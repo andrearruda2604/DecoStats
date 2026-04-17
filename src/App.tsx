@@ -113,38 +113,54 @@ export default function App() {
                   </p>
                 </div>
 
-                <div className="inline-flex p-1 bg-surface-container rounded-xl border border-outline-variant/20">
-                  {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setToggle(mode)}
-                      className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
-                        toggle === mode
-                          ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                          : 'text-on-surface-variant/40 hover:text-on-surface'
-                      }`}
-                    >
-                      {mode === 'TOTAL' ? 'Total' : mode === 'HT' ? '1º T' : '2º T'}
-                    </button>
-                  ))}
-                </div>
+                {!['NS', 'TBD', 'PST', 'CANC'].includes(matchDetail.fixture.status) && (
+                  <div className="inline-flex p-1 bg-surface-container rounded-xl border border-outline-variant/20">
+                    {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setToggle(mode)}
+                        className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
+                          toggle === mode
+                            ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                            : 'text-on-surface-variant/40 hover:text-on-surface'
+                        }`}
+                      >
+                        {mode === 'TOTAL' ? 'Total' : mode === 'HT' ? '1º T' : '2º T'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Stats Table */}
-              <StatsTable
-                stats={currentStats}
-                homeTeamName={matchDetail.homeTeam.name}
-                awayTeamName={matchDetail.awayTeam.name}
-                toggle={toggle}
-              />
+              {['NS', 'TBD', 'PST', 'CANC'].includes(matchDetail.fixture.status) ? (
+                <div className="flex flex-col items-center justify-center p-12 bg-surface-container/30 rounded-3xl border border-outline-variant/10 mt-8">
+                  <div className="w-12 h-12 rounded-full border border-dashed border-on-surface-variant/30 flex items-center justify-center mb-4">
+                    <span className="text-on-surface-variant/40 text-xs font-bold font-mono">--</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-on-surface-variant/80 mb-1">DADOS INDISPONÍVEIS</h3>
+                  <p className="text-xs text-on-surface-variant/40 uppercase tracking-wide">Estatísticas detalhadas são geradas após o início.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Stats Table */}
+                  <StatsTable
+                    stats={currentStats}
+                    homeTeamName={matchDetail.homeTeam.name}
+                    awayTeamName={matchDetail.awayTeam.name}
+                    toggle={toggle}
+                  />
 
-              {/* Match Events */}
-              <MatchEvents
-                events={matchDetail.events}
-                homeTeamId={matchDetail.homeTeam.id}
-                homeTeamName={matchDetail.homeTeam.name}
-                awayTeamName={matchDetail.awayTeam.name}
-              />
+                  {/* Match Events */}
+                  {matchDetail.events && matchDetail.events.length > 0 && (
+                    <MatchEvents
+                      events={matchDetail.events}
+                      homeTeamId={matchDetail.homeTeam.id}
+                      homeTeamName={matchDetail.homeTeam.name}
+                      awayTeamName={matchDetail.awayTeam.name}
+                    />
+                  )}
+                </>
+              )}
             </>
           )}
 
