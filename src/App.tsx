@@ -126,10 +126,10 @@ export default function App() {
                       onChange={(e) => setMatchCount(Number(e.target.value) as MatchCountFilter)}
                       className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
                     >
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                      <option value={15}>15</option>
-                      <option value={20}>20</option>
+                      <option value={5} className="bg-[#121212] text-on-surface">5</option>
+                      <option value={10} className="bg-[#121212] text-on-surface">10</option>
+                      <option value={15} className="bg-[#121212] text-on-surface">15</option>
+                      <option value={20} className="bg-[#121212] text-on-surface">20</option>
                     </select>
                   </div>
 
