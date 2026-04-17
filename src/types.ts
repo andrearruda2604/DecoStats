@@ -120,6 +120,9 @@ export interface StatComparison {
   type: 'higher-better' | 'lower-better' | 'neutral';
 }
 
+export type MatchCountFilter = 5 | 10 | 15 | 20;
+export type ScopeFilter = 'season' | 'all';
+
 export interface PredictiveStatRow {
   label: string;
   subLabel: string;

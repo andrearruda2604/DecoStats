@@ -13,12 +13,15 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
-import { useState } from 'react';
-import type { ToggleMode } from './types';
+import { useState, useCallback } from 'react';
+import type { ToggleMode, MatchCountFilter, ScopeFilter } from './types';
+import { generatePredictiveData } from './services/api';
 
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [matchCount, setMatchCount] = useState<MatchCountFilter>(10);
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('season');
 
   // Matches list hook
   const {
@@ -54,12 +57,13 @@ export default function App() {
   };
 
   // Get the current predictions/stats based on toggle
-  const currentPredictive = matchDetail
+  const predictiveBlock = matchDetail ? generatePredictiveData(matchDetail.homeTeam.id, matchDetail.awayTeam.id, matchCount, scopeFilter) : null;
+  const currentPredictive = predictiveBlock
     ? toggle === 'TOTAL'
-      ? matchDetail.predictive.FT
+      ? predictiveBlock.FT
       : toggle === 'HT'
-        ? matchDetail.predictive.HT
-        : matchDetail.predictive['2H']
+        ? predictiveBlock.HT
+        : predictiveBlock['2H']
     : [];
 
   return (
@@ -101,32 +105,61 @@ export default function App() {
               {/* Scoreboard */}
               <Scoreboard data={matchDetail} />
 
-              {/* HT / FT / TOTAL Toggle */}
-              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-4">
                 <div>
-                  <h3 className="font-headline font-bold text-[10px] tracking-[0.3em] uppercase text-on-surface-variant flex items-center gap-2">
-                    <span className="w-6 h-[2px] bg-primary" />
-                    Estatísticas Detalhadas
+                  <h3 className="font-headline font-bold text-[11px] tracking-[0.3em] uppercase text-primary/80 flex items-center gap-3">
+                    <span className="w-6 h-[1px] bg-primary" />
+                    Tactical Analytics
                   </h3>
-                  <p className="text-[9px] text-on-surface-variant/30 uppercase tracking-widest ml-8 mt-1">
-                    {matchDetail.fixture.round}
+                  <p className="text-[12px] text-on-surface-variant/40 uppercase tracking-widest ml-9 mt-1.5 font-bold">
+                    Advanced Distribution Metrics Per Sequence
                   </p>
                 </div>
 
-                <div className="inline-flex p-1 bg-surface-container rounded-xl border border-outline-variant/20">
-                  {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setToggle(mode)}
-                      className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
-                        toggle === mode
-                          ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                          : 'text-on-surface-variant/40 hover:text-on-surface'
-                      }`}
+                <div className="flex flex-wrap items-center gap-3 bg-surface-container/20 p-2 rounded-2xl border border-outline-variant/5">
+                  
+                  {/* Select Jogos */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">Jogos:</label>
+                    <select
+                      value={matchCount}
+                      onChange={(e) => setMatchCount(Number(e.target.value) as MatchCountFilter)}
+                      className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
                     >
-                      {mode === 'TOTAL' ? 'Total' : mode === 'HT' ? '1º T' : '2º T'}
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={20}>20</option>
+                    </select>
+                  </div>
+
+                  {/* Toggle Temp Atual */}
+                  <div className="flex items-center gap-3 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">Temp. Atual:</label>
+                    <button 
+                      onClick={() => setScopeFilter(scopeFilter === 'season' ? 'all' : 'season')}
+                      className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${scopeFilter === 'season' ? 'bg-primary' : 'bg-surface-variant/30'}`}
+                    >
+                      <div className={`absolute top-0.5 bg-white w-3 h-3 rounded-full transition-transform duration-300 ${scopeFilter === 'season' ? 'left-4' : 'left-0.5'}`} />
                     </button>
-                  ))}
+                  </div>
+
+                  {/* HT / FT / TOTAL Toggle */}
+                  <div className="flex items-center p-1 bg-background rounded-xl border border-outline-variant/10 ml-auto">
+                    {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setToggle(mode)}
+                        className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
+                          toggle === mode
+                            ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                            : 'text-on-surface-variant/30 hover:text-on-surface'
+                        }`}
+                      >
+                        {mode === 'TOTAL' ? 'TOTAL' : mode === 'HT' ? 'HT' : 'FT'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
