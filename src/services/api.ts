@@ -246,3 +246,69 @@ export function generatePredictiveData(homeTeamId: number, awayTeamId: number, c
   }
   return result;
 }
+
+export async function fetchPredictiveData(homeTeamId: number, awayTeamId: number, count: number = 5, scope: string = 'season') {
+  if (!isSupabaseConfigured) {
+    return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+  }
+
+  try {
+    let homeQ = supabase.from('teams_history').select('*').eq('team_id', homeTeamId).order('match_date', { ascending: false }).limit(count);
+    let awayQ = supabase.from('teams_history').select('*').eq('team_id', awayTeamId).order('match_date', { ascending: false }).limit(count);
+
+    const [homeRes, awayRes] = await Promise.all([homeQ, awayQ]);
+    
+    const homeData = homeRes.data || [];
+    const awayData = awayRes.data || [];
+
+    // Fallback to mock if we don't have enough data (e.g. at least 3 matches)
+    if (homeData.length < 3 && awayData.length < 3) {
+      return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+    }
+
+    const periods = ['FT', 'HT', '2H'] as const;
+    const predictiveConf = [
+      { key: 'shots_total', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', dbKey: 'shots_total' },
+      { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', dbKey: 'shots_on_goal' },
+      { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', dbKey: 'corners' },
+      { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', dbKey: 'yellow_cards' },
+      { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', dbKey: 'red_cards' },
+      { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', dbKey: 'goals_for', highlight: 'green' as const },
+      { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', dbKey: 'goals_against' },
+    ];
+
+    const result: any = {};
+
+    for (const period of periods) {
+      // In this PoC, we will simulate the HT / 2H splits by dividing the FT data by 2 since API-Football free mostly gives FT stats
+      const mult = period === 'FT' ? 1 : 0.5;
+      
+      result[period] = predictiveConf.map(cfg => {
+          let hDist = homeData.map((row: any) => Math.round((row[cfg.dbKey] || 0) * mult));
+          let aDist = awayData.map((row: any) => Math.round((row[cfg.dbKey] || 0) * mult));
+          
+          if (hDist.length === 0) hDist = [0];
+          if (aDist.length === 0) aDist = [0];
+
+          return {
+            label: cfg.label,
+            subLabel: cfg.subLabel,
+            homeMin: Math.min(...hDist),
+            homeMax: Math.max(...hDist),
+            homeDist: hDist,
+            awayMin: Math.min(...aDist),
+            awayMax: Math.max(...aDist),
+            awayDist: aDist,
+            highlight: cfg.highlight || 'none'
+          };
+      });
+    }
+
+    return result;
+
+  } catch (err) {
+    console.error("Error fetching predictive data:", err);
+    return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+  }
+}
+

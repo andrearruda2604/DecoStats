@@ -13,15 +13,18 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { ToggleMode, MatchCountFilter, ScopeFilter } from './types';
-import { generatePredictiveData } from './services/api';
+import { fetchPredictiveData } from './services/api';
 
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchCount, setMatchCount] = useState<MatchCountFilter>(10);
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('season');
+
+  const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
+  const [predictiveLoading, setPredictiveLoading] = useState(false);
 
   // Matches list hook
   const {
@@ -56,8 +59,28 @@ export default function App() {
     setSelectedMatchId(null);
   };
 
+  // Fetch predictive block asynchronously when filters or match change
+  useEffect(() => {
+    let isMounted = true;
+    if (matchDetail) {
+      setPredictiveLoading(true);
+      fetchPredictiveData(matchDetail.homeTeam.id, matchDetail.awayTeam.id, matchCount, scopeFilter)
+        .then(res => {
+          if (isMounted) {
+            setPredictiveBlock(res);
+            setPredictiveLoading(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setPredictiveLoading(false);
+        });
+    } else {
+      setPredictiveBlock(null);
+    }
+    return () => { isMounted = false; };
+  }, [matchDetail, matchCount, scopeFilter]);
+
   // Get the current predictions/stats based on toggle
-  const predictiveBlock = matchDetail ? generatePredictiveData(matchDetail.homeTeam.id, matchDetail.awayTeam.id, matchCount, scopeFilter) : null;
   const currentPredictive = predictiveBlock
     ? toggle === 'TOTAL'
       ? predictiveBlock.FT
@@ -164,12 +187,19 @@ export default function App() {
               </div>
 
               {/* Predictive Stats Table */}
-              <StatsTable
-                predictiveStats={currentPredictive}
-                homeTeamName={matchDetail.homeTeam.name}
-                awayTeamName={matchDetail.awayTeam.name}
-                toggle={toggle}
-              />
+              <div className="relative min-h-[200px]">
+                {predictiveLoading ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-3xl">
+                    <div className="w-8 h-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                  </div>
+                ) : null}
+                <StatsTable
+                  predictiveStats={currentPredictive}
+                  homeTeamName={matchDetail.homeTeam.name}
+                  awayTeamName={matchDetail.awayTeam.name}
+                  toggle={toggle}
+                />
+              </div>
 
               {/* Match Events */}
               {matchDetail.events && matchDetail.events.length > 0 && !['NS', 'TBD', 'PST', 'CANC'].includes(matchDetail.fixture.status) && (
