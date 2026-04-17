@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-label: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --color-background: #060610;
+  --color-surface-dim: #080812;
+  --color-surface-bright: #1a1a2e;
+  --color-surface-container-lowest: #04040c;
+  --color-surface-container-low: #0a0a18;
+  --color-surface-container: #0e0e1c;
+  --color-surface-container-high: #131322;
+  --color-surface-container-highest: #1a1a2e;
+
+  --color-primary: #7c4dff;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #5c3dd5;
+  --color-on-primary-container: #ffffff;
+
+  --color-secondary: #f0f0f5;
+  --color-on-secondary: #080810;
+  --color-secondary-container: #1a1a2e;
+  --color-on-secondary-container: #f0f0f5;
+
+  --color-tertiary: #4caf50;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #1a1a2e;
+  --color-on-tertiary-container: #4caf50;
+
+  --color-on-surface: #eeeef4;
+  --color-on-surface-variant: #9090a8;
+  --color-outline: #2a2a40;
+  --color-outline-variant: #1e1e32;
+  --color-error: #ff5252;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a40 transparent;
+  }
+}
+
+.blueprint-grid {
+  background-image:
+    radial-gradient(#1a1a2e 0.5px, transparent 0.5px);
+  background-size: 28px 28px;
+}
+
+/* Smooth transitions for animated elements */
+.animate-in {
+  animation: fadeSlideIn 0.4s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

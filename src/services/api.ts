@@ -1,0 +1,188 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { MOCK_MATCHES_BY_DATE, MOCK_MATCH_DETAIL, MOCK_LEAGUES } from '../constants';
+import type { MatchCardData, MatchDetailData, StatComparison, ToggleMode } from '../types';
+
+// ─── Matches List ───────────────────────────────────────────────────
+
+export async function fetchMatches(
+  date: string,
+  leagueId?: number
+): Promise<MatchCardData[]> {
+  if (!isSupabaseConfigured) {
+    return MOCK_MATCHES_BY_DATE;
+  }
+
+  let query = supabase
+    .from('fixtures')
+    .select(`
+      id, api_id, date, status, home_score, away_score, round,
+      league:leagues!fixtures_league_id_fkey(name, country, country_code, flag_url, logo_url),
+      home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
+      away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
+    `)
+    .gte('date', `${date}T00:00:00`)
+    .lte('date', `${date}T23:59:59`)
+    .order('date', { ascending: true });
+
+  if (leagueId) {
+    query = query.eq('league_id', leagueId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((f: any) => ({
+    id: f.id,
+    apiId: f.api_id,
+    league: {
+      name: f.league?.name || '',
+      country: f.league?.country || '',
+      countryCode: f.league?.country_code || '',
+      flagUrl: f.league?.flag_url || '',
+      logoUrl: f.league?.logo_url || '',
+    },
+    time: new Date(f.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    date: f.date,
+    status: f.status,
+    homeTeam: {
+      id: f.home_team?.id || 0,
+      name: f.home_team?.name || '',
+      logoUrl: f.home_team?.logo_url || '',
+      score: f.home_score,
+    },
+    awayTeam: {
+      id: f.away_team?.id || 0,
+      name: f.away_team?.name || '',
+      logoUrl: f.away_team?.logo_url || '',
+      score: f.away_score,
+    },
+    round: f.round || '',
+  }));
+}
+
+// ─── Match Detail & Stats ───────────────────────────────────────────
+
+export async function fetchMatchDetail(fixtureId: number): Promise<MatchDetailData> {
+  if (!isSupabaseConfigured) {
+    return MOCK_MATCH_DETAIL;
+  }
+
+  // Fetch fixture with teams and league
+  const { data: fixture, error: fErr } = await supabase
+    .from('fixtures')
+    .select(`
+      *,
+      league:leagues!fixtures_league_id_fkey(*),
+      home_team:teams!fixtures_home_team_id_fkey(*),
+      away_team:teams!fixtures_away_team_id_fkey(*)
+    `)
+    .eq('id', fixtureId)
+    .single();
+
+  if (fErr || !fixture) throw fErr || new Error('Fixture not found');
+
+  // Fetch stats for all periods
+  const { data: stats, error: sErr } = await supabase
+    .from('fixture_stats')
+    .select('*')
+    .eq('fixture_id', fixtureId);
+
+  if (sErr) throw sErr;
+
+  // Fetch events
+  const { data: events, error: eErr } = await supabase
+    .from('fixture_events')
+    .select('*')
+    .eq('fixture_id', fixtureId)
+    .order('elapsed', { ascending: true });
+
+  if (eErr) throw eErr;
+
+  // Process stats into comparison format
+  const processedStats = processStats(
+    stats || [],
+    fixture.home_team?.id,
+    fixture.away_team?.id
+  );
+
+  return {
+    fixture,
+    homeTeam: fixture.home_team,
+    awayTeam: fixture.away_team,
+    league: fixture.league,
+    stats: processedStats,
+    events: events || [],
+  };
+}
+
+// ─── Stats Processing ───────────────────────────────────────────────
+
+const STAT_CONFIG: { key: string; label: string; subLabel: string; type: 'higher-better' | 'lower-better' | 'neutral' }[] = [
+  { key: 'shots_total', label: 'CHUTES', subLabel: 'TOTAL SHOT ACCURACY', type: 'higher-better' },
+  { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'TARGET CONVERSION', type: 'higher-better' },
+  { key: 'corners', label: 'ESCANTEIOS', subLabel: 'SET-PIECE FREQUENCY', type: 'higher-better' },
+  { key: 'possession', label: 'POSSE DE BOLA', subLabel: 'POSSESSION DOMINANCE', type: 'higher-better' },
+  { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'DISCIPLINARY INDEX', type: 'lower-better' },
+  { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'CRITICAL FOUL', type: 'lower-better' },
+  { key: 'goals', label: 'GOLS', subLabel: 'OFFENSIVE YIELD', type: 'higher-better' },
+  { key: 'fouls', label: 'FALTAS', subLabel: 'FOUL RATE', type: 'lower-better' },
+  { key: 'offsides', label: 'IMPEDIMENTOS', subLabel: 'OFFSIDE FREQUENCY', type: 'neutral' },
+];
+
+function processStats(
+  stats: any[],
+  homeTeamId: number,
+  awayTeamId: number
+): MatchDetailData['stats'] {
+  const result: MatchDetailData['stats'] = { FT: [], HT: [], '2H': [] };
+
+  for (const period of ['FT', 'HT', '2H'] as const) {
+    const homeStat = stats.find(s => s.team_id === homeTeamId && s.period === period);
+    const awayStat = stats.find(s => s.team_id === awayTeamId && s.period === period);
+
+    result[period] = STAT_CONFIG.map(cfg => ({
+      label: cfg.label,
+      subLabel: cfg.subLabel,
+      homeValue: homeStat ? (homeStat[cfg.key] ?? 0) : 0,
+      awayValue: awayStat ? (awayStat[cfg.key] ?? 0) : 0,
+      type: cfg.type,
+    }));
+  }
+
+  return result;
+}
+
+// ─── Search ─────────────────────────────────────────────────────────
+
+export async function searchTeams(query: string) {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from('teams')
+    .select('id, name, logo_url, short_name')
+    .ilike('name', `%${query}%`)
+    .limit(20);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchLeagues() {
+  if (!isSupabaseConfigured) {
+    return MOCK_LEAGUES;
+  }
+
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) throw error;
+  return data || [];
+}
