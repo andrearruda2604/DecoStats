@@ -109,10 +109,10 @@ export default function App() {
                 <div>
                   <h3 className="font-headline font-bold text-[11px] tracking-[0.3em] uppercase text-primary/80 flex items-center gap-3">
                     <span className="w-6 h-[1px] bg-primary" />
-                    Tactical Analytics
+                    Análise Tática
                   </h3>
                   <p className="text-[12px] text-on-surface-variant/40 uppercase tracking-widest ml-9 mt-1.5 font-bold">
-                    Advanced Distribution Metrics Per Sequence
+                    Métricas Distributivas Avançadas
                   </p>
                 </div>
 

@@ -18,18 +18,18 @@ export default function StatsTable({ predictiveStats, homeTeamName, awayTeamName
       {/* Table Header */}
       <div className="grid grid-cols-12 items-center py-5 px-6 border-b border-outline-variant/20 bg-surface-container-highest/30">
         <div className="col-span-4 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60">
-          Metric Parameter
+          PARÂMETRO DE MÉTRICA
         </div>
         
         {/* Home Headers */}
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MIN</div>
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MAX</div>
-        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">DISTRIBUTION</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MÍN</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MÁX</div>
+        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">DISTRIBUIÇÃO</div>
         
         {/* Away Headers */}
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MIN</div>
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MAX</div>
-        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">DISTRIBUTION</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MÍN</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MÁX</div>
+        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">DISTRIBUIÇÃO</div>
       </div>
 
       {/* Rows */}

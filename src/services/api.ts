@@ -206,13 +206,13 @@ export function generatePredictiveData(homeTeamId: number, awayTeamId: number, c
   const periods = ['FT', 'HT', '2H'] as const;
   
   const predictiveConf = [
-    { key: 'shots_total', label: 'CHUTES', subLabel: 'TOTAL SHOT ACCURACY RANGE', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
-    { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'TARGET CONVERSION EFFICIENCY', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
-    { key: 'corners', label: 'ESCANTEIOS', subLabel: 'SET-PIECE FREQUENCY ANALYTICS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
-    { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'DISCIPLINARY VOLATILITY INDEX', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
-    { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'CRITICAL FOUL DISPLACEMENT', baseH: 0, rangeH: 1, baseA: 0, rangeA: 1 },
-    { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'PRIMARY OFFENSIVE YIELD', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2, highlight: 'green' as const },
-    { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'DEFENSIVE RESISTANCE LEVEL', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
+    { key: 'shots_total', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
+    { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
+    { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
+    { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
+    { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', baseH: 0, rangeH: 1, baseA: 0, rangeA: 1 },
+    { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2, highlight: 'green' as const },
+    { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
   ];
 
   const result: any = {};
