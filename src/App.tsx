@@ -64,7 +64,7 @@ export default function App() {
     let isMounted = true;
     if (matchDetail) {
       setPredictiveLoading(true);
-      fetchPredictiveData(matchDetail.homeTeam.id, matchDetail.awayTeam.id, matchCount, scopeFilter)
+      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, matchCount, scopeFilter)
         .then(res => {
           if (isMounted) {
             setPredictiveBlock(res);
