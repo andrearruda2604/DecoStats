@@ -120,6 +120,18 @@ export interface StatComparison {
   type: 'higher-better' | 'lower-better' | 'neutral';
 }
 
+export interface PredictiveStatRow {
+  label: string;
+  subLabel: string;
+  homeMin: number;
+  homeMax: number;
+  homeDist: number[];
+  awayMin: number;
+  awayMax: number;
+  awayDist: number[];
+  highlight?: 'green' | 'red' | 'none';
+}
+
 export interface MatchDetailData {
   fixture: Fixture;
   homeTeam: Team;
@@ -129,6 +141,11 @@ export interface MatchDetailData {
     FT: StatComparison[];
     HT: StatComparison[];
     '2H': StatComparison[];
+  };
+  predictive: {
+    FT: PredictiveStatRow[];
+    HT: PredictiveStatRow[];
+    '2H': PredictiveStatRow[];
   };
   events: FixtureEvent[];
 }

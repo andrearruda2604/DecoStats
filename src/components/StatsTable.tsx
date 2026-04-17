@@ -3,109 +3,77 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { StatComparison, ToggleMode } from '../types';
+import type { PredictiveStatRow, ToggleMode } from '../types';
 
-interface StatsTableProps {
-  stats: StatComparison[];
+interface PredictiveStatsTableProps {
+  predictiveStats: PredictiveStatRow[];
   homeTeamName: string;
   awayTeamName: string;
   toggle: ToggleMode;
 }
 
-function getBarWidth(value: number, otherValue: number): number {
-  const total = value + otherValue;
-  if (total === 0) return 50;
-  return Math.max(15, Math.min(85, (value / total) * 100));
-}
-
-function getStatColor(homeVal: number, awayVal: number, type: StatComparison['type'], isHome: boolean): string {
-  if (type === 'neutral') return '';
-  if (homeVal === awayVal) return '';
-
-  const homeWins = type === 'higher-better' ? homeVal > awayVal : homeVal < awayVal;
-  const awayWins = !homeWins;
-
-  if (isHome && homeWins) return 'text-emerald-400';
-  if (!isHome && awayWins) return 'text-emerald-400';
-  if (isHome && !homeWins) return 'text-red-400/70';
-  if (!isHome && !awayWins) return 'text-red-400/70';
-  return '';
-}
-
-export default function StatsTable({ stats, homeTeamName, awayTeamName, toggle }: StatsTableProps) {
+export default function StatsTable({ predictiveStats, homeTeamName, awayTeamName }: PredictiveStatsTableProps) {
   return (
-    <div className="bg-surface-container rounded-3xl overflow-hidden border border-outline-variant shadow-lg">
-      {/* Header */}
-      <div className="grid grid-cols-12 items-center py-4 px-6 bg-surface-container-highest/10 border-b border-outline-variant/30">
-        <div className="col-span-3 text-[10px] font-bold uppercase tracking-widest text-primary truncate">
-          {homeTeamName}
+    <div className="bg-surface-container rounded-3xl overflow-hidden border border-outline-variant/30 shadow-2xl">
+      {/* Table Header */}
+      <div className="grid grid-cols-12 items-center py-5 px-6 border-b border-outline-variant/20 bg-surface-container-highest/30">
+        <div className="col-span-4 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60">
+          Metric Parameter
         </div>
-        <div className="col-span-6 text-center">
-          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-on-surface-variant/40">
-            {toggle === 'TOTAL' ? 'Full Time' : toggle === 'HT' ? '1º Tempo' : '2º Tempo'}
-          </span>
-        </div>
-        <div className="col-span-3 text-right text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60 truncate">
-          {awayTeamName}
-        </div>
+        
+        {/* Home Headers */}
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MIN</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">MAX</div>
+        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">DISTRIBUTION</div>
+        
+        {/* Away Headers */}
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MIN</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MAX</div>
+        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">DISTRIBUTION</div>
       </div>
 
-      {/* Stat Rows */}
-      <div className="divide-y divide-outline-variant/10">
-        {stats.map((stat, idx) => {
-          const homeWidth = getBarWidth(stat.homeValue, stat.awayValue);
-          const awayWidth = 100 - homeWidth;
-          const homeColor = getStatColor(stat.homeValue, stat.awayValue, stat.type, true);
-          const awayColor = getStatColor(stat.homeValue, stat.awayValue, stat.type, false);
-          const isGoals = stat.label === 'GOLS';
+      {/* Rows */}
+      <div className="flex flex-col">
+        {predictiveStats.map((stat, i) => {
+          const isGreenHighlight = stat.highlight && stat.highlight === 'green';
 
           return (
-            <div
-              key={idx}
-              className={`py-5 px-6 transition-colors hover:bg-surface-container-highest/10 ${
-                isGoals ? 'bg-emerald-500/[0.03]' : ''
+            <div 
+              key={i} 
+              className={`grid grid-cols-12 items-center py-5 px-6 border-b border-outline-variant/10 last:border-b-0 transition-colors ${
+                isGreenHighlight ? 'bg-emerald-500/5' : 'hover:bg-surface-container-highest/10'
               }`}
             >
-              {/* Values row */}
-              <div className="grid grid-cols-12 items-center mb-2">
-                <div className="col-span-3">
-                  <span className={`text-lg font-black tabular-nums ${homeColor || 'text-on-surface'}`}>
-                    {stat.label === 'POSSE DE BOLA' ? `${stat.homeValue}%` : stat.homeValue}
-                  </span>
-                </div>
-                <div className="col-span-6 text-center">
-                  <span className={`text-xs font-bold uppercase tracking-wider ${
-                    isGoals ? 'text-emerald-400' : 'text-on-surface/80'
-                  }`}>
-                    {stat.label}
-                  </span>
-                  <div className="text-[8px] text-on-surface-variant/30 uppercase tracking-widest mt-0.5">
-                    {stat.subLabel}
-                  </div>
-                </div>
-                <div className="col-span-3 text-right">
-                  <span className={`text-lg font-black tabular-nums ${awayColor || 'text-on-surface-variant/70'}`}>
-                    {stat.label === 'POSSE DE BOLA' ? `${stat.awayValue}%` : stat.awayValue}
-                  </span>
-                </div>
+              {/* Metric Info */}
+              <div className="col-span-4 flex flex-col pr-4">
+                <span className={`text-sm font-black tracking-wide uppercase ${isGreenHighlight ? 'text-emerald-400' : 'text-on-surface'}`}>
+                  {stat.label}
+                </span>
+                <span className={`text-[9px] uppercase tracking-widest mt-1 ${isGreenHighlight ? 'text-emerald-500/60' : 'text-on-surface-variant/40'}`}>
+                  {stat.subLabel}
+                </span>
               </div>
 
-              {/* Bar visualization */}
-              <div className="flex gap-1 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className={`rounded-full transition-all duration-700 ease-out ${
-                    homeColor === 'text-emerald-400' ? 'bg-emerald-500/60' : 
-                    homeColor === 'text-red-400/70' ? 'bg-red-500/30' : 'bg-primary/40'
-                  }`}
-                  style={{ width: `${homeWidth}%` }}
-                />
-                <div
-                  className={`rounded-full transition-all duration-700 ease-out ${
-                    awayColor === 'text-emerald-400' ? 'bg-emerald-500/60' : 
-                    awayColor === 'text-red-400/70' ? 'bg-red-500/30' : 'bg-on-surface-variant/15'
-                  }`}
-                  style={{ width: `${awayWidth}%` }}
-                />
+              {/* Home Team Stats */}
+              <div className="col-span-1 text-center">
+                <span className={`text-sm font-bold ${isGreenHighlight ? 'text-emerald-400' : 'text-white'}`}>{stat.homeMin}</span>
+              </div>
+              <div className="col-span-1 text-center">
+                <span className={`text-sm font-bold ${isGreenHighlight ? 'text-emerald-400' : 'text-white'}`}>{stat.homeMax}</span>
+              </div>
+              <div className="col-span-2 text-center text-[10px] font-mono tracking-widest text-emerald-400/80">
+                {stat.homeDist.join(' | ')}
+              </div>
+
+              {/* Away Team Stats */}
+              <div className="col-span-1 text-center">
+                <span className="text-sm font-bold text-on-surface-variant">{stat.awayMin}</span>
+              </div>
+              <div className="col-span-1 text-center">
+                <span className="text-sm font-bold text-on-surface-variant">{stat.awayMax}</span>
+              </div>
+              <div className="col-span-2 text-center text-[10px] font-mono tracking-widest text-on-surface-variant/40">
+                {stat.awayDist.join(' | ')}
               </div>
             </div>
           );

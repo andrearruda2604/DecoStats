@@ -110,12 +110,18 @@ export async function fetchMatchDetail(fixtureId: number): Promise<MatchDetailDa
     fixture.away_team?.id
   );
 
+  const predictiveStats = generatePredictiveData(
+    fixture.home_team?.id || 0,
+    fixture.away_team?.id || 0
+  );
+
   return {
     fixture,
     homeTeam: fixture.home_team,
     awayTeam: fixture.away_team,
     league: fixture.league,
     stats: processedStats,
+    predictive: predictiveStats,
     events: events || [],
   };
 }
@@ -185,4 +191,57 @@ export async function fetchLeagues() {
 
   if (error) throw error;
   return data || [];
+}
+
+// ─── Predictive Mocking ─────────────────────────────────────────────
+
+function getSeededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+export function generatePredictiveData(homeTeamId: number, awayTeamId: number) {
+  const seedBase = homeTeamId * 1000 + awayTeamId + 1;
+  const periods = ['FT', 'HT', '2H'] as const;
+  
+  const predictiveConf = [
+    { key: 'shots_total', label: 'CHUTES', subLabel: 'TOTAL SHOT ACCURACY RANGE', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
+    { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'TARGET CONVERSION EFFICIENCY', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
+    { key: 'corners', label: 'ESCANTEIOS', subLabel: 'SET-PIECE FREQUENCY ANALYTICS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
+    { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'DISCIPLINARY VOLATILITY INDEX', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
+    { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'CRITICAL FOUL DISPLACEMENT', baseH: 0, rangeH: 1, baseA: 0, rangeA: 1 },
+    { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'PRIMARY OFFENSIVE YIELD', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2, highlight: 'green' as const },
+    { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'DEFENSIVE RESISTANCE LEVEL', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
+  ];
+
+  const result: any = {};
+  
+  for (const period of periods) {
+     const mult = period === 'FT' ? 1 : 0.5;
+     result[period] = predictiveConf.map((cfg, i) => {
+        const hSeed = seedBase + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
+        const aSeed = seedBase * 2 + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
+        
+        const hMin = Math.round(cfg.baseH * mult + getSeededRandom(hSeed) * 2);
+        const hMax = hMin + Math.round(cfg.rangeH * mult + getSeededRandom(hSeed + 10) * 2);
+        const hDist = Array.from({length: 4}, (_, j) => Math.floor(Math.max(hMin, Math.min(hMax, (hMin + hMax)/2 + (getSeededRandom(hSeed + 20 + j) - 0.5) * cfg.rangeH))));
+
+        const aMin = Math.round(cfg.baseA * mult + getSeededRandom(aSeed) * 2);
+        const aMax = aMin + Math.round(cfg.rangeA * mult + getSeededRandom(aSeed + 10) * 2);
+        const aDist = Array.from({length: 4}, (_, j) => Math.floor(Math.max(aMin, Math.min(aMax, (aMin + aMax)/2 + (getSeededRandom(aSeed + 20 + j) - 0.5) * cfg.rangeA))));
+
+        return {
+          label: cfg.label,
+          subLabel: cfg.subLabel,
+          homeMin: hMin,
+          homeMax: hMax,
+          homeDist: hDist,
+          awayMin: aMin,
+          awayMax: aMax,
+          awayDist: aDist,
+          highlight: cfg.highlight || 'none'
+        }
+     });
+  }
+  return result;
 }
