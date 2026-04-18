@@ -111,7 +111,13 @@ async function runSeeder() {
     const extractStat = (typeStr) => {
         if(!myStatsRaw) return null;
         const s = myStatsRaw.statistics.find(s => s.type === typeStr);
-        return s && s.value !== null ? parseInt(s.value, 10) : 0;
+        if (s && s.value !== null) {
+            if (typeof s.value === 'string' && s.value.includes('%')) {
+                return parseInt(s.value.replace('%', ''), 10);
+            }
+            return parseInt(s.value, 10);
+        }
+        return 0;
     };
 
     const record = {
@@ -128,7 +134,12 @@ async function runSeeder() {
         shots_on_goal: extractStat('Shots on Goal'),
         corners: extractStat('Corner Kicks'),
         yellow_cards: extractStat('Yellow Cards'),
-        red_cards: extractStat('Red Cards')
+        red_cards: extractStat('Red Cards'),
+        possession: extractStat('Ball Possession'),
+        fouls: extractStat('Fouls'),
+        offsides: extractStat('Offsides'),
+        goalkeeper_saves: extractStat('Goalkeeper Saves'),
+        passes_accurate: extractStat('Passes accurate')
     };
 
     const { error } = await supabase.from('teams_history').insert([record]);
