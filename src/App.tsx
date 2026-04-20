@@ -14,14 +14,16 @@ import ErrorState from './components/ErrorState';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
 import { useState, useCallback, useEffect } from 'react';
-import type { ToggleMode, MatchCountFilter, ScopeFilter } from './types';
+import type { ToggleMode, MatchCountFilter } from './types';
 import { fetchPredictiveData } from './services/api';
 
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [matchCount, setMatchCount] = useState<MatchCountFilter>(10);
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('season');
+  const [toggle, setToggle] = useState<ToggleMode>('TOTAL');
+  const [statsCount, setStatsCount] = useState<number>(20);
+  const [seasonOnly, setSeasonOnly] = useState(true);
+  const [mandoOnly, setMandoOnly] = useState(true);
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
@@ -44,8 +46,6 @@ export default function App() {
     data: matchDetail,
     loading: detailLoading,
     error: detailError,
-    toggle,
-    setToggle,
     refresh: refreshDetail,
   } = useMatchStats(selectedMatchId);
 
@@ -64,7 +64,10 @@ export default function App() {
     let isMounted = true;
     if (matchDetail) {
       setPredictiveLoading(true);
-      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, matchCount, scopeFilter)
+      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, { 
+        seasonOnly, 
+        mandoOnly 
+      })
         .then(res => {
           if (isMounted) {
             setPredictiveBlock(res);
@@ -78,7 +81,7 @@ export default function App() {
       setPredictiveBlock(null);
     }
     return () => { isMounted = false; };
-  }, [matchDetail, matchCount, scopeFilter]);
+  }, [matchDetail, statsCount, seasonOnly, mandoOnly]);
 
   // Get the current predictions/stats based on toggle
   const currentPredictive = predictiveBlock
@@ -145,8 +148,8 @@ export default function App() {
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">
                     <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">Jogos:</label>
                     <select
-                      value={matchCount}
-                      onChange={(e) => setMatchCount(Number(e.target.value) as MatchCountFilter)}
+                      value={statsCount}
+                      onChange={(e) => setStatsCount(Number(e.target.value))}
                       className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
                     >
                       <option value={5} className="bg-[#121212] text-on-surface">5</option>
@@ -156,14 +159,27 @@ export default function App() {
                     </select>
                   </div>
 
-                  {/* Toggle Temp Atual */}
+                  {/* Toggle Temporada */}
                   <div className="flex items-center gap-3 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">
-                    <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">Temp. Atual:</label>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">2025/26:</label>
                     <button 
-                      onClick={() => setScopeFilter(scopeFilter === 'season' ? 'all' : 'season')}
-                      className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${scopeFilter === 'season' ? 'bg-primary' : 'bg-surface-variant/30'}`}
+                      onClick={() => setSeasonOnly(!seasonOnly)}
+                      className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${seasonOnly ? 'bg-primary' : 'bg-surface-variant/30'}`}
+                      title="Filtrar apenas temporada atual"
                     >
-                      <div className={`absolute top-0.5 bg-white w-3 h-3 rounded-full transition-transform duration-300 ${scopeFilter === 'season' ? 'left-4' : 'left-0.5'}`} />
+                      <div className={`absolute top-0.5 bg-white w-3 h-3 rounded-full transition-transform duration-300 ${seasonOnly ? 'left-4' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {/* Toggle Mando (Home/Away) */}
+                  <div className="flex items-center gap-3 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-on-surface-variant/40">Considerar Mando:</label>
+                    <button 
+                      onClick={() => setMandoOnly(!mandoOnly)}
+                      className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${mandoOnly ? 'bg-primary' : 'bg-surface-variant/30'}`}
+                      title="Analisar Mandante em Casa e Visitante Fora"
+                    >
+                      <div className={`absolute top-0.5 bg-white w-3 h-3 rounded-full transition-transform duration-300 ${mandoOnly ? 'left-4' : 'left-0.5'}`} />
                     </button>
                   </div>
 

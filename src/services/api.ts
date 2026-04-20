@@ -252,23 +252,46 @@ export function generatePredictiveData(homeTeamId: number, awayTeamId: number, c
   return result;
 }
 
-export async function fetchPredictiveData(homeTeamId: number, awayTeamId: number, count: number = 5, scope: string = 'season') {
+export async function fetchPredictiveData(
+  homeTeamId: number, 
+  awayTeamId: number, 
+  count: number = 5, 
+  options: { mandoOnly?: boolean, seasonOnly?: boolean } = {}
+) {
   if (!isSupabaseConfigured) {
-    return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+    // Para o mock, mantemos a compatibilidade simples
+    return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
   }
 
   try {
-    let homeQ = supabase.from('teams_history').select('*').eq('team_id', homeTeamId).order('match_date', { ascending: false }).limit(count);
-    let awayQ = supabase.from('teams_history').select('*').eq('team_id', awayTeamId).order('match_date', { ascending: false }).limit(count);
+    let homeQuery = supabase.from('teams_history').select('*').eq('team_id', homeTeamId);
+    let awayQuery = supabase.from('teams_history').select('*').eq('team_id', awayTeamId);
 
-    const [homeRes, awayRes] = await Promise.all([homeQ, awayQ]);
+    const CURRENT_SEASON = 2025; // 2025/26 season
+
+    // Filtro de Mando (Casa para Mandante / Fora para Visitante)
+    if (options.mandoOnly) {
+      homeQuery = homeQuery.eq('is_home', true);
+      awayQuery = awayQuery.eq('is_home', false);
+    }
+
+    // Filtro de Temporada
+    if (options.seasonOnly) {
+      homeQuery = homeQuery.eq('season', CURRENT_SEASON);
+      awayQuery = awayQuery.eq('season', CURRENT_SEASON);
+    }
+
+    const [homeRes, awayRes] = await Promise.all([
+      homeQuery.order('match_date', { ascending: false }).limit(count),
+      awayQuery.order('match_date', { ascending: false }).limit(count)
+    ]);
     
     const homeData = homeRes.data || [];
     const awayData = awayRes.data || [];
 
     // Fallback to mock if we don't have enough data (e.g. at least 3 matches)
     if (homeData.length < 3 && awayData.length < 3) {
-      return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+      return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
     }
 
     const periods = ['FT', 'HT', '2H'] as const;
@@ -318,7 +341,7 @@ export async function fetchPredictiveData(homeTeamId: number, awayTeamId: number
 
   } catch (err) {
     console.error("Error fetching predictive data:", err);
-    return generatePredictiveData(homeTeamId, awayTeamId, count, scope);
+    return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
   }
 }
 

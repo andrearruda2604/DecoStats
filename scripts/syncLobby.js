@@ -75,6 +75,7 @@ async function syncFutureFixtures() {
     validMatches.forEach(m => leaguesMap.set(m.league.id, m.league));
     for (const [id, leagueData] of leaguesMap) {
       await supabase.from('leagues').upsert({
+         id: leagueData.id, // Use API ID as primary key
          api_id: leagueData.id,
          name: leagueData.name,
          country: leagueData.country,
@@ -82,13 +83,9 @@ async function syncFutureFixtures() {
          logo_url: leagueData.logo,
          season: leagueData.season,
          is_active: true
-      }, { onConflict: 'api_id' });
+      }, { onConflict: 'id' });
     }
     
-    // Get DB IDs for Leagues
-    const { data: dbLeagues } = await supabase.from('leagues').select('id, api_id').in('api_id', Array.from(leaguesMap.keys()));
-    const leagueDbId = (apiId) => dbLeagues.find(l => l.api_id === apiId)?.id;
-
     // UPSERT Teams
     const teamsMap = new Map();
     validMatches.forEach(m => {
@@ -98,23 +95,21 @@ async function syncFutureFixtures() {
     
     for (const [id, teamData] of teamsMap) {
       await supabase.from('teams').upsert({
+        id: teamData.id, // Use API ID as primary key
         api_id: teamData.id,
         name: teamData.name,
         short_name: teamData.name?.substring(0, 3).toUpperCase(),
         logo_url: teamData.logo,
-        league_id: leagueDbId(teamData.league_id)
-      }, { onConflict: 'api_id' });
+        league_id: teamData.league_id
+      }, { onConflict: 'id' });
     }
-    
-    const { data: dbTeams } = await supabase.from('teams').select('id, api_id').in('api_id', Array.from(teamsMap.keys()));
-    const teamDbId = (apiId) => dbTeams.find(t => t.api_id === apiId)?.id;
     
     // UPSERT Fixtures
     const fixturesToInsert = validMatches.map(m => ({
        api_id: m.fixture.id,
-       league_id: leagueDbId(m.league.id),
-       home_team_id: teamDbId(m.teams.home.id),
-       away_team_id: teamDbId(m.teams.away.id),
+       league_id: m.league.id,
+       home_team_id: m.teams.home.id,
+       away_team_id: m.teams.away.id,
        date: m.fixture.date,
        status: m.fixture.status.short,
        home_score: m.goals.home,
