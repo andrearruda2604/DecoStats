@@ -298,16 +298,16 @@ export async function fetchPredictiveData(
     const predictiveConf = [
       { key: 'shots_total', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', dbKey: 'shots_total' },
       { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', dbKey: 'shots_on_goal' },
-      { key: 'possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', dbKey: 'possession' },
-      { key: 'passes_accurate', label: 'PASSES CERTOS', subLabel: 'EFICIÊNCIA DE CONSTRUÇÃO TÁTICA', dbKey: 'passes_accurate' },
       { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', dbKey: 'corners' },
-      { key: 'fouls', label: 'FALTAS COMETIDAS', subLabel: 'ÍNDICE DE QUEBRA DE RITMO', dbKey: 'fouls' },
-      { key: 'offsides', label: 'IMPEDIMENTOS', subLabel: 'VULNERABILIDADE À LINHA ALTA', dbKey: 'offsides' },
-      { key: 'goalkeeper_saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', dbKey: 'goalkeeper_saves' },
       { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', dbKey: 'yellow_cards' },
       { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', dbKey: 'red_cards' },
       { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', dbKey: 'goals_for', highlight: 'green' as const },
       { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', dbKey: 'goals_against' },
+      { key: 'goalkeeper_saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', dbKey: 'goalkeeper_saves' },
+      { key: 'possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', dbKey: 'possession' },
+      { key: 'passes_accurate', label: 'PASSES CERTOS', subLabel: 'EFICIÊNCIA DE CONSTRUÇÃO TÁTICA', dbKey: 'passes_accurate' },
+      { key: 'fouls', label: 'FALTAS COMETIDAS', subLabel: 'ÍNDICE DE QUEBRA DE RITMO', dbKey: 'fouls' },
+      { key: 'offsides', label: 'IMPEDIMENTOS', subLabel: 'VULNERABILIDADE À LINHA ALTA', dbKey: 'offsides' },
     ];
 
     const result: any = {};

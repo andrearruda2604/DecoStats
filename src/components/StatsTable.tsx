@@ -27,9 +27,9 @@ export default function StatsTable({ predictiveStats, homeTeamName, awayTeamName
         <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-[#A855F7]">DISTRIBUIÇÃO</div>
         
         {/* Away Headers */}
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MÍN</div>
-        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">MÁX</div>
-        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-on-surface-variant/50">DISTRIBUIÇÃO</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-blue-400/50">MÍN</div>
+        <div className="col-span-1 text-center text-[10px] font-bold tracking-widest text-blue-400/50">MÁX</div>
+        <div className="col-span-2 text-center text-[10px] font-bold tracking-widest text-blue-400/50">DISTRIBUIÇÃO</div>
       </div>
 
       {/* Rows */}
@@ -67,12 +67,12 @@ export default function StatsTable({ predictiveStats, homeTeamName, awayTeamName
 
               {/* Away Team Stats */}
               <div className="col-span-1 text-center">
-                <span className="text-sm font-bold text-on-surface-variant">{stat.awayMin}</span>
+                <span className="text-sm font-bold text-blue-100">{stat.awayMin}</span>
               </div>
               <div className="col-span-1 text-center">
-                <span className="text-sm font-bold text-on-surface-variant">{stat.awayMax}</span>
+                <span className="text-sm font-bold text-blue-100">{stat.awayMax}</span>
               </div>
-              <div className="col-span-2 text-center text-[10px] font-mono tracking-widest text-on-surface-variant/40">
+              <div className="col-span-2 text-center text-[10px] font-mono tracking-widest text-blue-400/80">
                 {stat.awayDist.join(' | ')}
               </div>
             </div>
