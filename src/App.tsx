@@ -131,18 +131,18 @@ export default function App() {
               {/* Scoreboard */}
               <Scoreboard data={matchDetail} />
 
-              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-4">
+              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-4 px-4 md:px-0">
                 <div>
-                  <h3 className="font-headline font-bold text-[11px] tracking-[0.3em] uppercase text-primary/80 flex items-center gap-3">
-                    <span className="w-6 h-[1px] bg-primary" />
+                  <h3 className="font-headline font-bold text-[10px] md:text-[11px] tracking-[0.2em] md:tracking-[0.3em] uppercase text-primary/80 flex items-center gap-3">
+                    <span className="w-4 md:w-6 h-[1px] bg-primary" />
                     Análise Tática
                   </h3>
-                  <p className="text-[12px] text-on-surface-variant/40 uppercase tracking-widest ml-9 mt-1.5 font-bold">
+                  <p className="text-[10px] md:text-[12px] text-on-surface-variant/40 uppercase tracking-widest ml-7 md:ml-9 mt-1 md:mt-1.5 font-bold">
                     Métricas Distributivas Avançadas
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 bg-surface-container/20 p-2 rounded-2xl border border-outline-variant/5">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 bg-surface-container/20 p-2 rounded-2xl border border-outline-variant/5 w-full md:w-auto">
                   
                   {/* Select Jogos */}
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-outline-variant/10">

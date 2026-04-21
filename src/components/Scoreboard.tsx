@@ -43,15 +43,15 @@ export default function Scoreboard({ data }: ScoreboardProps) {
         )}
       </div>
 
-      <div className="p-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+      <div className="p-4 md:p-8">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8 relative z-10">
           {/* Home Team */}
-          <div className="flex items-center gap-5 text-center md:text-left">
-            <div className="w-18 h-18 flex items-center justify-center">
+          <div className="flex items-center gap-3 md:gap-5 text-center md:text-left">
+            <div className="w-12 h-12 md:w-18 md:h-18 flex items-center justify-center">
               <img
                 src={homeTeam.logo_url}
                 alt={homeTeam.name}
-                className="w-16 h-16 object-contain drop-shadow-lg"
+                className="w-10 h-10 md:w-16 md:h-16 object-contain drop-shadow-lg"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '';
                   (e.target as HTMLImageElement).alt = homeTeam.short_name;
@@ -59,10 +59,10 @@ export default function Scoreboard({ data }: ScoreboardProps) {
               />
             </div>
             <div>
-              <h2 className="font-bold text-lg tracking-tight text-on-surface uppercase">
+              <h2 className="font-bold text-sm md:text-lg tracking-tight text-on-surface uppercase">
                 {homeTeam.name}
               </h2>
-              <span className="text-[9px] uppercase font-bold text-on-surface-variant/40 tracking-widest">
+              <span className="text-[8px] md:text-[9px] uppercase font-bold text-on-surface-variant/40 tracking-widest">
                 Mandante
               </span>
             </div>
@@ -70,26 +70,26 @@ export default function Scoreboard({ data }: ScoreboardProps) {
 
           {/* Score */}
           <div className="flex flex-col items-center">
-            <div className="flex items-baseline gap-5 text-6xl font-black">
+            <div className="flex items-baseline gap-3 md:gap-5 text-4xl md:text-6xl font-black">
               <span className="text-on-surface tabular-nums">{fixture.home_score ?? '-'}</span>
-              <span className="text-on-surface-variant/15 font-light text-4xl">:</span>
+              <span className="text-on-surface-variant/15 font-light text-2xl md:text-4xl">:</span>
               <span className="text-on-surface tabular-nums">{fixture.away_score ?? '-'}</span>
             </div>
 
             {/* HT Score */}
             {fixture.ht_home_score !== null && fixture.ht_away_score !== null && (
-              <div className="text-[10px] text-on-surface-variant/30 font-medium mt-1 tracking-wider">
+              <div className="text-[9px] md:text-[10px] text-on-surface-variant/30 font-medium mt-1 tracking-wider">
                 HT: {fixture.ht_home_score} - {fixture.ht_away_score}
               </div>
             )}
 
             {/* Status Badge */}
-            <div className="mt-3 flex items-center gap-2 px-4 py-1.5 rounded-full border border-outline-variant/20 bg-surface-container-highest/30">
+            <div className="mt-3 flex items-center gap-2 px-3 md:px-4 py-1 rounded-full border border-outline-variant/20 bg-surface-container-highest/30">
               {isLive && (
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: statusConfig.color }} />
+                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full animate-pulse" style={{ backgroundColor: statusConfig.color }} />
               )}
               <span
-                className="text-[10px] font-black uppercase tracking-[0.25em]"
+                className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.25em]"
                 style={{ color: statusConfig.color }}
               >
                 {statusConfig.label}
@@ -98,20 +98,20 @@ export default function Scoreboard({ data }: ScoreboardProps) {
           </div>
 
           {/* Away Team */}
-          <div className="flex items-center gap-5 text-center md:text-right flex-row-reverse md:flex-row">
-            <div>
-              <h2 className="font-bold text-lg tracking-tight text-on-surface uppercase">
+          <div className="flex items-center gap-3 md:gap-5 text-center md:text-right flex-row-reverse md:flex-row">
+            <div className="text-right">
+              <h2 className="font-bold text-sm md:text-lg tracking-tight text-on-surface uppercase">
                 {awayTeam.name}
               </h2>
-              <span className="text-[9px] uppercase font-bold text-on-surface-variant/40 tracking-widest">
+              <span className="text-[8px] md:text-[9px] uppercase font-bold text-on-surface-variant/40 tracking-widest">
                 Visitante
               </span>
             </div>
-            <div className="w-18 h-18 flex items-center justify-center">
+            <div className="w-12 h-12 md:w-18 md:h-18 flex items-center justify-center">
               <img
                 src={awayTeam.logo_url}
                 alt={awayTeam.name}
-                className="w-16 h-16 object-contain drop-shadow-lg"
+                className="w-10 h-10 md:w-16 md:h-16 object-contain drop-shadow-lg"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '';
                   (e.target as HTMLImageElement).alt = awayTeam.short_name;
