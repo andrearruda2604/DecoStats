@@ -20,7 +20,7 @@ import { fetchPredictiveData } from './services/api';
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [toggle, setToggle] = useState<ToggleMode>('TOTAL');
+  const [toggle, setToggle] = useState<ToggleMode>('FT');
   const [statsCount, setStatsCount] = useState<number>(20);
   const [seasonOnly, setSeasonOnly] = useState(true);
   const [mandoOnly, setMandoOnly] = useState(true);
@@ -62,7 +62,7 @@ export default function App() {
   }, [matchDetail, statsCount, seasonOnly, mandoOnly]);
 
   const currentPredictive = predictiveBlock
-    ? toggle === 'TOTAL' ? predictiveBlock.FT : toggle === 'HT' ? predictiveBlock.HT : predictiveBlock['2H']
+    ? predictiveBlock[toggle] || []
     : [];
 
   return (
@@ -152,9 +152,9 @@ export default function App() {
                   🎯 100%
                 </button>
 
-                {/* HT / FT / TOTAL */}
+                {/* HT / 2H / FT */}
                 <div className="flex items-center p-0.5 card flex-shrink-0">
-                  {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
+                  {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
                     <button
                       key={mode}
                       onClick={() => setToggle(mode)}
@@ -164,7 +164,7 @@ export default function App() {
                           : 'text-on-surface-variant/30 hover:text-on-surface'
                       }`}
                     >
-                      {mode}
+                      {mode === 'FT' ? 'TOTAL' : mode}
                     </button>
                   ))}
                 </div>

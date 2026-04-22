@@ -110,7 +110,7 @@ export interface MatchCardData {
   round: string;
 }
 
-export type ToggleMode = 'HT' | 'FT' | 'TOTAL';
+export type ToggleMode = 'HT' | '2H' | 'FT';
 
 export interface StatComparison {
   label: string;

@@ -20,7 +20,7 @@ export function useMatchStats(fixtureId: number | null): UseMatchStatsReturn {
   const [data, setData] = useState<MatchDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toggle, setToggle] = useState<ToggleMode>('TOTAL');
+  const [toggle, setToggle] = useState<ToggleMode>('FT');
 
   const loadDetail = useCallback(async () => {
     if (!fixtureId) return;
