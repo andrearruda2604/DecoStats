@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { League } from '../types';
 
 interface LeagueFilterProps {
@@ -40,49 +40,51 @@ export default function LeagueFilter({
   selectedDate,
   onSelectDate,
 }: LeagueFilterProps) {
+  const displayDate = formatDisplayDate(selectedDate);
+  const prevLabel = formatDisplayDate(shiftDate(selectedDate, -1));
+  const nextLabel = formatDisplayDate(shiftDate(selectedDate, 1));
+
   return (
-    <div className="space-y-4 mb-6">
-      {/* Date Navigation */}
-      <div className="flex items-center justify-between bg-surface-container rounded-2xl p-3 border border-outline-variant/20">
+    <div className="space-y-3 mb-5">
+      {/* Date Navigation — Tab style */}
+      <div className="flex items-center justify-between card px-2 py-1.5">
         <button
           onClick={() => onSelectDate(shiftDate(selectedDate, -1))}
-          className="p-2 hover:bg-surface-container-highest/30 rounded-lg transition-colors text-on-surface-variant/60 hover:text-primary"
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-surface-container-highest/30 transition-colors text-on-surface-variant/50 hover:text-on-surface"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
+          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">{prevLabel}</span>
         </button>
 
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold uppercase tracking-widest text-on-surface">
-            {formatDisplayDate(selectedDate)}
+          <span className="text-sm font-black uppercase tracking-widest text-on-surface">
+            {displayDate}
           </span>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => onSelectDate(e.target.value)}
-            className="bg-transparent text-[10px] text-on-surface-variant/40 outline-none cursor-pointer border border-outline-variant/20 rounded px-2 py-1"
+            className="bg-transparent text-[10px] text-on-surface-variant/40 outline-none cursor-pointer border border-outline-variant rounded px-1.5 py-0.5 w-[110px]"
           />
         </div>
 
         <button
           onClick={() => onSelectDate(shiftDate(selectedDate, 1))}
-          className="p-2 hover:bg-surface-container-highest/30 rounded-lg transition-colors text-on-surface-variant/60 hover:text-primary"
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-surface-container-highest/30 transition-colors text-on-surface-variant/50 hover:text-on-surface"
         >
-          <ChevronRight className="w-5 h-5" />
+          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">{nextLabel}</span>
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       {/* League Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        <div className="flex items-center gap-1 mr-1 text-on-surface-variant/40">
-          <Filter className="w-3.5 h-3.5" />
-        </div>
-
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
         <button
           onClick={() => onSelectLeague(null)}
-          className={`flex-shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
+          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${
             selectedLeagueId === null
-              ? 'bg-primary text-on-primary border-primary shadow-lg shadow-primary/20'
-              : 'bg-surface-container text-on-surface-variant/60 border-outline-variant/20 hover:border-primary/40 hover:text-on-surface'
+              ? 'bg-primary text-on-primary border-primary'
+              : 'bg-surface-container text-on-surface-variant/60 border-outline-variant hover:border-primary/40'
           }`}
         >
           Todas
@@ -92,13 +94,13 @@ export default function LeagueFilter({
           <button
             key={league.id}
             onClick={() => onSelectLeague(selectedLeagueId === league.id ? null : league.id)}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
               selectedLeagueId === league.id
-                ? 'bg-primary text-on-primary border-primary shadow-lg shadow-primary/20'
-                : 'bg-surface-container text-on-surface-variant/60 border-outline-variant/20 hover:border-primary/40 hover:text-on-surface'
+                ? 'bg-primary text-on-primary border-primary'
+                : 'bg-surface-container text-on-surface-variant/60 border-outline-variant hover:border-primary/40'
             }`}
           >
-            <img src={league.flag_url} alt="" className="w-4 h-3 object-cover rounded-sm" />
+            <img src={league.flag_url} alt="" className="w-3.5 h-2.5 object-cover rounded-sm" />
             {league.name}
           </button>
         ))}
