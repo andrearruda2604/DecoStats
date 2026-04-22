@@ -15,9 +15,12 @@ interface LayoutProps {
   showBack?: boolean;
 }
 
+import InstallPrompt from './InstallPrompt';
+
 export default function Layout({ children, activeView, onNavigate, showBack = false }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+      <InstallPrompt />
       {/* TopAppBar */}
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 h-12 border-b border-outline-variant/30 bg-black/90 backdrop-blur-xl">
         <div className="flex items-center gap-2">
