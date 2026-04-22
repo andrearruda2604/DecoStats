@@ -223,7 +223,8 @@ export function generatePredictiveData(homeTeamId: number, awayTeamId: number, c
   const result: any = {};
   
   for (const period of periods) {
-     const mult = (period === 'FT' ? 1 : 0.5) * scopeMod;
+     const multP = period === 'FT' ? 1 : period === 'HT' ? 0.45 : 0.55;
+     const mult = multP * scopeMod;
      result[period] = predictiveConf.map((cfg, i) => {
         const hSeed = seedBase + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
         const aSeed = seedBase * 2 + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
@@ -313,8 +314,8 @@ export async function fetchPredictiveData(
     const result: any = {};
 
     for (const period of periods) {
-      // In this PoC, we will simulate the HT / 2H splits by dividing the FT data by 2 since API-Football free mostly gives FT stats
-      const mult = period === 'FT' ? 1 : 0.5;
+      // API-Football free mostly gives FT stats. Simulating organic HT/2H splits (45% vs 55%)
+      const mult = period === 'FT' ? 1 : period === 'HT' ? 0.45 : 0.55;
       
       result[period] = predictiveConf.map(cfg => {
           let hDist = homeData.map((row: any) => Math.round((row[cfg.dbKey] || 0) * mult));
