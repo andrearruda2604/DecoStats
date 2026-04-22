@@ -24,6 +24,7 @@ export default function App() {
   const [statsCount, setStatsCount] = useState<number>(20);
   const [seasonOnly, setSeasonOnly] = useState(true);
   const [mandoOnly, setMandoOnly] = useState(true);
+  const [show100Only, setShow100Only] = useState(false);
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
@@ -139,6 +140,18 @@ export default function App() {
                   Mando
                 </button>
 
+                {/* 100% Filter */}
+                <button
+                  onClick={() => setShow100Only(!show100Only)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${
+                    show100Only
+                      ? 'border-amber-400 bg-amber-400/10 text-amber-400'
+                      : 'border-outline-variant bg-surface-container text-on-surface-variant/50'
+                  }`}
+                >
+                  🎯 100%
+                </button>
+
                 {/* HT / FT / TOTAL */}
                 <div className="flex items-center p-0.5 card flex-shrink-0">
                   {(['HT', 'FT', 'TOTAL'] as ToggleMode[]).map((mode) => (
@@ -169,6 +182,7 @@ export default function App() {
                   homeTeamName={matchDetail.homeTeam.name}
                   awayTeamName={matchDetail.awayTeam.name}
                   toggle={toggle}
+                  show100Only={show100Only}
                 />
               </div>
 

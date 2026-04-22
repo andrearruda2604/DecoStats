@@ -301,7 +301,7 @@ export async function fetchPredictiveData(
       { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', dbKey: 'corners' },
       { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', dbKey: 'yellow_cards' },
       { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', dbKey: 'red_cards' },
-      { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', dbKey: 'goals_for', highlight: 'green' as const },
+      { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', dbKey: 'goals_for' },
       { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', dbKey: 'goals_against' },
       { key: 'goalkeeper_saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', dbKey: 'goalkeeper_saves' },
       { key: 'possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', dbKey: 'possession' },

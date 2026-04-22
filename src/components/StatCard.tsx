@@ -10,6 +10,7 @@ import type { PredictiveStatRow } from '../types';
 interface StatCardProps {
   stat: PredictiveStatRow;
   index: number;
+  show100Only?: boolean;
 }
 
 function computeMode(dist: number[]): { value: number; count: number } {
@@ -35,7 +36,6 @@ function computeSmartOverLines(dist: number[]): number[] {
   const range = max - min;
   
   if (range <= 3) {
-    // Small range (e.g., Red Cards 0-2): use 0.5 increments
     const lines: number[] = [];
     for (let i = Math.floor(min); i <= max; i++) {
       lines.push(i + 0.5);
@@ -43,7 +43,6 @@ function computeSmartOverLines(dist: number[]): number[] {
     return lines.slice(0, 4);
   }
   
-  // Normal range: spread 4 lines across the distribution
   const step = Math.max(1, Math.round(range / 5));
   const lines: number[] = [];
   for (let i = Math.floor(min); lines.length < 4 && i + 0.5 < max; i += step) {
@@ -58,36 +57,67 @@ function computeOverPct(dist: number[], threshold: number): number {
   return Math.round((count / dist.length) * 100);
 }
 
-export default function StatCard({ stat, index }: StatCardProps) {
+function computeUnderPct(dist: number[], threshold: number): number {
+  if (dist.length === 0) return 0;
+  const count = dist.filter(v => v < threshold).length;
+  return Math.round((count / dist.length) * 100);
+}
+
+export default function StatCard({ stat, index, show100Only = false }: StatCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const isGreenHighlight = stat.highlight === 'green';
 
   const homeMode = computeMode(stat.homeDist);
   const awayMode = computeMode(stat.awayDist);
 
-  // Merge both distributions to compute smart lines that work for both teams
   const allValues = [...stat.homeDist, ...stat.awayDist];
   const overLines = computeSmartOverLines(allValues);
 
+  // Build the probability rows with Over + Under
+  const probRows = overLines.map((line) => {
+    const homeOver = computeOverPct(stat.homeDist, line);
+    const awayOver = computeOverPct(stat.awayDist, line);
+    const homeUnder = computeUnderPct(stat.homeDist, line);
+    const awayUnder = computeUnderPct(stat.awayDist, line);
+    return { line, homeOver, awayOver, homeUnder, awayUnder };
+  });
+
+  // If 100% filter is active, check if this card has ANY 100% line
+  const has100 = probRows.some(r =>
+    r.homeOver === 100 || r.awayOver === 100 || r.homeUnder === 100 || r.awayUnder === 100
+  );
+
+  // In 100% mode, hide cards with no 100% lines
+  if (show100Only && !has100) return null;
+
+  // In 100% mode, filter only rows that have at least one 100%
+  const displayRows = show100Only
+    ? probRows.filter(r => r.homeOver === 100 || r.awayOver === 100 || r.homeUnder === 100 || r.awayUnder === 100)
+    : probRows;
+
   return (
-    <div
-      className={`card transition-all duration-300 ${expanded ? 'card-active' : ''} ${isGreenHighlight ? 'bg-emerald-950/20' : ''}`}
-    >
-      {/* Collapsed Header — always visible */}
+    <div className={`card transition-all duration-300 ${expanded ? 'card-active' : ''}`}>
+      {/* Collapsed Header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left"
       >
-        <span className={`text-[11px] font-black uppercase tracking-wider flex-shrink-0 ${isGreenHighlight ? 'text-emerald-400' : 'text-on-surface'}`}>
-          {stat.label}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+          <span className="text-[11px] font-black uppercase tracking-wider text-on-surface truncate">
+            {stat.label}
+          </span>
+          {has100 && (
+            <span className="text-[8px] font-black bg-amber-400/20 text-amber-400 px-1.5 py-0.5 rounded tracking-wider flex-shrink-0">
+              100%
+            </span>
+          )}
+        </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-shrink-0">
           <span className="text-[11px] font-bold text-emerald-400 tabular-nums">
-            {stat.homeMin} — {stat.homeMax}
+            {stat.homeMin}—{stat.homeMax}
           </span>
           <span className="text-[11px] font-bold text-blue-400 tabular-nums">
-            {stat.awayMin} — {stat.awayMax}
+            {stat.awayMin}—{stat.awayMax}
           </span>
           {expanded
             ? <ChevronUp className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -99,12 +129,11 @@ export default function StatCard({ stat, index }: StatCardProps) {
       {/* Expanded Content */}
       {expanded && (
         <div className="card-expand border-t border-outline-variant px-4 pb-4 space-y-4">
-          {/* Sublabel */}
           <p className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 pt-3">
             {stat.subLabel}
           </p>
 
-          {/* Range Section */}
+          {/* Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="text-[8px] uppercase tracking-widest text-emerald-400/60 font-bold">Mandante</span>
@@ -120,7 +149,7 @@ export default function StatCard({ stat, index }: StatCardProps) {
             </div>
           </div>
 
-          {/* Moda Section */}
+          {/* Moda */}
           <div className="border-t border-outline-variant/50 pt-3">
             <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
               Mais Frequente
@@ -137,55 +166,71 @@ export default function StatCard({ stat, index }: StatCardProps) {
             </div>
           </div>
 
-          {/* Over Lines Section */}
-          {overLines.length > 0 && (
+          {/* Probabilidades (Over + Under) */}
+          {displayRows.length > 0 && (
             <div className="border-t border-outline-variant/50 pt-3">
               <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
                 Probabilidades
               </span>
-              <div className="mt-2 space-y-2.5">
-                {overLines.map((line) => {
-                  const homePct = computeOverPct(stat.homeDist, line);
-                  const awayPct = computeOverPct(stat.awayDist, line);
-                  return (
-                    <div key={line} className="flex items-center gap-3">
-                      <span className="text-[10px] text-on-surface-variant/60 font-bold w-16 flex-shrink-0 tabular-nums">
+              <div className="mt-2 space-y-3">
+                {displayRows.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
+                  <div key={line} className="space-y-1.5">
+                    {/* Over line */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] text-on-surface-variant/60 font-bold w-16 flex-shrink-0 tabular-nums">
                         Over {line}
                       </span>
                       <div className="flex-1 space-y-1">
-                        {/* Home bar */}
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-400 rounded-full transition-all duration-500"
-                              style={{ width: `${homePct}%` }}
-                            />
+                            <div className={`h-full rounded-full transition-all duration-500 ${homeOver === 100 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${homeOver}%` }} />
                           </div>
-                          <span className="text-[9px] font-bold text-emerald-400 w-8 text-right tabular-nums">
-                            {homePct}%
+                          <span className={`text-[9px] font-bold w-8 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {homeOver}%
                           </span>
                         </div>
-                        {/* Away bar */}
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-400 rounded-full transition-all duration-500"
-                              style={{ width: `${awayPct}%` }}
-                            />
+                            <div className={`h-full rounded-full transition-all duration-500 ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400'}`} style={{ width: `${awayOver}%` }} />
                           </div>
-                          <span className="text-[9px] font-bold text-blue-400 w-8 text-right tabular-nums">
-                            {awayPct}%
+                          <span className={`text-[9px] font-bold w-8 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
+                            {awayOver}%
                           </span>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+
+                    {/* Under line */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] text-on-surface-variant/40 font-bold w-16 flex-shrink-0 tabular-nums">
+                        Under {line}
+                      </span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-400/50'}`} style={{ width: `${homeUnder}%` }} />
+                          </div>
+                          <span className={`text-[8px] font-bold w-8 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-400/50'}`}>
+                            {homeUnder}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-400/50'}`} style={{ width: `${awayUnder}%` }} />
+                          </div>
+                          <span className={`text-[8px] font-bold w-8 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-400/50'}`}>
+                            {awayUnder}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Distribution Section */}
+          {/* Distribution */}
           <div className="border-t border-outline-variant/50 pt-3">
             <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
               Distribuição
