@@ -70,7 +70,7 @@ const overLines = Array.from({length: 35}, (_, i) => i + 0.5);
 function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
     let picks = [];
     
-    ['FT', 'HT'].forEach(period => {
+    ['FT', 'HT', '2H'].forEach(period => {
         if (!data[period]) return;
         const stats = data[period];
         

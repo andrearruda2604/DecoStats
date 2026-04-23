@@ -172,7 +172,7 @@ export default function Odd20() {
                                    {pick.teamTarget === 'HOME' ? match.home : match.away} • <span className={pick.result === 'RED' ? 'text-rose-400' : pick.result === 'GREEN' ? 'text-emerald-400' : 'text-on-surface'}>{pick.line} {pick.stat}</span>
                                 </span>
                                 <div className="flex gap-2 items-center">
-                                   <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{pick.period === 'HT' ? '1º Tempo' : 'Tempo Regulamentar'}</span>
+                                   <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{pick.period === 'HT' ? '1º Tempo' : pick.period === '2H' ? '2º Tempo' : 'Tempo Regulamentar'}</span>
                                    <span className="text-[10px] text-primary/70 font-semibold">• Odd {pick.odd ? pick.odd.toFixed(2) : '1.15'}</span>
                                 </div>
                              </div>

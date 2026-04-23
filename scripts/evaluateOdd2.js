@@ -121,6 +121,12 @@ async function evaluateTicket() {
             actualValue = Math.floor(actualValue / 2); // Approximation for retro-evaluating HT corners/shots
         } else if (pick.period === 'HT' && pick.stat === 'GOLS MARCADOS') {
             actualValue = isHome ? matchDetail.score.halftime.home : matchDetail.score.halftime.away;
+        } else if (pick.period === '2H' && pick.stat !== 'GOLS MARCADOS') {
+            actualValue = Math.ceil(actualValue / 2); // Approximation for retro-evaluating 2H
+        } else if (pick.period === '2H' && pick.stat === 'GOLS MARCADOS') {
+            const ftG = isHome ? homeGoals : awayGoals;
+            const htG = isHome ? (matchDetail.score.halftime.home || 0) : (matchDetail.score.halftime.away || 0);
+            actualValue = ftG - htG;
         }
 
         const isPickGreen = pick.type === 'UNDER' ? actualValue < line : actualValue > line;
