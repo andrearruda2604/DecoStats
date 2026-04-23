@@ -124,8 +124,15 @@ export default function Odd20() {
                     }`}></div>
                     
                     <div className="flex justify-between items-center mb-3">
-                       <div className="text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded-md">
-                           {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                       <div className="flex items-center gap-2">
+                          <div className="text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded-md">
+                              {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                          </div>
+                          {match.picks.length > 1 && (
+                             <div className="text-[10px] font-black text-primary border border-primary/30 bg-primary/5 px-2 py-1 rounded-md uppercase tracking-wider">
+                                Criar Aposta
+                             </div>
+                          )}
                        </div>
                        {match.matchResult ? (
                            <div className={`text-xs font-black px-2 py-1 rounded-md ${match.matchResult === 'GREEN' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
@@ -139,28 +146,41 @@ export default function Odd20() {
                        )}
                     </div>
 
-                    <div className="font-bold text-on-surface mb-4">
-                       {match.home} <span className="text-on-surface-variant px-1 font-normal">vs</span> {match.away}
+                    <div className="font-bold text-on-surface mb-3 flex items-center justify-between">
+                       <div>{match.home} <span className="text-on-surface-variant px-1 font-normal">vs</span> {match.away}</div>
+                       {/* Calculando odd combinada do Bet Builder do jogo */}
+                       <div className="text-xs text-primary font-bold">
+                          Odd {(match.picks.reduce((acc: number, p: any) => acc * p.odd, 1.0)).toFixed(2)}
+                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
+                       {/* Visual linking line for Bet Builder */}
+                       {match.picks.length > 1 && (
+                          <div className="absolute left-3 top-4 bottom-4 w-px bg-outline-variant/30"></div>
+                       )}
+
                        {match.picks.map((pick: any, j: number) => (
-                          <div key={j} className="flex justify-between items-center bg-background/50 rounded-lg p-3">
+                          <div key={j} className="flex justify-between items-center bg-background/50 rounded-lg p-2.5 relative z-10 pl-5">
+                             {/* Connector Dot */}
+                             {match.picks.length > 1 && (
+                                <div className="absolute left-[-2px] w-1.5 h-1.5 rounded-full bg-outline-variant/50"></div>
+                             )}
+
                              <div className="flex flex-col">
-                                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{pick.stat}</span>
-                                <span className="text-sm font-bold text-on-surface mt-0.5">
-                                   {pick.teamTarget === 'HOME' ? match.home : match.away} • <span className={pick.result === 'RED' ? 'text-rose-400' : pick.result === 'GREEN' ? 'text-emerald-400' : 'text-primary'}>{pick.line}</span>
+                                <span className="text-sm font-bold text-on-surface mb-0.5">
+                                   {pick.teamTarget === 'HOME' ? match.home : match.away} • <span className={pick.result === 'RED' ? 'text-rose-400' : pick.result === 'GREEN' ? 'text-emerald-400' : 'text-on-surface'}>{pick.line} {pick.stat}</span>
                                 </span>
+                                <div className="flex gap-2 items-center">
+                                   <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{pick.period === 'HT' ? '1º Tempo' : 'Tempo Regulamentar'}</span>
+                                   <span className="text-[10px] text-primary/70 font-semibold">• Odd {pick.odd ? pick.odd.toFixed(2) : '1.15'}</span>
+                                </div>
                              </div>
                              <div className="text-right">
                                 <div className="text-[10px] font-black text-amber-500 mb-0.5">{pick.probability}% Histórico</div>
-                                {pick.actualValue !== undefined ? (
+                                {pick.actualValue !== undefined && (
                                    <div className={`text-[10px] font-bold ${pick.result === 'GREEN' ? 'text-emerald-400' : 'text-rose-400'}`}>
                                       Fez: {pick.actualValue}
-                                   </div>
-                                ) : (
-                                   <div className="text-xs font-black text-on-surface-variant bg-surface px-2 py-0.5 rounded inline-block">
-                                      Odd {pick.odd ? pick.odd.toFixed(2) : '1.15'}
                                    </div>
                                 )}
                              </div>

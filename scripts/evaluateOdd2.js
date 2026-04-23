@@ -116,13 +116,20 @@ async function evaluateTicket() {
             actualValue = statObj && statObj.value !== null ? parseInt(statObj.value) : 0;
         }
         
-        const isPickGreen = actualValue > line;
+        // Simplification for HT stats (since api-football /statistics only gives FT totals)
+        if (pick.period === 'HT' && pick.stat !== 'GOLS MARCADOS') {
+            actualValue = Math.floor(actualValue / 2); // Approximation for retro-evaluating HT corners/shots
+        } else if (pick.period === 'HT' && pick.stat === 'GOLS MARCADOS') {
+            actualValue = isHome ? matchDetail.score.halftime.home : matchDetail.score.halftime.away;
+        }
+
+        const isPickGreen = pick.type === 'UNDER' ? actualValue < line : actualValue > line;
         if (!isPickGreen) { matchGreen = false; allGreen = false; }
         
         pick.result = isPickGreen ? 'GREEN' : 'RED';
         pick.actualValue = actualValue;
         
-        console.log(`[${pick.result}] ${pick.stat} ${pick.teamTarget} > ${line} (Fez: ${actualValue})`);
+        console.log(`[${pick.result}] ${pick.period} ${pick.stat} ${pick.teamTarget} ${pick.type === 'UNDER' ? '<' : '>'} ${line} (Fez: ${actualValue})`);
     }
     
     entry.matchResult = matchGreen ? 'GREEN' : 'RED';

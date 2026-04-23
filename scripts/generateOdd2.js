@@ -66,66 +66,91 @@ function generatePredictiveData(homeTeamId, awayTeamId, count = 5) {
 
 const overLines = Array.from({length: 35}, (_, i) => i + 0.5);
 
-// Extrai melhores probabilidades (desce de 100% até 80%)
+// Extrai melhores probabilidades (desce de 100% até 80%) mesclando HT, FT, Over e Under
 function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
-    const picks = [];
-    const ftStats = data['FT'];
+    let picks = [];
     
-    ftStats.forEach(stat => {
-        const hDist = stat.homeDist;
-        const aDist = stat.awayDist;
+    ['FT', 'HT'].forEach(period => {
+        if (!data[period]) return;
+        const stats = data[period];
         
-        for (const line of overLines) {
-            const hOver = hDist.filter(val => val > line).length;
-            const aOver = aDist.filter(val => val > line).length;
+        stats.forEach(stat => {
+            const hDist = stat.homeDist;
+            const aDist = stat.awayDist;
             
-            const hPct = (hOver / 5) * 100;
-            const aPct = (aOver / 5) * 100;
-            
-            if (hPct >= 80) {
-                picks.push({
-                   team: homeTeam.name,
-                   teamTarget: 'HOME',
-                   stat: stat.label,
-                   line: `Over ${line}`,
-                   probability: hPct,
-                   odd: (1 + ((105 - hPct)/200)) // Explicit simulated odd
-                });
+            for (const line of overLines) {
+                const hOver = hDist.filter(val => val > line).length;
+                const aOver = aDist.filter(val => val > line).length;
+                const hUnder = hDist.filter(val => val < line).length;
+                const aUnder = aDist.filter(val => val < line).length;
+                
+                const processPick = (count, teamObj, target, type) => {
+                    const prob = (count / hDist.length) * 100;
+                    if (prob >= 80) {
+                        picks.push({
+                            team: teamObj.name,
+                            teamTarget: target,
+                            stat: stat.label,
+                            period: period,
+                            type: type,
+                            line: type === 'OVER' ? `Mais de ${line}` : `Menos de ${line}`,
+                            lineVal: line,
+                            probability: prob,
+                            odd: (1 + ((105 - prob)/200))
+                        });
+                    }
+                };
+
+                processPick(hOver, homeTeam, 'HOME', 'OVER');
+                processPick(aOver, awayTeam, 'AWAY', 'OVER');
+                processPick(hUnder, homeTeam, 'HOME', 'UNDER');
+                processPick(aUnder, awayTeam, 'AWAY', 'UNDER');
             }
-            if (aPct >= 80) {
-                picks.push({
-                   team: awayTeam.name,
-                   teamTarget: 'AWAY',
-                   stat: stat.label,
-                   line: `Over ${line}`,
-                   probability: aPct,
-                   odd: (1 + ((105 - aPct)/200)) // Explicit simulated odd
-                });
-            }
-        }
+        });
     });
 
     if (picks.length === 0) return null;
     
-    // Sort picks by highest probability, then by most aggressive line (highest line value)
-    picks.sort((a, b) => {
-        if (b.probability !== a.probability) return b.probability - a.probability;
-        const lineA = parseFloat(a.line.split(' ')[1]);
-        const lineB = parseFloat(b.line.split(' ')[1]);
-        return lineB - lineA;
+    // Group the picks uniquely filtering out loose/redundant lines to find the "Tightest" safe line
+    const tightestPicks = {};
+    picks.forEach(p => {
+        const key = `${p.team}_${p.stat}_${p.period}_${p.type}`;
+        if (!tightestPicks[key]) {
+            tightestPicks[key] = p;
+        } else {
+            const existing = tightestPicks[key];
+            if (p.probability > existing.probability) {
+                tightestPicks[key] = p;
+            } else if (p.probability === existing.probability) {
+                if (p.type === 'OVER' && p.lineVal > existing.lineVal) {
+                    tightestPicks[key] = p;
+                }
+                if (p.type === 'UNDER' && p.lineVal < existing.lineVal) {
+                    tightestPicks[key] = p;
+                }
+            }
+        }
     });
 
-    // Group to prevent duplicate stats on the same team
-    const bestPicks = {};
-    for (const p of picks) {
-       const key = `${p.team}_${p.stat}`;
-       if (!bestPicks[key]) {
-           bestPicks[key] = p;
-       }
-    }
+    const bestPicks = Object.values(tightestPicks);
     
-    const finalPicks = Object.values(bestPicks);
-    return finalPicks.slice(0, 2); // Limita a 2 picks por partida
+    // Filtramos para evitar contradições (ex: ter 'Mais de 2.5' e 'Menos de 4.5' da mesma stat pro mesmo time)
+    // O mais provável/arrojado sobrevive. Ordem de relevância por melhor probability.
+    bestPicks.sort((a, b) => b.probability - a.probability);
+
+    const safePicks = [];
+    const usedStatSignatures = new Set();
+    
+    for (const p of bestPicks) {
+        const uniqueStatSig = `${p.team}_${p.stat}_${p.period}`;
+        // Só deixamos passar 1 per stat per period per match
+        if (!usedStatSignatures.has(uniqueStatSig)) {
+            usedStatSignatures.add(uniqueStatSig);
+            safePicks.push(p);
+        }
+    }
+
+    return safePicks.slice(0, 4); // Bet builder limits: Max 4 options natively integrated to simulate the bet builder multi-cross
 }
 
 async function generateOdd2() {
