@@ -214,7 +214,7 @@ export default function App() {
 
       {/* ═══ ODD 2.0 ═══ */}
       {activeView === 'ODD20' && (
-        <Odd20 />
+        <Odd20 selectedDate={selectedDate} />
       )}
     </Layout>
   );

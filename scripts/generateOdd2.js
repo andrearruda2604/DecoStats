@@ -129,12 +129,15 @@ function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
 
 async function generateOdd2() {
   const today = new Date().toISOString().split('T')[0];
+  const startOfDay = `${today} 00:00:00+00`;
+  const endOfDay = `${today} 23:59:59+00`;
   console.log(`Buscando jogos de hoje (${today}) para Odd 2.0...`);
 
   const { data: fixtures, error } = await supabase
     .from('fixtures')
     .select('*, home:teams!home_team_id(*), away:teams!away_team_id(*)')
-    .eq('date', today);
+    .gte('date', startOfDay)
+    .lte('date', endOfDay);
 
   if (error || !fixtures) {
     console.error("Erro buscando fixtures:", error);

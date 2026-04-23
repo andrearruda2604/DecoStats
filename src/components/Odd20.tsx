@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Trophy, CheckCircle2, TrendingUp, AlertCircle, Share2, ClipboardCopy } from 'lucide-react';
+import { Trophy, CheckCircle2, TrendingUp, AlertCircle, Share2, ClipboardCopy, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Odd20() {
@@ -43,22 +43,28 @@ export default function Odd20() {
   return (
     <div className="pt-16 px-4 md:px-6 pb-24 max-w-lg mx-auto">
       
-      {/* Navegação de Datas */}
-      <div className="flex justify-center mb-6">
-        <div className="flex bg-surface-container-highest p-1 rounded-full">
-           <button 
-             onClick={() => setDateOffset(-1)}
-             className={`px-6 py-2 rounded-full text-xs font-bold transition-all ${dateOffset === -1 ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-           >
-             Ontem
-           </button>
-           <button 
-             onClick={() => setDateOffset(0)}
-             className={`px-6 py-2 rounded-full text-xs font-bold transition-all ${dateOffset === 0 ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-           >
-             Hoje
-           </button>
+      {/* Navegação de Datas Infinita */}
+      <div className="flex justify-between items-center mb-6 bg-surface border border-outline-variant/30 rounded-2xl p-2 shadow-sm backdrop-blur-sm">
+        <button 
+          onClick={() => setDateOffset(prev => prev - 1)}
+          className="p-2 text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container rounded-xl"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        
+        <div className="flex items-center gap-2">
+           <Calendar className="w-4 h-4 text-primary" />
+           <span className="text-sm font-bold tracking-wide uppercase">
+              {isToday ? 'Hoje' : targetDateObj.toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'})}
+           </span>
         </div>
+
+        <button 
+          onClick={() => setDateOffset(prev => prev + 1)}
+          className="p-2 text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container rounded-xl"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
       {loading ? (
@@ -68,9 +74,9 @@ export default function Odd20() {
       ) : !ticket || ticket.matches_count === 0 ? (
         <div className="text-center p-8 bg-surface border border-outline-variant rounded-3xl mt-8">
             <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-on-surface mb-2">Sem Bilhete para {isToday ? 'Hoje' : 'Ontem'}</h2>
-            <p className="text-on-surface-variant text-sm">
-              Não encontramos métricas de alta confiança suficientes nos jogos disponíveis.
+            <h2 className="text-xl font-bold text-on-surface mb-2">Sem Bilhete de Valor</h2>
+            <p className="text-on-surface-variant text-sm text-left">
+              Para listar jogos no Bilhete Odd 2.0, nós monitoramos estritamente escanteios, chutes, gols e cartões de dezenas de jogos buscando taxas de reincidência superiores a <strong className="text-primary">80%</strong>. Neste dia específico as ligas não geraram dados contundentes para formarmos um ticket qualificado.
             </p>
         </div>
       ) : (
