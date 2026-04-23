@@ -51,9 +51,14 @@ const STAT_MAPPING = {
 };
 
 async function evaluateTicket() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const targetDate = yesterday.toISOString().split('T')[0];
+  let targetDate;
+  if (process.argv[2]) {
+    targetDate = process.argv[2];
+  } else {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    targetDate = yesterday.toISOString().split('T')[0];
+  }
 
   console.log(`\n=== Avaliando Ticket Retro: ${targetDate} ===`);
 
