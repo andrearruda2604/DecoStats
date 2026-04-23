@@ -78,13 +78,13 @@ export default function LeagueFilter({
       </div>
 
       {/* League Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 overflow-x-auto sm:overflow-x-visible no-scrollbar pb-0.5">
         <button
           onClick={() => onSelectLeague(null)}
-          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${
+          className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border shadow-sm ${
             selectedLeagueId === null
-              ? 'bg-primary text-on-primary border-primary'
-              : 'bg-surface-container text-on-surface-variant/60 border-outline-variant hover:border-primary/40'
+              ? 'bg-primary text-on-primary border-primary ring-2 ring-primary/20'
+              : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/40 hover:bg-surface-container-highest'
           }`}
         >
           Todas
@@ -94,14 +94,20 @@ export default function LeagueFilter({
           <button
             key={league.id}
             onClick={() => onSelectLeague(selectedLeagueId === league.id ? null : league.id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+            className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all border shadow-sm ${
               selectedLeagueId === league.id
-                ? 'bg-primary text-on-primary border-primary'
-                : 'bg-surface-container text-on-surface-variant/60 border-outline-variant hover:border-primary/40'
+                ? 'bg-primary text-on-primary border-primary ring-2 ring-primary/20'
+                : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/40 hover:bg-surface-container-highest'
             }`}
           >
-            <img src={league.flag_url} alt="" className="w-3.5 h-2.5 object-cover rounded-sm" />
-            {league.name}
+            <div className="w-4 h-3 overflow-hidden rounded-[2px] shadow-sm border border-white/10">
+              <img 
+                src={league.flag_url || `https://media.api-sports.io/flags/${league.country_code?.toLowerCase()}.svg`} 
+                alt="" 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+            <span>{league.name}</span>
           </button>
         ))}
       </div>

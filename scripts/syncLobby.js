@@ -50,12 +50,13 @@ async function fetchWithRetry(url) {
   }
 }
 
-async function syncFutureFixtures() {
-  console.log('Starting Future Fixtures Sync (Next 7 days)...');
+async function syncLobbyFixtures() {
+  console.log('Starting Fixtures Sync (Yesterday + Next 7 days)...');
   
   const today = new Date();
   
-  for (let i = 0; i <= 7; i++) {
+  // Start from -1 (yesterday) to update results of finished games
+  for (let i = -1; i <= 7; i++) {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + i);
     const dateStr = targetDate.toISOString().split('T')[0];
@@ -70,40 +71,44 @@ async function syncFutureFixtures() {
     
     if (validMatches.length === 0) continue;
 
-    // Fetch Odds for the day for Bet365 (Bookmaker 8)
+    // Fetch Odds for matches on or after today
     const oddsMap = new Map();
-    try {
-      let page = 1;
-      let totalPages = 1;
-      console.log(`Fetching Bet365 odds for ${dateStr}...`);
-      do {
-        const oddsData = await fetchWithRetry(`https://v3.football.api-sports.io/odds?date=${dateStr}&bookmaker=8&page=${page}`);
-        (oddsData.response || []).forEach(odd => {
-           // Find Bookmaker 8
-           const b365 = odd.bookmakers?.find(b => b.id === 8);
-           if (b365) {
-             oddsMap.set(odd.fixture.id, b365.bets);
-           }
-        });
-        totalPages = oddsData.paging?.total || 1;
-        page++;
-        await new Promise(r => setTimeout(r, 500)); // Sleep between odd pages
-      } while (page <= totalPages);
-      console.log(`Matched odds for ${oddsMap.size} fixtures.`);
-    } catch (err) {
-      console.error(`Error fetching odds for ${dateStr}:`, err.message);
+    if (i >= 0) {
+      try {
+        let page = 1;
+        let totalPages = 1;
+        console.log(`Fetching Bet365 odds for ${dateStr}...`);
+        do {
+          const oddsData = await fetchWithRetry(`https://v3.football.api-sports.io/odds?date=${dateStr}&bookmaker=8&page=${page}`);
+          (oddsData.response || []).forEach(odd => {
+             const b365 = odd.bookmakers?.find(b => b.id === 8);
+             if (b365) {
+               oddsMap.set(odd.fixture.id, b365.bets);
+             }
+          });
+          totalPages = oddsData.paging?.total || 1;
+          page++;
+          await new Promise(r => setTimeout(r, 500));
+        } while (page <= totalPages);
+      } catch (err) {
+        console.error(`Error fetching odds for ${dateStr}:`, err.message);
+      }
     }
     
     // UPSERT Leagues
     const leaguesMap = new Map();
     validMatches.forEach(m => leaguesMap.set(m.league.id, m.league));
     for (const [id, leagueData] of leaguesMap) {
+      let displayName = leagueData.name;
+      if (id === 71) displayName = 'Brasileirão';
+
       await supabase.from('leagues').upsert({
-         id: leagueData.id, // Use API ID as primary key
+         id: leagueData.id,
          api_id: leagueData.id,
-         name: leagueData.name,
+         name: displayName,
          country: leagueData.country,
-         country_code: leagueData.flag?.split('/').pop().substring(0,2).toUpperCase() || 'XX',
+         country_code: leagueData.country === 'England' ? 'GB' : (leagueData.flag?.split('/').pop().substring(0,2).toUpperCase() || 'XX'),
+         flag_url: leagueData.flag,
          logo_url: leagueData.logo,
          season: leagueData.season,
          is_active: true
@@ -119,7 +124,7 @@ async function syncFutureFixtures() {
     
     for (const [id, teamData] of teamsMap) {
       await supabase.from('teams').upsert({
-        id: teamData.id, // Use API ID as primary key
+        id: teamData.id,
         api_id: teamData.id,
         name: teamData.name,
         short_name: teamData.name?.substring(0, 3).toUpperCase(),
@@ -146,7 +151,6 @@ async function syncFutureFixtures() {
        odds: oddsMap.get(m.fixture.id) || null
     }));
     
-    // Batch upsert maximum 100 rows per call
     const batchSize = 100;
     for (let j = 0; j < fixturesToInsert.length; j += batchSize) {
         const batch = fixturesToInsert.slice(j, j + batchSize);
@@ -154,9 +158,9 @@ async function syncFutureFixtures() {
         if (error) console.error("Error upserting fixtures:", error);
     }
     
-    console.log(`Saved ${fixturesToInsert.length} matches securely to Database.`);
-    await new Promise(r => setTimeout(r, 1000)); // Sleep to prevent flood
+    console.log(`Saved ${fixturesToInsert.length} matches for ${dateStr}`);
+    await new Promise(r => setTimeout(r, 1000));
   }
 }
 
-syncFutureFixtures().then(() => console.log('Done.')).catch(console.error);
+syncLobbyFixtures().then(() => console.log('Sync Complete.')).catch(console.error);

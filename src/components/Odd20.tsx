@@ -41,10 +41,10 @@ export default function Odd20() {
   const isToday = dateOffset === 0;
 
   return (
-    <div className="pt-16 px-4 md:px-6 pb-24 max-w-lg mx-auto">
+    <div className="pt-16 px-4 md:px-6 pb-24 max-w-5xl mx-auto">
       
       {/* Navegação de Datas Infinita */}
-      <div className="flex justify-between items-center mb-6 bg-surface border border-outline-variant/30 rounded-2xl p-2 shadow-sm backdrop-blur-sm">
+      <div className="flex justify-between items-center mb-6 bg-surface border border-outline-variant/30 rounded-2xl p-2 shadow-sm backdrop-blur-sm max-w-lg mx-auto">
         <button 
           onClick={() => setDateOffset(prev => prev - 1)}
           className="p-2 text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container rounded-xl"
@@ -72,7 +72,7 @@ export default function Odd20() {
           <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
         </div>
       ) : !ticket || ticket.matches_count === 0 ? (
-        <div className="text-center p-8 bg-surface border border-outline-variant rounded-3xl mt-8">
+        <div className="text-center p-8 bg-surface border border-outline-variant rounded-3xl mt-8 max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
             <h2 className="text-xl font-bold text-on-surface mb-2">Sem Bilhete de Valor</h2>
             <p className="text-on-surface-variant text-sm text-left">
@@ -82,7 +82,7 @@ export default function Odd20() {
       ) : (
         <>
           {/* HEADER TICKET */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg ${
                 ticket.status === 'GREEN' ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-emerald-500/30' :
                 ticket.status === 'RED' ? 'bg-gradient-to-br from-rose-400 to-red-600 shadow-rose-500/30' :
@@ -91,7 +91,7 @@ export default function Odd20() {
                 <Trophy className="w-8 h-8 text-white" />
              </div>
              
-             <h1 className="text-3xl font-black italic tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-2">
+             <h1 className="text-4xl font-black italic tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-2">
                 {ticket.status === 'GREEN' ? 'GREEN NA MÚLTIPLA!' : ticket.status === 'RED' ? 'MÚLTIPLA RED' : 'ODD 2.0 DO DIA'}
              </h1>
              
@@ -107,8 +107,8 @@ export default function Odd20() {
              </div>
           </div>
 
-          {/* TICKETS LIST */}
-          <div className="space-y-4 mb-8">
+          {/* TICKETS LIST - Grid on Desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
              {ticket.ticket_data.entries.map((match: any, i: number) => (
                  <motion.div 
                    initial={{ opacity: 0, y: 20 }}

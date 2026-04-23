@@ -52,91 +52,98 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
         </div>
       )}
 
-      {/* Individual Match Cards */}
-      {filtered.map((match) => {
-        const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
-        const isLive = statusConfig.pulse;
-        const hasScore = match.homeTeam.score !== null;
+      {/* Grid of Match Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+        {filtered.map((match) => {
+          const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
+          const isLive = statusConfig.pulse;
+          const hasScore = match.homeTeam.score !== null;
 
-        return (
-          <div
-            key={match.id}
-            onClick={() => onSelectMatch(match.id)}
-            className="card p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-[0.99] group"
-          >
-            {/* Top row: League + Time */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <img src={match.league.flagUrl} alt="" className="w-4 h-3 object-cover rounded-sm" />
-                <span className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant/40">
-                  {match.league.name}
-                </span>
+          return (
+            <div
+              key={match.id}
+              onClick={() => onSelectMatch(match.id)}
+              className="card p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-[0.99] group flex flex-col justify-between"
+            >
+              <div>
+                {/* Top row: League + Time */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <img src={match.league.flagUrl} alt="" className="w-4 h-3 object-cover rounded-sm" />
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant/40">
+                      {match.league.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {isLive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-wider"
+                      style={{ color: isLive ? statusConfig.color : undefined }}
+                    >
+                      {isLive ? statusConfig.label : match.time}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Teams */}
+                <div className="space-y-1">
+                  {/* Home Team Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <img
+                        src={match.homeTeam.logoUrl}
+                        alt=""
+                        className="w-6 h-6 object-contain flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
+                        {match.homeTeam.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
+                      {hasScore ? match.homeTeam.score : ''}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-outline-variant/10 my-0.5" />
+
+                  {/* Away Team Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <img
+                        src={match.awayTeam.logoUrl}
+                        alt=""
+                        className="w-6 h-6 object-contain flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
+                        {match.awayTeam.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
+                      {hasScore ? match.awayTeam.score : ''}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                {isLive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                <span
-                  className="text-[9px] font-bold uppercase tracking-wider"
-                  style={{ color: isLive ? statusConfig.color : undefined }}
-                >
-                  {isLive ? statusConfig.label : match.time}
-                </span>
-              </div>
+              {/* Status label for non-live */}
+              {!isLive && match.status !== 'NS' && (
+                <div className="mt-3 pt-2 border-t border-outline-variant/10 text-center">
+                  <span
+                    className="text-[8px] font-bold uppercase tracking-widest"
+                    style={{ color: statusConfig.color + 'aa' }}
+                  >
+                    {statusConfig.label}
+                  </span>
+                </div>
+              )}
             </div>
-
-            {/* Home Team Row */}
-            <div className="flex items-center justify-between py-1.5">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <img
-                  src={match.homeTeam.logoUrl}
-                  alt=""
-                  className="w-6 h-6 object-contain flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                  {match.homeTeam.name}
-                </span>
-              </div>
-              <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-                {hasScore ? match.homeTeam.score : ''}
-              </span>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-outline-variant/30 my-1" />
-
-            {/* Away Team Row */}
-            <div className="flex items-center justify-between py-1.5">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <img
-                  src={match.awayTeam.logoUrl}
-                  alt=""
-                  className="w-6 h-6 object-contain flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                  {match.awayTeam.name}
-                </span>
-              </div>
-              <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-                {hasScore ? match.awayTeam.score : ''}
-              </span>
-            </div>
-
-            {/* Status label for non-live */}
-            {!isLive && match.status !== 'NS' && (
-              <div className="mt-2 text-center">
-                <span
-                  className="text-[8px] font-bold uppercase tracking-widest"
-                  style={{ color: statusConfig.color + '99' }}
-                >
-                  {statusConfig.label}
-                </span>
-              </div>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {/* Footer */}
       <div className="text-center py-6">

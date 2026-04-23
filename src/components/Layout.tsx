@@ -60,7 +60,7 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
 
 
       {/* Main Content */}
-      <main className="pt-16 pb-8 px-3 md:px-6 max-w-3xl mx-auto min-h-screen">
+      <main className="pt-16 pb-8 px-3 md:px-6 max-w-6xl mx-auto min-h-screen">
         {children}
       </main>
 
