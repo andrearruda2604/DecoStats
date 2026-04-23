@@ -31,7 +31,7 @@ function getSeededRandom(seed) {
 }
 
 // Emulate UI predictive generator for finding 100% metrics
-function generatePredictiveData(homeTeamId, awayTeamId, count = 5) {
+function generatePredictiveData(homeTeamId, awayTeamId, count = 20) {
   const seedBase = homeTeamId * 1000 + awayTeamId + 1;
   const periods = ['FT', 'HT', '2H'];
   
@@ -176,7 +176,7 @@ async function generateOdd2() {
   
   for (const m of fixtures) {
       if (['PST', 'NS'].includes(m.status) || true) { // Permitir todos para testes
-          const predictive = generatePredictiveData(m.home_team_id, m.away_team_id, 5);
+          const predictive = generatePredictiveData(m.home_team_id, m.away_team_id, 20);
           const rawOdds = m.odds; // JSONB from api-football
           
           const picks = extractTopPicks(m.home, m.away, predictive, rawOdds);
