@@ -25,43 +25,63 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function getSeededRandom(seed) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+async function fetchHistoricalDistributions(homeTeamId, awayTeamId) {
+    const { data: homeHistory } = await supabase
+       .from('teams_history')
+       .select('*')
+       .eq('team_id', homeTeamId)
+       .eq('is_home', true)
+       .order('match_date', { ascending: false })
+       .limit(20);
 
-// Emulate UI predictive generator for finding 100% metrics
-function generatePredictiveData(homeTeamId, awayTeamId, count = 20) {
-  const seedBase = homeTeamId * 1000 + awayTeamId + 1;
-  const periods = ['FT', 'HT', '2H'];
-  
-  const predictiveConf = [
-    { key: 'shots_total', label: 'CHUTES', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
-    { key: 'shots_on_goal', label: 'CHUTES NO GOL', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
-    { key: 'corners', label: 'ESCANTEIOS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
-    { key: 'yellow_cards', label: 'CARTÃO AMARELO', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
-    { key: 'goals_for', label: 'GOLS MARCADOS', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 }
-  ];
+    const { data: awayHistory } = await supabase
+       .from('teams_history')
+       .select('*')
+       .eq('team_id', awayTeamId)
+       .eq('is_home', false)
+       .order('match_date', { ascending: false })
+       .limit(20);
 
-  const result = {};
-  for (const period of periods) {
-     const mult = period === 'FT' ? 1 : period === 'HT' ? 0.45 : 0.55;
-     result[period] = predictiveConf.map((cfg, i) => {
-        const hSeed = seedBase + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
-        const aSeed = seedBase * 2 + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
-        
-        const hMin = Math.round(cfg.baseH * mult + getSeededRandom(hSeed) * 2);
-        const hMax = hMin + Math.round(cfg.rangeH * mult + getSeededRandom(hSeed + 10) * 2);
-        const hDist = Array.from({length: count}, (_, j) => Math.floor(Math.max(hMin, Math.min(hMax, (hMin + hMax)/2 + (getSeededRandom(hSeed + 20 + j) - 0.5) * cfg.rangeH))));
+    const metrics = [
+        { key: 'Total Shots', label: 'CHUTES', flatKey: 'shots_total' },
+        { key: 'Shots on Goal', label: 'CHUTES NO GOL', flatKey: 'shots_on_goal' },
+        { key: 'Corner Kicks', label: 'ESCANTEIOS', flatKey: 'corners' },
+        { key: 'Yellow Cards', label: 'CARTÃO AMARELO', flatKey: 'yellow_cards' },
+        { key: 'goals', label: 'GOLS MARCADOS', flatKey: 'goals_for' }
+    ];
 
-        const aMin = Math.round(cfg.baseA * mult + getSeededRandom(aSeed) * 2);
-        const aMax = aMin + Math.round(cfg.rangeA * mult + getSeededRandom(aSeed + 10) * 2);
-        const aDist = Array.from({length: count}, (_, j) => Math.floor(Math.max(aMin, Math.min(aMax, (aMin + aMax)/2 + (getSeededRandom(aSeed + 20 + j) - 0.5) * cfg.rangeA))));
+    const processPeriod = (periodField) => {
+        return metrics.map(m => {
+            const getVal = (histList) => {
+                if(!histList) return [];
+                return histList.map(h => {
+                    let val = null;
+                    if (m.label === 'GOLS MARCADOS') {
+                        if (periodField === 'stats_ft') val = h.goals_for;
+                        else val = Math.floor((h.goals_for || 0) / (periodField === 'stats_1h' ? 2 : 2));
+                    } else {
+                        const arr = h[periodField];
+                        if (arr && arr.length > 0) {
+                            const found = arr.find(x => x.type === m.key);
+                            if (found && found.value !== null) {
+                                if (typeof found.value === 'string' && found.value.includes('%')) val = parseInt(found.value.replace('%',''), 10);
+                                else val = parseInt(found.value, 10);
+                            }
+                        }
+                        if (val === null && periodField === 'stats_ft') val = h[m.flatKey];
+                    }
+                    return val || 0;
+                });
+            };
+            return { label: m.label, homeDist: getVal(homeHistory), awayDist: getVal(awayHistory) };
+        });
+    };
 
-        return { label: cfg.label, homeDist: hDist, awayDist: aDist };
-     });
-  }
-  return result;
+    return {
+        FT: processPeriod('stats_ft'),
+        HT: processPeriod('stats_1h'),
+        '2H': processPeriod('stats_2h')
+    };
 }
 
 const overLines = Array.from({length: 35}, (_, i) => i + 0.5);
@@ -176,7 +196,7 @@ async function generateOdd2() {
   
   for (const m of fixtures) {
       if (['PST', 'NS'].includes(m.status) || true) { // Permitir todos para testes
-          const predictive = generatePredictiveData(m.home_team_id, m.away_team_id, 20);
+          const predictive = await fetchHistoricalDistributions(m.home_team_id, m.away_team_id);
           const rawOdds = m.odds; // JSONB from api-football
           
           const picks = extractTopPicks(m.home, m.away, predictive, rawOdds);

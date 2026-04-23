@@ -83,7 +83,7 @@ async function runSeederForTeamId(TEAM_ID, LEAGUE_ID) {
         if(existing) continue;
 
         console.log(`  - Fetching stats for fixture ${fixtureId}...`);
-        const statsRes = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${fixtureId}`);
+        const statsRes = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${fixtureId}&half=true`);
         await new Promise(r => setTimeout(r, 1000));
 
         const teamStatsList = statsRes.response || [];
@@ -92,6 +92,7 @@ async function runSeederForTeamId(TEAM_ID, LEAGUE_ID) {
         if (!myStatsRaw) continue;
 
         const extractStat = (typeStr) => {
+            if (!myStatsRaw.statistics) return 0;
             const s = myStatsRaw.statistics.find(s => s.type === typeStr);
             if (s && s.value !== null) {
                 if (typeof s.value === 'string' && s.value.includes('%')) return parseInt(s.value.replace('%', ''), 10);
@@ -105,7 +106,10 @@ async function runSeederForTeamId(TEAM_ID, LEAGUE_ID) {
             goals_for: isHome ? fixtureData.goals.home : fixtureData.goals.away, goals_against: isHome ? fixtureData.goals.away : fixtureData.goals.home,
             shots_total: extractStat('Total Shots'), shots_on_goal: extractStat('Shots on Goal'), corners: extractStat('Corner Kicks'), yellow_cards: extractStat('Yellow Cards'),
             red_cards: extractStat('Red Cards'), possession: extractStat('Ball Possession'), fouls: extractStat('Fouls'), offsides: extractStat('Offsides'),
-            goalkeeper_saves: extractStat('Goalkeeper Saves'), passes_accurate: extractStat('Passes accurate')
+            goalkeeper_saves: extractStat('Goalkeeper Saves'), passes_accurate: extractStat('Passes accurate'),
+            stats_ft: myStatsRaw.statistics || [],
+            stats_1h: myStatsRaw.statistics_1h || [],
+            stats_2h: myStatsRaw.statistics_2h || []
         };
 
         await supabase.from('teams_history').insert([record]);

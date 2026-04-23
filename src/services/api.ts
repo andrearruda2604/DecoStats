@@ -193,90 +193,68 @@ export async function fetchLeagues() {
   return data || [];
 }
 
-// ─── Predictive Mocking ─────────────────────────────────────────────
+// ─── Real Historical Data ───────────────────────────────────────────
 
-function getSeededRandom(seed: number) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
+const PREDICTIVE_CONF = [
+  { apiType: 'Total Shots', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', flatKey: 'shots_total' },
+  { apiType: 'Shots on Goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', flatKey: 'shots_on_goal' },
+  { apiType: 'Ball Possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', flatKey: 'possession' },
+  { apiType: 'Passes accurate', label: 'PASSES CERTOS', subLabel: 'EFICIÊNCIA DE CONSTRUÇÃO TÁTICA', flatKey: 'passes_accurate' },
+  { apiType: 'Corner Kicks', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', flatKey: 'corners' },
+  { apiType: 'Fouls', label: 'FALTAS COMETIDAS', subLabel: 'ÍNDICE DE QUEBRA DE RITMO', flatKey: 'fouls' },
+  { apiType: 'Offsides', label: 'IMPEDIMENTOS', subLabel: 'VULNERABILIDADE À LINHA ALTA', flatKey: 'offsides' },
+  { apiType: 'Goalkeeper Saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', flatKey: 'goalkeeper_saves' },
+  { apiType: 'Yellow Cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', flatKey: 'yellow_cards' },
+  { apiType: 'Red Cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', flatKey: 'red_cards' },
+  { apiType: 'goals', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', flatKey: 'goals_for', highlight: 'green' as const },
+  { apiType: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', flatKey: 'goals_against' },
+];
+
+function extractStatFromJsonb(jsonbArr: any[], apiType: string): number {
+  if (!jsonbArr || jsonbArr.length === 0) return 0;
+  const found = jsonbArr.find((s: any) => s.type === apiType);
+  if (!found || found.value === null || found.value === undefined) return 0;
+  if (typeof found.value === 'string' && found.value.includes('%')) return parseInt(found.value.replace('%', ''), 10);
+  return parseInt(found.value, 10) || 0;
 }
 
-export function generatePredictiveData(homeTeamId: number, awayTeamId: number, count: number = 5, scope: string = 'season') {
-  const scopeMod = scope === 'all' ? 1.2 : 1.0;
-  const seedBase = homeTeamId * 1000 + awayTeamId + 1;
+function generatePredictiveData(homeTeamId: number, awayTeamId: number, count: number = 5, _scope: string = 'all') {
+  // Minimal fallback for when DB has no data - generates zeros
   const periods = ['FT', 'HT', '2H'] as const;
-  
-  const predictiveConf = [
-    { key: 'shots_total', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
-    { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
-    { key: 'possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', baseH: 52, rangeH: 15, baseA: 48, rangeA: 15 },
-    { key: 'passes_accurate', label: 'PASSES CERTOS', subLabel: 'EFICIÊNCIA DE CONSTRUÇÃO TÁTICA', baseH: 400, rangeH: 100, baseA: 350, rangeA: 100 },
-    { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
-    { key: 'fouls', label: 'FALTAS COMETIDAS', subLabel: 'ÍNDICE DE QUEBRA DE RITMO', baseH: 10, rangeH: 4, baseA: 12, rangeA: 4 },
-    { key: 'offsides', label: 'IMPEDIMENTOS', subLabel: 'VULNERABILIDADE À LINHA ALTA', baseH: 2, rangeH: 2, baseA: 1, rangeA: 2 },
-    { key: 'goalkeeper_saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', baseH: 2, rangeH: 3, baseA: 3, rangeA: 3 },
-    { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
-    { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', baseH: 0, rangeH: 1, baseA: 0, rangeA: 1 },
-    { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2, highlight: 'green' as const },
-    { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
-  ];
-
   const result: any = {};
-  
   for (const period of periods) {
-     const multP = period === 'FT' ? 1 : period === 'HT' ? 0.45 : 0.55;
-     const mult = multP * scopeMod;
-     result[period] = predictiveConf.map((cfg, i) => {
-        const hSeed = seedBase + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
-        const aSeed = seedBase * 2 + i * 10 + (period === 'FT' ? 1 : period === 'HT' ? 2 : 3);
-        
-        const hMin = Math.round(cfg.baseH * mult + getSeededRandom(hSeed) * 2);
-        const hMax = hMin + Math.round(cfg.rangeH * mult + getSeededRandom(hSeed + 10) * 2);
-        const hDist = Array.from({length: count}, (_, j) => Math.floor(Math.max(hMin, Math.min(hMax, (hMin + hMax)/2 + (getSeededRandom(hSeed + 20 + j) - 0.5) * cfg.rangeH))));
-
-        const aMin = Math.round(cfg.baseA * mult + getSeededRandom(aSeed) * 2);
-        const aMax = aMin + Math.round(cfg.rangeA * mult + getSeededRandom(aSeed + 10) * 2);
-        const aDist = Array.from({length: count}, (_, j) => Math.floor(Math.max(aMin, Math.min(aMax, (aMin + aMax)/2 + (getSeededRandom(aSeed + 20 + j) - 0.5) * cfg.rangeA))));
-
-        return {
-          label: cfg.label,
-          subLabel: cfg.subLabel,
-          homeMin: hMin,
-          homeMax: hMax,
-          homeDist: hDist,
-          awayMin: aMin,
-          awayMax: aMax,
-          awayDist: aDist,
-          highlight: cfg.highlight || 'none'
-        }
-     });
+    result[period] = PREDICTIVE_CONF.map(cfg => ({
+      label: cfg.label,
+      subLabel: cfg.subLabel,
+      homeMin: 0, homeMax: 0, homeDist: Array(count).fill(0),
+      awayMin: 0, awayMax: 0, awayDist: Array(count).fill(0),
+      highlight: (cfg as any).highlight || 'none'
+    }));
   }
   return result;
 }
 
 export async function fetchPredictiveData(
-  homeTeamId: number, 
-  awayTeamId: number, 
-  count: number = 5, 
+  homeTeamId: number,
+  awayTeamId: number,
+  count: number = 20,
   options: { mandoOnly?: boolean, seasonOnly?: boolean } = {}
 ) {
   if (!isSupabaseConfigured) {
-    // Para o mock, mantemos a compatibilidade simples
-    return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
+    return generatePredictiveData(homeTeamId, awayTeamId, count);
   }
 
   try {
     let homeQuery = supabase.from('teams_history').select('*').eq('team_id', homeTeamId);
     let awayQuery = supabase.from('teams_history').select('*').eq('team_id', awayTeamId);
 
-    const CURRENT_SEASON = 2025; // 2025/26 season
+    const CURRENT_SEASON = 2025;
 
-    // Filtro de Mando (Casa para Mandante / Fora para Visitante)
     if (options.mandoOnly) {
       homeQuery = homeQuery.eq('is_home', true);
       awayQuery = awayQuery.eq('is_home', false);
     }
 
-    // Filtro de Temporada
     if (options.seasonOnly) {
       homeQuery = homeQuery.eq('season', CURRENT_SEASON);
       awayQuery = awayQuery.eq('season', CURRENT_SEASON);
@@ -286,41 +264,42 @@ export async function fetchPredictiveData(
       homeQuery.order('match_date', { ascending: false }).limit(count),
       awayQuery.order('match_date', { ascending: false }).limit(count)
     ]);
-    
+
     const homeData = homeRes.data || [];
     const awayData = awayRes.data || [];
 
-    // Fallback to mock if we don't have enough data (e.g. at least 3 matches)
     if (homeData.length < 3 && awayData.length < 3) {
-      return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
+      return generatePredictiveData(homeTeamId, awayTeamId, count);
     }
 
-    const periods = ['FT', 'HT', '2H'] as const;
-    const predictiveConf = [
-      { key: 'shots_total', label: 'CHUTES', subLabel: 'PRECISÃO TOTAL DE CHUTES', dbKey: 'shots_total' },
-      { key: 'shots_on_goal', label: 'CHUTES NO GOL', subLabel: 'EFICIÊNCIA DE CONVERSÃO NO ALVO', dbKey: 'shots_on_goal' },
-      { key: 'corners', label: 'ESCANTEIOS', subLabel: 'FREQUÊNCIA DE BOLAS PARADAS', dbKey: 'corners' },
-      { key: 'yellow_cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', dbKey: 'yellow_cards' },
-      { key: 'red_cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', dbKey: 'red_cards' },
-      { key: 'goals_for', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', dbKey: 'goals_for' },
-      { key: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', dbKey: 'goals_against' },
-      { key: 'goalkeeper_saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', dbKey: 'goalkeeper_saves' },
-      { key: 'possession', label: 'POSSE DE BOLA (%)', subLabel: 'CONTROLE DE RITMO E ESPAÇO', dbKey: 'possession' },
-      { key: 'passes_accurate', label: 'PASSES CERTOS', subLabel: 'EFICIÊNCIA DE CONSTRUÇÃO TÁTICA', dbKey: 'passes_accurate' },
-      { key: 'fouls', label: 'FALTAS COMETIDAS', subLabel: 'ÍNDICE DE QUEBRA DE RITMO', dbKey: 'fouls' },
-      { key: 'offsides', label: 'IMPEDIMENTOS', subLabel: 'VULNERABILIDADE À LINHA ALTA', dbKey: 'offsides' },
-    ];
+    const periodMap: Record<string, string> = {
+      FT: 'stats_ft',
+      HT: 'stats_1h',
+      '2H': 'stats_2h'
+    };
 
     const result: any = {};
 
-    for (const period of periods) {
-      // API-Football free mostly gives FT stats. Simulating organic HT/2H splits (45% vs 55%)
-      const mult = period === 'FT' ? 1 : period === 'HT' ? 0.45 : 0.55;
-      
-      result[period] = predictiveConf.map(cfg => {
-          let hDist = homeData.map((row: any) => Math.round((row[cfg.dbKey] || 0) * mult));
-          let aDist = awayData.map((row: any) => Math.round((row[cfg.dbKey] || 0) * mult));
-          
+    for (const period of ['FT', 'HT', '2H'] as const) {
+      const jsonbCol = periodMap[period];
+
+      result[period] = PREDICTIVE_CONF.map(cfg => {
+          const extractVal = (row: any): number => {
+            if (cfg.apiType === 'goals') return row.goals_for || 0;
+            if (cfg.apiType === 'goals_against') return row.goals_against || 0;
+
+            const jsonbArr = row[jsonbCol];
+            if (jsonbArr && jsonbArr.length > 0) {
+              return extractStatFromJsonb(jsonbArr, cfg.apiType);
+            }
+            // Fallback to flat columns for FT if JSONB not populated yet
+            if (period === 'FT') return row[cfg.flatKey] || 0;
+            return 0;
+          };
+
+          let hDist = homeData.map((row: any) => extractVal(row));
+          let aDist = awayData.map((row: any) => extractVal(row));
+
           if (hDist.length === 0) hDist = [0];
           if (aDist.length === 0) aDist = [0];
 
@@ -333,7 +312,7 @@ export async function fetchPredictiveData(
             awayMin: Math.min(...aDist),
             awayMax: Math.max(...aDist),
             awayDist: aDist,
-            highlight: cfg.highlight || 'none'
+            highlight: (cfg as any).highlight || 'none'
           };
       });
     }
@@ -342,7 +321,8 @@ export async function fetchPredictiveData(
 
   } catch (err) {
     console.error("Error fetching predictive data:", err);
-    return generatePredictiveData(homeTeamId, awayTeamId, count, options.mandoOnly ? 'home_away' : 'all');
+    return generatePredictiveData(homeTeamId, awayTeamId, count);
   }
 }
+
 
