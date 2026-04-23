@@ -21,7 +21,14 @@ jobs:
       - name: Instalar Dependências
         run: npm install
 
-      - name: Gerar Bilhete Odd 2.0
+      - name: Avaliar Ticket de Ontem (Retro PWA)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_FOOTBALL_KEY: ${{ secrets.VITE_API_FOOTBALL_KEY }}
+        run: node scripts/evaluateOdd2.js
+
+      - name: Gerar Bilhete Odd 2.0 (Hoje)
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

@@ -67,64 +67,64 @@ function generatePredictiveData(homeTeamId, awayTeamId, count = 5) {
 
 const overLines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5];
 
-// Extrai probabilidades
-function extract100PercentPicks(homeTeam, awayTeam, data, bet365Odds) {
+// Extrai melhores probabilidades (desce de 100% até 80%)
+function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
     const picks = [];
-    
-    // Simplification for Odd 2.0: Let's focus on FT only for safety!
     const ftStats = data['FT'];
     
     ftStats.forEach(stat => {
         const hDist = stat.homeDist;
         const aDist = stat.awayDist;
         
-        // Let's find Over thresholds that happened 100% of the time (5/5 times)
         for (const line of overLines) {
             const hOver = hDist.filter(val => val > line).length;
             const aOver = aDist.filter(val => val > line).length;
             
-            const hPct = hOver / 5;
-            const aPct = aOver / 5;
+            const hPct = (hOver / 5) * 100;
+            const aPct = (aOver / 5) * 100;
             
-            // If Home team hits this 100% of the time
-            if (hPct === 1) {
+            if (hPct >= 80) {
                 picks.push({
                    team: homeTeam.name,
                    teamTarget: 'HOME',
                    stat: stat.label,
                    line: `Over ${line}`,
-                   probability: 100
+                   probability: hPct
                 });
             }
-            // If Away team hits this 100% of the time
-            if (aPct === 1) {
+            if (aPct >= 80) {
                 picks.push({
                    team: awayTeam.name,
                    teamTarget: 'AWAY',
                    stat: stat.label,
                    line: `Over ${line}`,
-                   probability: 100
+                   probability: aPct
                 });
             }
         }
     });
 
-    // Retorna apenas a "melhor pick" mais agressiva (maior line com 100%) para não floodar
     if (picks.length === 0) return null;
     
-    // Agrupa por time e estátista e pega a maior linha
+    // Sort picks by highest probability, then by most aggressive line (highest line value)
+    picks.sort((a, b) => {
+        if (b.probability !== a.probability) return b.probability - a.probability;
+        const lineA = parseFloat(a.line.split(' ')[1]);
+        const lineB = parseFloat(b.line.split(' ')[1]);
+        return lineB - lineA;
+    });
+
+    // Group to prevent duplicate stats on the same team
     const bestPicks = {};
-    picks.forEach(p => {
+    for (const p of picks) {
        const key = `${p.team}_${p.stat}`;
-       const lineVal = parseFloat(p.line.split(' ')[1]);
-       if (!bestPicks[key] || lineVal > parseFloat(bestPicks[key].line.split(' ')[1])) {
+       if (!bestPicks[key]) {
            bestPicks[key] = p;
        }
-    });
+    }
     
     const finalPicks = Object.values(bestPicks);
-    // Limita a 2 estatísticas por jogo na múltipla para ser conservador
-    return finalPicks.slice(0, 2);
+    return finalPicks.slice(0, 2); // Limita a 2 picks por partida
 }
 
 async function generateOdd2() {
@@ -150,7 +150,7 @@ async function generateOdd2() {
           const predictive = generatePredictiveData(m.home_team_id, m.away_team_id, 5);
           const rawOdds = m.odds; // JSONB from api-football
           
-          const picks = extract100PercentPicks(m.home, m.away, predictive, rawOdds);
+          const picks = extractTopPicks(m.home, m.away, predictive, rawOdds);
           
           if (picks && picks.length > 0) {
               ticketEntries.push({
@@ -164,15 +164,22 @@ async function generateOdd2() {
       }
   }
 
-  // Monta Bilhete
-  // Simula Odd. Como API free não nos dá as odds de jogadores/stats específicos, 
-  // simulamos uma odd média conservadora de 1.15 por entrada 100%.
   let simulatedOdd = 1.0;
   let matchesCount = ticketEntries.length;
-  ticketEntries.forEach(t => t.picks.forEach(() => { simulatedOdd *= 1.15; }));
+  let totalProbability = 0;
+  let totalPicks = 0;
+  
+  ticketEntries.forEach(t => t.picks.forEach(p => { 
+      simulatedOdd *= (1 + ((105 - p.probability)/200)); // Simula odd (ex: 100% -> 1.02, 80% -> 1.12)
+      totalProbability += p.probability;
+      totalPicks++;
+  }));
+
+  const avgConfidence = totalPicks > 0 ? (totalProbability / totalPicks).toFixed(1) : 0;
 
   const finalTicket = {
       entries: ticketEntries,
+      confidence_score: avgConfidence,
       generated_at: new Date().toISOString()
   };
 
@@ -182,7 +189,8 @@ async function generateOdd2() {
         date: today,
         matches_count: matchesCount,
         total_odd: simulatedOdd.toFixed(2),
-        ticket_data: finalTicket
+        ticket_data: finalTicket,
+        status: 'PENDING'
     }, {onConflict: 'date'});
 
   if (upsertError) {
