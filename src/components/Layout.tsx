@@ -6,7 +6,7 @@
 import { ArrowLeft, LayoutGrid, BarChart2, Activity } from 'lucide-react';
 import { ReactNode } from 'react';
 
-export type ViewType = 'LOBBY' | 'DATA';
+export type ViewType = 'LOBBY' | 'DATA' | 'ODD20';
 
 interface LayoutProps {
   children: ReactNode;
@@ -19,32 +19,45 @@ import InstallPrompt from './InstallPrompt';
 
 export default function Layout({ children, activeView, onNavigate, showBack = false }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary pb-16">
       <InstallPrompt />
       {/* TopAppBar */}
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 h-12 border-b border-outline-variant/30 bg-black/90 backdrop-blur-xl">
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 h-14 border-b border-outline-variant/30 bg-black/90 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           {showBack && (
             <button
               onClick={() => onNavigate('LOBBY')}
               className="text-on-surface-variant/60 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-surface-container-highest/20"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-4 h-4 text-primary" />
-            <h1 className="font-headline font-black tracking-tighter uppercase text-on-surface text-sm">
-              Deco<span className="text-primary">Stats</span>
-            </h1>
+          <div className="flex items-center gap-1 cursor-pointer" onClick={() => onNavigate('LOBBY')}>
+             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center font-black text-on-primary text-xs shadow-lg shadow-primary/20">D</div>
+             <h1 className="text-xl font-black italic tracking-tighter hidden sm:block ml-1">
+                DECOSTATS
+             </h1>
           </div>
         </div>
-
-        <div className="flex items-center gap-1">
-          <NavPill label="Jogos" active={activeView === 'LOBBY'} onClick={() => onNavigate('LOBBY')} />
-          <NavPill label="Análise" active={activeView === 'DATA'} onClick={() => onNavigate('DATA')} />
-        </div>
+        
+        {!showBack && (
+           <div className="flex bg-surface-container-highest/50 rounded-full p-1 border border-outline-variant/20">
+             <button 
+                onClick={() => onNavigate('LOBBY')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${activeView === 'LOBBY' ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+             >
+                Jogos
+             </button>
+             <button 
+                onClick={() => onNavigate('ODD20')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1 ${activeView === 'ODD20' ? 'bg-primary text-on-primary shadow shadow-primary/20' : 'text-primary/70 hover:text-primary'}`}
+             >
+                Odd 2.0
+             </button>
+           </div>
+        )}
       </header>
+
 
       {/* Main Content */}
       <main className="pt-16 pb-8 px-3 md:px-6 max-w-3xl mx-auto min-h-screen">

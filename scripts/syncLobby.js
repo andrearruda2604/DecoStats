@@ -69,6 +69,30 @@ async function syncFutureFixtures() {
     console.log(`Found ${validMatches.length} matches across tracked leagues on ${dateStr}`);
     
     if (validMatches.length === 0) continue;
+
+    // Fetch Odds for the day for Bet365 (Bookmaker 8)
+    const oddsMap = new Map();
+    try {
+      let page = 1;
+      let totalPages = 1;
+      console.log(`Fetching Bet365 odds for ${dateStr}...`);
+      do {
+        const oddsData = await fetchWithRetry(`https://v3.football.api-sports.io/odds?date=${dateStr}&bookmaker=8&page=${page}`);
+        (oddsData.response || []).forEach(odd => {
+           // Find Bookmaker 8
+           const b365 = odd.bookmakers?.find(b => b.id === 8);
+           if (b365) {
+             oddsMap.set(odd.fixture.id, b365.bets);
+           }
+        });
+        totalPages = oddsData.paging?.total || 1;
+        page++;
+        await new Promise(r => setTimeout(r, 500)); // Sleep between odd pages
+      } while (page <= totalPages);
+      console.log(`Matched odds for ${oddsMap.size} fixtures.`);
+    } catch (err) {
+      console.error(`Error fetching odds for ${dateStr}:`, err.message);
+    }
     
     // UPSERT Leagues
     const leaguesMap = new Map();
@@ -118,7 +142,8 @@ async function syncFutureFixtures() {
        ht_away_score: m.score.halftime.away,
        venue: m.fixture.venue.name,
        round: m.league.round,
-       season: m.league.season
+       season: m.league.season,
+       odds: oddsMap.get(m.fixture.id) || null
     }));
     
     // Batch upsert maximum 100 rows per call

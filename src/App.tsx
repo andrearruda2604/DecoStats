@@ -8,6 +8,7 @@ import Scoreboard from './components/Scoreboard';
 import StatsTable from './components/StatsTable';
 import MatchEvents from './components/MatchEvents';
 import Lobby from './components/Lobby';
+import Odd20 from './components/Odd20';
 import LeagueFilter from './components/LeagueFilter';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
@@ -209,6 +210,11 @@ export default function App() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ═══ ODD 2.0 ═══ */}
+      {activeView === 'ODD20' && (
+        <Odd20 />
       )}
     </Layout>
   );
