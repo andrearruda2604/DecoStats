@@ -160,7 +160,7 @@ export default function Odd20() {
                                    </div>
                                 ) : (
                                    <div className="text-xs font-black text-on-surface-variant bg-surface px-2 py-0.5 rounded inline-block">
-                                      Odd 1.15
+                                      Odd {pick.odd ? pick.odd.toFixed(2) : '1.15'}
                                    </div>
                                 )}
                              </div>

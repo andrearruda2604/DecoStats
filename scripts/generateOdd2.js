@@ -39,7 +39,6 @@ function generatePredictiveData(homeTeamId, awayTeamId, count = 5) {
     { key: 'shots_total', label: 'CHUTES', baseH: 10, rangeH: 6, baseA: 8, rangeA: 5 },
     { key: 'shots_on_goal', label: 'CHUTES NO GOL', baseH: 4, rangeH: 3, baseA: 3, rangeA: 2 },
     { key: 'corners', label: 'ESCANTEIOS', baseH: 4, rangeH: 5, baseA: 3, rangeA: 4 },
-    { key: 'fouls', label: 'FALTAS COMETIDAS', baseH: 10, rangeH: 4, baseA: 12, rangeA: 4 },
     { key: 'yellow_cards', label: 'CARTÃO AMARELO', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 },
     { key: 'goals_for', label: 'GOLS MARCADOS', baseH: 1, rangeH: 2, baseA: 1, rangeA: 2 }
   ];
@@ -65,7 +64,7 @@ function generatePredictiveData(homeTeamId, awayTeamId, count = 5) {
   return result;
 }
 
-const overLines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5];
+const overLines = Array.from({length: 35}, (_, i) => i + 0.5);
 
 // Extrai melhores probabilidades (desce de 100% até 80%)
 function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
@@ -89,7 +88,8 @@ function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
                    teamTarget: 'HOME',
                    stat: stat.label,
                    line: `Over ${line}`,
-                   probability: hPct
+                   probability: hPct,
+                   odd: (1 + ((105 - hPct)/200)) // Explicit simulated odd
                 });
             }
             if (aPct >= 80) {
@@ -98,7 +98,8 @@ function extractTopPicks(homeTeam, awayTeam, data, bet365Odds) {
                    teamTarget: 'AWAY',
                    stat: stat.label,
                    line: `Over ${line}`,
-                   probability: aPct
+                   probability: aPct,
+                   odd: (1 + ((105 - aPct)/200)) // Explicit simulated odd
                 });
             }
         }
@@ -173,7 +174,7 @@ async function generateOdd2() {
   let totalPicks = 0;
   
   ticketEntries.forEach(t => t.picks.forEach(p => { 
-      simulatedOdd *= (1 + ((105 - p.probability)/200)); // Simula odd (ex: 100% -> 1.02, 80% -> 1.12)
+      simulatedOdd *= p.odd;
       totalProbability += p.probability;
       totalPicks++;
   }));
