@@ -10,6 +10,8 @@ import { motion } from 'motion/react';
 
 export default function Odd20() {
   const [dateOffset, setDateOffset] = useState(0);
+  const [ticket, setTicket] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadTicket() {
@@ -178,7 +180,7 @@ export default function Odd20() {
                    <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Múltipla Sugerida</p>
                    <div className="flex items-center gap-2">
                       <TrendingUp className={`w-6 h-6 ${ticket.status === 'GREEN' ? 'text-emerald-400' : ticket.status === 'RED' ? 'text-rose-400' : 'text-primary'}`} />
-                      <span className="text-4xl font-black text-white">ODD {total_odd}</span>
+                      <span className="text-4xl font-black text-white">ODD {ticket.total_odd}</span>
                    </div>
                 </div>
              </div>
