@@ -53,7 +53,17 @@ async function fetchWithRetry(url) {
 async function syncLobbyFixtures() {
   console.log('Starting Fixtures Sync (Yesterday + Next 7 days)...');
   
+  // Configurações e Datas
+  const argDate = process.argv[2]; // Formato YYYY-MM-DD
   const today = new Date();
+  const targetDate = argDate ? new Date(argDate + 'T12:00:00Z') : today;
+
+  const dateStr = targetDate.toISOString().split('T')[0];
+  const yesterday = new Date(targetDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  console.log(`Iniciando Sincronização para data base: ${dateStr}...`);
   
   // Start from -1 (yesterday) to update results of finished games
   for (let i = -1; i <= 7; i++) {
