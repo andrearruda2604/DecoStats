@@ -34,7 +34,7 @@ export default function Odd20() {
        setTicket(data);
        // Carregar placares iniciais dos jogos do bilhete
        const ids = data.ticket_data.entries.map((e: any) => e.fixture_id);
-       const { data: fixtures } = await supabase.from('fixtures').select('api_id, goals_home, goals_away, status').in('api_id', ids);
+       const { data: fixtures } = await supabase.from('fixtures').select('api_id, home_score, away_score, status').in('api_id', ids);
        const scoreMap: Record<number, any> = {};
        fixtures?.forEach(f => scoreMap[f.api_id] = f);
        setLiveScores(scoreMap);
@@ -169,7 +169,7 @@ export default function Odd20() {
                                  <div className="flex flex-col items-center gap-2 flex-1"><img src={match.homeLogo} className="w-8 h-8 object-contain" /><span className="text-[10px] font-black text-white text-center line-clamp-1">{match.home}</span></div>
                                  <div className="flex flex-col items-center">
                                     {(isLive || isFinished) ? (
-                                       <span className="text-xl font-black text-white italic tabular-nums tracking-tighter">{live.goals_home} - {live.goals_away}</span>
+                                       <span className="text-xl font-black text-white italic tabular-nums tracking-tighter">{live.home_score} - {live.away_score}</span>
                                     ) : <span className="text-[9px] font-black text-on-surface-variant/20 italic">VS</span>}
                                     {isLive && live?.status && <span className="text-[8px] font-black text-rose-500 mt-1">{live.status}</span>}
                                  </div>
@@ -181,7 +181,7 @@ export default function Odd20() {
                                     // Mapear estatística do banco
                                     const statTypeMap: Record<string, string> = { 'ESCANTEIOS': 'Corner Kicks', 'CARTÃO AMARELO': 'Yellow Cards', 'CHUTES': 'Total Shots' };
                                     const apiStatType = statTypeMap[pick.stat] || pick.stat;
-                                    const currentVal = liveStats[`${match.fixture_id}-${teamId}-${apiStatType}`] ?? (pick.stat === 'GOLS MARCADOS' ? (pick.teamTarget === 'HOME' ? live?.goals_home : live?.goals_away) : undefined);
+                                    const currentVal = liveStats[`${match.fixture_id}-${teamId}-${apiStatType}`] ?? (pick.stat === 'GOLS MARCADOS' ? (pick.teamTarget === 'HOME' ? live?.home_score : live?.away_score) : undefined);
 
                                     return (
                                     <div key={j} className="bg-black/30 rounded-xl p-3.5 border border-white/5 group-hover:border-primary/20 transition-colors">

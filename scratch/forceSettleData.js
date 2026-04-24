@@ -38,8 +38,8 @@ async function forceSettle() {
                     const g = resMatch.response[0];
                     await supabase.from('fixtures').update({
                         status: g.fixture.status.short,
-                        goals_home: g.goals.home,
-                        goals_away: g.goals.away,
+                        home_score: g.goals.home,
+                        away_score: g.goals.away,
                         score: g.score
                     }).eq('api_id', entry.fixture_id);
 
