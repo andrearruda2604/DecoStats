@@ -171,31 +171,33 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
           {/* Probabilidades (Over + Under) */}
           {displayRows.length > 0 && (
             <div className="border-t border-outline-variant/50 pt-3">
-              <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black">
                 Probabilidades
               </span>
-              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              <div className="mt-4 md:columns-2 gap-x-12 [column-fill:auto]">
                 {displayRows.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
-                  <div key={line} className="space-y-1.5">
+                  <div key={line} className="break-inside-avoid mb-6 space-y-3">
                     {/* Over line */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-[9px] text-on-surface-variant/60 font-bold w-16 flex-shrink-0 tabular-nums">
-                        Over {line}
-                      </span>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${homeOver === 100 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${homeOver}%` }} />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-on-surface font-black uppercase tracking-tight">
+                          Over {line}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2.5 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
+                            <div className={`h-full transition-all duration-500 ${homeOver === 100 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${homeOver}%` }} />
                           </div>
-                          <span className={`text-[9px] font-bold w-8 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          <span className={`text-[11px] font-black w-10 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
                             {homeOver}%
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400'}`} style={{ width: `${awayOver}%` }} />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2.5 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
+                            <div className={`h-full transition-all duration-500 ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400'}`} style={{ width: `${awayOver}%` }} />
                           </div>
-                          <span className={`text-[9px] font-bold w-8 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
+                          <span className={`text-[11px] font-black w-10 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
                             {awayOver}%
                           </span>
                         </div>
@@ -203,24 +205,26 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
                     </div>
 
                     {/* Under line */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-[9px] text-on-surface-variant/40 font-bold w-16 flex-shrink-0 tabular-nums">
-                        Under {line}
-                      </span>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-400/50'}`} style={{ width: `${homeUnder}%` }} />
+                    <div className="space-y-1.5 opacity-80">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-tight">
+                          Under {line}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
+                            <div className={`h-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${homeUnder}%` }} />
                           </div>
-                          <span className={`text-[8px] font-bold w-8 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-400/50'}`}>
+                          <span className={`text-[10px] font-bold w-10 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-500'}`}>
                             {homeUnder}%
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-400/50'}`} style={{ width: `${awayUnder}%` }} />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
+                            <div className={`h-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-500'}`} style={{ width: `${awayUnder}%` }} />
                           </div>
-                          <span className={`text-[8px] font-bold w-8 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-400/50'}`}>
+                          <span className={`text-[10px] font-bold w-10 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-500'}`}>
                             {awayUnder}%
                           </span>
                         </div>
