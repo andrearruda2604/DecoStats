@@ -151,10 +151,17 @@ async function generateOdd2() {
   }
 
   const matchesCount = ticketEntries.length;
+  const allPicksProb = ticketEntries.flatMap(e => e.picks).map(p => p.probability);
+  const avgConfidence = allPicksProb.length > 0 ? (allPicksProb.reduce((a,b)=>a+b, 0) / allPicksProb.length).toFixed(0) : 0;
+
   await supabase.from('odd_tickets').upsert({
       date: today, matches_count: matchesCount, total_odd: simulatedOdd.toFixed(2),
       status: 'PENDING',
-      ticket_data: { entries: ticketEntries, confidence_score: (1/simulatedOdd*100).toFixed(0), generated_at: new Date().toISOString() }
+      ticket_data: { 
+          entries: ticketEntries, 
+          confidence_score: avgConfidence, 
+          generated_at: new Date().toISOString() 
+      }
   }, { onConflict: 'date' });
 
   console.log(`Bilhete Odd 2.0 Gerado: Odd ${simulatedOdd.toFixed(2)} (${matchesCount} jogos)`);
