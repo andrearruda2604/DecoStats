@@ -35,17 +35,19 @@ function computeSmartOverLines(dist: number[]): number[] {
   const max = Math.max(...dist);
   const range = max - min;
   
-  if (range <= 3) {
+  // Aumentamos para 8 linhas para dar mais visão de mercado
+  if (range <= 6) {
     const lines: number[] = [];
     for (let i = Math.floor(min); i <= max; i++) {
-      lines.push(i + 0.5);
+        lines.push(i + 0.5);
     }
-    return lines.slice(0, 4);
+    return lines.slice(0, 8);
   }
   
-  const step = Math.max(1, Math.round(range / 5));
+  // Cálculo mais denso para capturar valores como 11.5, 12.5 etc
+  const step = Math.max(1, Math.round(range / 10));
   const lines: number[] = [];
-  for (let i = Math.floor(min); lines.length < 4 && i + 0.5 < max; i += step) {
+  for (let i = Math.floor(min); lines.length < 8 && i + 0.5 < max; i += step) {
     lines.push(i + 0.5);
   }
   return lines;
@@ -172,7 +174,7 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
               <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
                 Probabilidades
               </span>
-              <div className="mt-2 space-y-3">
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 {displayRows.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
                   <div key={line} className="space-y-1.5">
                     {/* Over line */}
