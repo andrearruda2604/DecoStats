@@ -174,62 +174,71 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
               <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black">
                 Probabilidades
               </span>
-              <div className="mt-4 md:columns-2 gap-x-12 [column-fill:auto]">
-                {displayRows.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
-                  <div key={line} className="break-inside-avoid mb-6 space-y-3">
-                    {/* Over line */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-on-surface font-black uppercase tracking-tight">
-                          Over {line}
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2.5 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
-                            <div className={`h-full transition-all duration-500 ${homeOver === 100 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${homeOver}%` }} />
+              
+              {/* Divisão Manual: Esquerda (1-7) | Direita (8-14) */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+                {[
+                  displayRows.slice(0, Math.ceil(displayRows.length / 2)),
+                  displayRows.slice(Math.ceil(displayRows.length / 2))
+                ].map((column, colIdx) => (
+                  <div key={colIdx} className="space-y-6">
+                    {column.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
+                      <div key={line} className="mb-4 space-y-3 p-2 rounded-lg bg-surface/30 border border-white/5">
+                        {/* Over line */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[12px] text-white font-black uppercase">
+                              Mais de {line}
+                            </span>
                           </div>
-                          <span className={`text-[11px] font-black w-10 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            {homeOver}%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2.5 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
-                            <div className={`h-full transition-all duration-500 ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400'}`} style={{ width: `${awayOver}%` }} />
+                          <div className="space-y-1.5 bg-black/40 p-2 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
+                                <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${homeOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-emerald-400 shadow-emerald-400/30'}`} style={{ width: `${homeOver}%` }} />
+                              </div>
+                              <span className={`text-[12px] font-black w-10 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                {homeOver}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
+                                <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400 shadow-blue-400/50'}`} style={{ width: `${awayOver}%` }} />
+                              </div>
+                              <span className={`text-[12px] font-black w-10 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
+                                {awayOver}%
+                              </span>
+                            </div>
                           </div>
-                          <span className={`text-[11px] font-black w-10 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
-                            {awayOver}%
-                          </span>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Under line */}
-                    <div className="space-y-1.5 opacity-80">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-tight">
-                          Under {line}
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
-                            <div className={`h-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${homeUnder}%` }} />
+                        {/* Under line */}
+                        <div className="space-y-1.5 opacity-90 ">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[11px] text-on-surface-variant font-black uppercase">
+                              Menos de {line}
+                            </span>
                           </div>
-                          <span className={`text-[10px] font-bold w-10 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-500'}`}>
-                            {homeUnder}%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-surface-container-low rounded-sm overflow-hidden border border-white/5">
-                            <div className={`h-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-500'}`} style={{ width: `${awayUnder}%` }} />
+                          <div className="space-y-1.5 bg-black/20 p-2 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
+                                <div className={`h-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-600'}`} style={{ width: `${homeUnder}%` }} />
+                              </div>
+                              <span className={`text-[11px] font-black w-10 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-600'}`}>
+                                {homeUnder}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
+                                <div className={`h-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ width: `${awayUnder}%` }} />
+                              </div>
+                              <span className={`text-[11px] font-black w-10 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-600'}`}>
+                                {awayUnder}%
+                              </span>
+                            </div>
                           </div>
-                          <span className={`text-[10px] font-bold w-10 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-500'}`}>
-                            {awayUnder}%
-                          </span>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 ))}
               </div>
