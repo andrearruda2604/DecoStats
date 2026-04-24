@@ -18,7 +18,7 @@ import { useState, useEffect } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData } from './services/api';
 
-const APP_VERSION = '1.0.1-cold-math';
+const VERSION = '1.0.2-live-engine';
 
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
