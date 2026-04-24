@@ -18,6 +18,8 @@ import { useState, useEffect } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData } from './services/api';
 
+const APP_VERSION = '1.0.1-cold-math';
+
 export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
