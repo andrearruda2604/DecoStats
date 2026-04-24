@@ -193,19 +193,28 @@ async function generateOdd2() {
   console.log(`Encontrados ${fixtures.length} jogos.`);
   
   const ticketEntries = [];
+  let simulatedOdd = 1.0;
   
   for (const m of fixtures) {
-      if (['PST', 'NS'].includes(m.status) || true) { // Permitir todos para testes
+      // Logic: Only add matches until we reach the targeted Odd 2.0
+      if (simulatedOdd >= 2.0) break;
+
+      if (['PST', 'NS'].includes(m.status)) {
           const predictive = await fetchHistoricalDistributions(m.home_team_id, m.away_team_id);
-          const rawOdds = m.odds; // JSONB from api-football
+          const rawOdds = m.odds; 
           
           const picks = extractTopPicks(m.home, m.away, predictive, rawOdds);
           
           if (picks && picks.length > 0) {
+              const matchOdd = picks.reduce((acc, p) => acc * p.odd, 1.0);
+              simulatedOdd *= matchOdd;
+              
               ticketEntries.push({
                   fixture_id: m.api_id,
-                  home: m.home.short_name,
-                  away: m.away.short_name,
+                  home: m.home.name,
+                  away: m.away.name,
+                  homeLogo: m.home.logo_url,
+                  awayLogo: m.away.logo_url,
                   date_time: m.date,
                   picks: picks
               });
@@ -213,24 +222,13 @@ async function generateOdd2() {
       }
   }
 
-  let simulatedOdd = 1.0;
-  let matchesCount = ticketEntries.length;
-  let totalProbability = 0;
-  let totalPicks = 0;
-  
-  ticketEntries.forEach(t => t.picks.forEach(p => { 
-      simulatedOdd *= p.odd;
-      totalProbability += p.probability;
-      totalPicks++;
-  }));
-
-  const avgConfidence = totalPicks > 0 ? (totalProbability / totalPicks).toFixed(1) : 0;
-
   const finalTicket = {
       entries: ticketEntries,
-      confidence_score: avgConfidence,
+      confidence_score: (1 / simulatedOdd * 100).toFixed(0), // Simple confidence inverse of risk
       generated_at: new Date().toISOString()
   };
+
+  const matchesCount = ticketEntries.length;
 
   const { error: upsertError } = await supabase
     .from('odd_tickets')

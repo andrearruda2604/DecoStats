@@ -123,41 +123,45 @@ export default function Odd20() {
                        'bg-gradient-to-b from-primary to-blue-500'
                     }`}></div>
                     
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="flex justify-between items-center mb-4">
                        <div className="flex items-center gap-2">
-                          <div className="text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded-md">
+                          <div className="text-[10px] font-black text-on-surface-variant bg-surface-container px-2 py-1 rounded-md uppercase tracking-tighter">
                               {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
                           </div>
                           {match.picks.length > 1 && (
-                             <div className="text-[10px] font-black text-primary border border-primary/30 bg-primary/5 px-2 py-1 rounded-md uppercase tracking-wider">
-                                Criar Aposta
+                             <div className="text-[10px] font-black text-primary border border-primary/20 bg-primary/5 px-2 py-1 rounded-md uppercase tracking-wider">
+                                Build
                              </div>
                           )}
                        </div>
                        {match.matchResult ? (
-                           <div className={`text-xs font-black px-2 py-1 rounded-md ${match.matchResult === 'GREEN' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
-                              {match.matchResult === 'GREEN' ? 'BATEU' : 'FALHOU'}
+                           <div className={`text-[10px] font-black px-2 py-1 rounded-md ${match.matchResult === 'GREEN' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
+                              {match.matchResult === 'GREEN' ? 'VENCEU' : 'PERDEU'}
                            </div>
                        ) : (
-                           <div className="text-xs font-semibold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
+                           <div className="text-[10px] font-bold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
                               <CheckCircle2 className="w-3 h-3" />
-                              Análise Concluída
+                              PRONTO
                            </div>
                        )}
                     </div>
 
-                    <div className="font-bold text-on-surface mb-3 flex items-center justify-between">
-                       <div>{match.home} <span className="text-on-surface-variant px-1 font-normal">vs</span> {match.away}</div>
-                       {/* Calculando odd combinada do Bet Builder do jogo */}
-                       <div className="text-xs text-primary font-bold">
-                          Odd {(match.picks.reduce((acc: number, p: any) => acc * p.odd, 1.0)).toFixed(2)}
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                       <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <img src={match.homeLogo} alt="" className="w-5 h-5 object-contain" />
+                          <span className="text-sm font-bold text-on-surface truncate">{match.home}</span>
+                       </div>
+                       <div className="text-[10px] font-black text-on-surface-variant/30">VS</div>
+                       <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                          <span className="text-sm font-bold text-on-surface truncate">{match.away}</span>
+                          <img src={match.awayLogo} alt="" className="w-5 h-5 object-contain" />
                        </div>
                     </div>
 
-                    <div className="space-y-2 relative">
+                    <div className="space-y-2.5 relative">
                        {/* Visual linking line for Bet Builder */}
                        {match.picks.length > 1 && (
-                          <div className="absolute left-3 top-4 bottom-4 w-px bg-outline-variant/30"></div>
+                          <div className="absolute left-3 top-4 bottom-4 w-px bg-outline-variant/20"></div>
                        )}
 
                        {match.picks.map((pick: any, j: number) => (
