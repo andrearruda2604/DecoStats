@@ -86,11 +86,17 @@ async function generateOdd2() {
 
       const evaluate = (periodStats, label) => {
           periodStats.forEach(stat => {
-              // Lines to check
+              // Lines to check - Dynamic based on median
               let lines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
-              if (label === 'FT' && stat.key === 'Corner Kicks') lines = [2.5, 3.5, 4.5, 5.5, 6.5, 7.5];
-              if (label === 'FT' && stat.key === 'Total Shots') lines = [7.5, 9.5, 11.5, 13.5, 15.5];
-              if (label !== 'FT' && stat.key === 'Total Shots') lines = [3.5, 4.5, 5.5, 6.5];
+              
+              if (stat.key === 'Total Shots') {
+                  const median = stat.hDist.length > 0 ? stat.hDist.sort((a,b)=>a-b)[Math.floor(stat.hDist.length/2)] : 10;
+                  // Bet365 for balance: start a bit below median and go up in steps of 2.0
+                  const startLine = Math.max(7.5, Math.floor(median - 4) + 0.5);
+                  lines = [startLine, startLine + 2, startLine + 4, startLine + 6, startLine + 8];
+              } else if (label === 'FT' && stat.key === 'Corner Kicks') {
+                  lines = [2.5, 3.5, 4.5, 5.5, 6.5, 7.5];
+              }
               
               lines.forEach(line => {
                   const check = (dist, teamName, target) => {
@@ -99,8 +105,9 @@ async function generateOdd2() {
                       const under = (dist.filter(v => v < line).length / dist.length) * 100;
 
                       const pushIf = (prob, type) => {
-                          if (prob >= 75) {
-                              const oddVal = parseFloat((1 + ((105 - prob) / 90)).toFixed(2));
+                          // Bet365 Safety: Avoid lines that are too "obvious" (prob > 97%) as they won't have markets
+                          if (prob >= 70 && prob <= 96) { 
+                              const oddVal = parseFloat((1 + ((105 - prob) / 80)).toFixed(2));
                               picks.push({
                                   team: teamName, teamTarget: target, stat: stat.label, period: label,
                                   type, line: `${type === 'OVER' ? 'Mais de' : 'Menos de'} ${line}`,
