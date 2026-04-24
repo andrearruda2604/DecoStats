@@ -179,10 +179,16 @@ export default function Odd20() {
                                     </span>
                                  )}
                               </div>
-                              <div className="flex items-center justify-between gap-4 mb-5 text-sm font-black text-white">
-                                 <span>{match.home}</span>
-                                 <span className="text-[10px] text-on-surface-variant/30">X</span>
-                                 <span>{match.away}</span>
+                              <div className="flex items-center justify-between gap-4 mb-5">
+                                 <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <img src={match.homeLogo} alt="" className="w-6 h-6 object-contain" />
+                                    <span className="text-sm font-black text-white truncate">{match.home}</span>
+                                 </div>
+                                 <div className="text-[10px] font-black text-on-surface-variant/30 px-2">X</div>
+                                 <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                                    <span className="text-sm font-black text-white truncate text-right">{match.away}</span>
+                                    <img src={match.awayLogo} alt="" className="w-6 h-6 object-contain" />
+                                 </div>
                               </div>
                               <div className="space-y-2">
                                  {match.picks.map((pick: any, j: number) => (
