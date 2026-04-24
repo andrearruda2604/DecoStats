@@ -52,7 +52,18 @@ async function settle() {
               const pickTeam = pick.teamTarget === 'HOME' ? fix.home_team_id : fix.away_team_id;
               
               if (pick.stat === 'GOLS MARCADOS') {
-                  actualValue = pick.teamTarget === 'HOME' ? fix.home_score : fix.away_score;
+                  if (pick.period === 'HT') {
+                      actualValue = pick.teamTarget === 'HOME' ? fix.score?.halftime?.home : fix.score?.halftime?.away;
+                  } else if (pick.period === '2H') {
+                      const ftH = fix.goals_home || 0;
+                      const ftA = fix.goals_away || 0;
+                      const htH = fix.score?.halftime?.home || 0;
+                      const htA = fix.score?.halftime?.away || 0;
+                      actualValue = pick.teamTarget === 'HOME' ? (ftH - htH) : (ftA - htA);
+                  } else {
+                      actualValue = pick.teamTarget === 'HOME' ? fix.goals_home : fix.goals_away;
+                  }
+                  actualValue = parseInt(actualValue || 0);
               } else {
                   // Mapeamento de tipos para match_stats
                   const typeMap = { 'ESCANTEIOS': 'Corner Kicks', 'CARTÃO AMARELO': 'Yellow Cards', 'CHUTES': 'Total Shots' };

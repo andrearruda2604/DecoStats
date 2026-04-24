@@ -23,7 +23,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const LEAGUES_TO_SYNC = [39, 140, 135, 78, 61, 94, 71, 2];
+const LEAGUES_TO_SYNC = [39, 140, 135, 78, 61, 94, 135, 2];
 
 const headers = {
   'x-apisports-key': API_KEY,

@@ -28,19 +28,24 @@ async function fetchHistoricalDistributions(homeTeamId, awayTeamId) {
         { key: 'goals', label: 'GOLS MARCADOS', flatKey: 'goals_for' }
     ];
 
-    const getStats = async (tid, isHome) => {
-        const { data } = await supabase.from('teams_history').select('*').eq('team_id', tid).eq('is_home', isHome).order('match_date', { ascending: false }).limit(20);
+    const getStats = async (tid) => {
+        // MATEMÁTICA PURA: 30 jogos para máxima precisão
+        const { data } = await supabase.from('teams_history')
+            .select('*')
+            .eq('team_id', tid)
+            .order('match_date', { ascending: false })
+            .limit(30);
         return data || [];
     };
 
-    const homeHistory = await getStats(homeTeamId, true);
-    const awayHistory = await getStats(awayTeamId, false);
+    const homeHistory = await getStats(homeTeamId);
+    const awayHistory = await getStats(awayTeamId);
 
     const processPeriod = (periodField) => {
         return metrics.map(m => {
             const getVal = (hist) => hist.map(h => {
                 if (m.label === 'GOLS MARCADOS') {
-                    if (periodField === 'stats_ft') return h.goals_for || 0;
+                    if (periodField === 'stats_ft') return (h.goals_for || 0);
                     const st = h[periodField]?.find(s => s.type === 'goals');
                     return st ? parseInt(st.value) : 0;
                 }
@@ -68,6 +73,7 @@ async function generateOdd2() {
   const startOfDay = `${today} 00:00:00+00`;
   const endOfDay = `${today} 23:59:59+00`;
   
+  // IMPARCIALIDADE: Sem filtro de ligas, buscando todos os jogos agendados
   const { data: fixtures } = await supabase.from('fixtures')
     .select('*, home:teams!home_team_id(*), away:teams!away_team_id(*)')
     .gte('date', startOfDay).lte('date', endOfDay);
@@ -77,37 +83,37 @@ async function generateOdd2() {
   const ticketEntries = [];
   let simulatedOdd = 1.0;
 
-  for (const m of fixtures) {
-      if (simulatedOdd >= 2.2) break;
-      if (!['NS', 'PST'].includes(m.status)) continue;
+  // Organiza por horário
+  const sortedFixtures = fixtures.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+  for (const m of sortedFixtures) {
+      if (simulatedOdd >= 2.5) break; 
+      if (!['NS', 'TBD', 'FT'].includes(m.status)) continue;
 
       const predictive = await fetchHistoricalDistributions(m.home_team_id, m.away_team_id);
       const picks = [];
 
       const evaluate = (periodStats, label) => {
           periodStats.forEach(stat => {
-              // Lines to check - Dynamic based on median
-              let lines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+              let lines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 7.5, 8.5, 9.5];
               
               if (stat.key === 'Total Shots') {
                   const median = stat.hDist.length > 0 ? stat.hDist.sort((a,b)=>a-b)[Math.floor(stat.hDist.length/2)] : 10;
-                  // Bet365 for balance: start a bit below median and go up in steps of 2.0
-                  const startLine = Math.max(7.5, Math.floor(median - 4) + 0.5);
-                  lines = [startLine, startLine + 2, startLine + 4, startLine + 6, startLine + 8];
-              } else if (label === 'FT' && stat.key === 'Corner Kicks') {
-                  lines = [2.5, 3.5, 4.5, 5.5, 6.5, 7.5];
+                  const startLine = Math.max(7.5, Math.floor(median - 3.5) + 0.5);
+                  lines = [startLine, startLine + 2, startLine + 4];
               }
-              
+
               lines.forEach(line => {
                   const check = (dist, teamName, target) => {
-                      if (dist.length < 5) return;
+                      if (dist.length < 5) return; 
+                      
                       const over = (dist.filter(v => v > line).length / dist.length) * 100;
                       const under = (dist.filter(v => v < line).length / dist.length) * 100;
 
                       const pushIf = (prob, type) => {
-                          // Bet365 Safety: Avoid lines that are too "obvious" (prob > 97%) as they won't have markets
-                          if (prob >= 70 && prob <= 96) { 
-                              const oddVal = parseFloat((1 + ((105 - prob) / 80)).toFixed(2));
+                          // RÉGUA DE 75% - Puramente matemática
+                          if (prob >= 75 && prob <= 95) { 
+                              const oddVal = parseFloat((1 + ((105 - prob) / 90)).toFixed(2));
                               picks.push({
                                   team: teamName, teamTarget: target, stat: stat.label, period: label,
                                   type, line: `${type === 'OVER' ? 'Mais de' : 'Menos de'} ${line}`,
@@ -128,7 +134,6 @@ async function generateOdd2() {
       evaluate(predictive.stats_1h, 'HT');
       evaluate(predictive.stats_2h, '2H');
 
-      // Pick best entry for this match
       picks.sort((a,b) => b.probability - a.probability);
       const uniquePicks = [];
       const used = new Set();

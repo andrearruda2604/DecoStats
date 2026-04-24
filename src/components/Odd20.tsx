@@ -21,7 +21,13 @@ export default function Odd20() {
       setLoading(true);
       const target = new Date();
       target.setDate(target.getDate() + dateOffset);
-      const targetDateStr = target.toISOString().split('T')[0];
+      
+      // Ajuste para pegar a data LOCAL (YYYY-MM-DD) e não UTC
+      const y = target.getFullYear();
+      const m = String(target.getMonth() + 1).padStart(2, '0');
+      const d = String(target.getDate()).padStart(2, '0');
+      const targetDateStr = `${y}-${m}-${d}`;
+
       
       const { data, error } = await supabase
         .from('odd_tickets')
@@ -86,23 +92,24 @@ export default function Odd20() {
   return (
     <div className="pt-16 px-4 md:px-6 pb-24 max-w-5xl mx-auto">
       
-      {/* ABAS */}
-      <div className="flex bg-surface-container/40 border border-outline-variant/20 rounded-2xl p-1 mb-10 max-w-sm mx-auto backdrop-blur-xl">
+      {/* ABAS DE NAVEGAÇÃO SUPERIOR */}
+      <div className="relative z-50 flex bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-1.5 mb-12 max-w-sm mx-auto backdrop-blur-2xl shadow-2xl shadow-black/50">
          <button 
            onClick={() => setActiveTab('today')}
-           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'today' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant hover:text-white'}`}
+           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'today' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]' : 'text-on-surface-variant hover:text-white'}`}
          >
-            <Trophy className="w-3.5 h-3.5" />
+            <Trophy className="w-4 h-4" />
             Sugestão
          </button>
          <button 
            onClick={() => setActiveTab('history')}
-           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-on-surface-variant hover:text-white'}`}
+           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]' : 'text-on-surface-variant hover:text-white'}`}
          >
-            <History className="w-3.5 h-3.5" />
+            <History className="w-4 h-4" />
             Histórico
          </button>
       </div>
+
 
       <AnimatePresence mode="wait">
          {activeTab === 'today' ? (

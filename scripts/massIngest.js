@@ -101,15 +101,27 @@ async function runSeederForTeamId(TEAM_ID, LEAGUE_ID) {
             return 0;
         };
 
+        // Manual Goal injection for periods
+        const htGoalsFor = isHome ? (fixtureData.score.halftime.home ?? 0) : (fixtureData.score.halftime.away ?? 0);
+        const ftGoalsFor = isHome ? (fixtureData.goals.home ?? 0) : (fixtureData.goals.away ?? 0);
+        const st2GoalsFor = ftGoalsFor - htGoalsFor;
+
+        const stats1h = [...(myStatsRaw.statistics_1h || [])];
+        const stats2h = [...(myStatsRaw.statistics_2h || [])];
+
+        // Ensure "goals" exists for our generator
+        if (!stats1h.find(s => s.type === 'goals')) stats1h.push({ type: 'goals', value: htGoalsFor });
+        if (!stats2h.find(s => s.type === 'goals')) stats2h.push({ type: 'goals', value: st2GoalsFor });
+
         const record = {
             fixture_id: fixtureId, team_id: TEAM_ID, opponent_id: opponentId, is_home: isHome, season: SEASON, league_id: LEAGUE_ID, match_date: fixtureData.fixture.date,
-            goals_for: isHome ? fixtureData.goals.home : fixtureData.goals.away, goals_against: isHome ? fixtureData.goals.away : fixtureData.goals.home,
+            goals_for: ftGoalsFor, goals_against: isHome ? fixtureData.goals.away : fixtureData.goals.home,
             shots_total: extractStat('Total Shots'), shots_on_goal: extractStat('Shots on Goal'), corners: extractStat('Corner Kicks'), yellow_cards: extractStat('Yellow Cards'),
             red_cards: extractStat('Red Cards'), possession: extractStat('Ball Possession'), fouls: extractStat('Fouls'), offsides: extractStat('Offsides'),
             goalkeeper_saves: extractStat('Goalkeeper Saves'), passes_accurate: extractStat('Passes accurate'),
             stats_ft: myStatsRaw.statistics || [],
-            stats_1h: myStatsRaw.statistics_1h || [],
-            stats_2h: myStatsRaw.statistics_2h || []
+            stats_1h: stats1h,
+            stats_2h: stats2h
         };
 
         await supabase.from('teams_history').insert([record]);
