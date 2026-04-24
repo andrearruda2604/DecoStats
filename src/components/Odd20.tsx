@@ -16,24 +16,28 @@ export default function Odd20() {
   const [allTickets, setAllTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
 
+  async function loadCurrentTicket(offset: number) {
+    const target = new Date();
+    target.setDate(target.getDate() + offset);
+    
+    const y = target.getFullYear();
+    const m = String(target.getMonth() + 1).padStart(2, '0');
+    const d = String(target.getDate()).padStart(2, '0');
+    const targetDateStr = `${y}-${m}-${d}`;
+
+    const { data } = await supabase
+      .from('odd_tickets')
+      .select('*')
+      .eq('date', targetDateStr)
+      .maybeSingle();
+
+    setTicket(data);
+  }
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const target = new Date();
-      target.setDate(target.getDate() + dateOffset);
-      
-      const y = target.getFullYear();
-      const m = String(target.getMonth() + 1).padStart(2, '0');
-      const d = String(target.getDate()).padStart(2, '0');
-      const targetDateStr = `${y}-${m}-${d}`;
-
-      const { data } = await supabase
-        .from('odd_tickets')
-        .select('*')
-        .eq('date', targetDateStr)
-        .maybeSingle();
-
-      setTicket(data);
+      await loadCurrentTicket(dateOffset);
       setLoading(false);
     }
     loadData();
@@ -57,6 +61,31 @@ export default function Odd20() {
       }
     }
     loadHistory();
+
+    // REAL-TIME: Ouvir atualizações de bilhetes (Custo zero/baixo)
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'odd_tickets' },
+        (payload) => {
+          console.log('Real-time Update:', payload);
+          // Se o bilhete atualizado for o que estamos vendo hoje, atualizamos a UI
+          setTicket((current: any) => {
+             if (current && payload.new.date === current.date) {
+               return payload.new;
+             }
+             return current;
+          });
+          // Também atualizamos a lista de histórico
+          setAllTickets(prev => prev.map(t => t.date === payload.new.date ? payload.new : t));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const getCalendarData = () => {

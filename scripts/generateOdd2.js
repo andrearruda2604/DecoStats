@@ -90,8 +90,8 @@ async function generateOdd2() {
                       const under = (dist.filter(v => v < line).length / dist.length) * 100;
 
                       const pushIf = (prob, type) => {
-                          // RÉGUA MATEMÁTICA: 75% a 98%
-                          if (prob >= 75 && prob <= 98) { 
+                          // RÉGUA MATEMÁTICA: 75% a 95% (Evitar teto da Bet365)
+                          if (prob >= 75 && prob <= 95) { 
                               const oddVal = parseFloat((1 + ((105 - prob) / 85)).toFixed(2));
                               picks.push({
                                   team: teamName, teamTarget: target, stat: stat.label, period: label,
