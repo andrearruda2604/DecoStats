@@ -22,100 +22,96 @@ export default function Odd20() {
       const target = new Date();
       target.setDate(target.getDate() + dateOffset);
       
-      // Ajuste para pegar a data LOCAL (YYYY-MM-DD) e não UTC
       const y = target.getFullYear();
       const m = String(target.getMonth() + 1).padStart(2, '0');
       const d = String(target.getDate()).padStart(2, '0');
       const targetDateStr = `${y}-${m}-${d}`;
 
-      
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('odd_tickets')
         .select('*')
         .eq('date', targetDateStr)
         .maybeSingle();
-      
-      setTicket(!error && data ? data : null);
 
-      const { data: tickets } = await supabase
-        .from('odd_tickets')
-        .select('date, status, total_odd')
-        .order('date', { ascending: true });
-      
-      if (tickets) {
-          setAllTickets(tickets);
-          const won = tickets.filter(t => t.status === 'WON').length;
-          const lost = tickets.filter(t => t.status === 'LOST').length;
-          const pending = tickets.filter(t => t.status === 'PENDING').length;
-          const totalOdd = tickets.reduce((acc, t) => acc + (parseFloat(t.total_odd as any) || 0), 0);
-          setStats({ won, lost, pending, avgOdd: (totalOdd / (tickets.length || 1)).toFixed(2) });
-      }
-
+      setTicket(data);
       setLoading(false);
     }
     loadData();
   }, [dateOffset]);
 
-  const getDaysInMonth = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const days = new Date(year, month + 1, 0).getDate();
-    return { firstDay, days };
+  useEffect(() => {
+    async function loadHistory() {
+      const { data } = await supabase
+        .from('odd_tickets')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (data) {
+        setAllTickets(data);
+        const won = data.filter(t => t.status === 'WON').length;
+        const lost = data.filter(t => t.status === 'LOST').length;
+        const pending = data.filter(t => t.status === 'PENDING').length;
+        const odds = data.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
+        const avg = odds.length > 0 ? (odds.reduce((a,b) => a+b, 0) / odds.length).toFixed(2) : '0.00';
+        setStats({ won, lost, pending, avgOdd: avg });
+      }
+    }
+    loadHistory();
+  }, []);
+
+  const getCalendarData = () => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    const cells = [];
+    for (let i = 0; i < start.getDay(); i++) cells.push(null);
+    for (let i = 1; i <= end.getDate(); i++) {
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const t = allTickets.find(x => x.date === dateStr);
+      cells.push({ day: i, dateStr, status: t?.status });
+    }
+    return cells;
   };
 
-  const { firstDay, days } = getDaysInMonth();
-  const calendarCells = Array.from({ length: 35 }, (_, i) => {
-    const day = i - firstDay + 1;
-    if (day <= 0 || day > days) return null;
-    const d = new Date();
-    d.setDate(day);
-    const dateStr = d.toISOString().split('T')[0];
-    const ticketForDay = allTickets.find(t => t.date === dateStr);
-    return { day, dateStr, status: ticketForDay?.status || 'EMPTY' };
-  });
+  const handleDayClick = (dateStr: string) => {
+    const targetDate = new Date(dateStr + 'T12:00:00');
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    setDateOffset(diffDays);
+    setActiveTab('today');
+  };
 
   const targetDateObj = new Date();
   targetDateObj.setDate(targetDateObj.getDate() + dateOffset);
-
-  const handleDayClick = (dateStr: string) => {
-      const target = new Date(dateStr + 'T12:00:00');
-      const today = new Date();
-      today.setHours(12,0,0,0);
-      const diffTime = target.getTime() - today.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-      setDateOffset(diffDays);
-      setActiveTab('today');
-  };
+  const calendarCells = getCalendarData();
 
   return (
-    <div className="pt-16 px-4 md:px-6 pb-24 max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 min-h-screen">
       
-      {/* ABAS DE NAVEGAÇÃO SUPERIOR */}
-      <div className="relative z-50 flex bg-surface-container/60 border border-outline-variant/30 rounded-2xl p-1.5 mb-12 max-w-sm mx-auto backdrop-blur-2xl shadow-2xl shadow-black/50">
+      {/* HEADER TABS */}
+      <div className="flex bg-surface-container/30 backdrop-blur-xl border border-outline-variant/10 rounded-2xl p-1.5 mb-12 max-w-sm mx-auto shadow-2xl relative z-50">
          <button 
            onClick={() => setActiveTab('today')}
-           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'today' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]' : 'text-on-surface-variant hover:text-white'}`}
+           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'today' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}
          >
             <Trophy className="w-4 h-4" />
             Sugestão
          </button>
          <button 
            onClick={() => setActiveTab('history')}
-           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]' : 'text-on-surface-variant hover:text-white'}`}
+           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}
          >
             <History className="w-4 h-4" />
             Histórico
          </button>
       </div>
 
-
       <AnimatePresence mode="wait">
          {activeTab === 'today' ? (
             <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-               
-               {/* NAVEGAÇÃO DATA */}
                <div className="flex justify-between items-center bg-surface-container/20 border border-outline-variant/10 rounded-2xl p-1.5 max-w-[280px] mx-auto mb-8">
                   <button onClick={() => setDateOffset(prev => prev - 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
                   <div className="flex items-center gap-2 px-4">
@@ -132,7 +128,7 @@ export default function Odd20() {
                   <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
                       <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
                       <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais para este dia</h2>
-                      <p className="text-on-surface-variant text-xs leading-relaxed">As métricas de reincidência não atingiram a meta de 80% exigida pelo robô DecoStats.</p>
+                      <p className="text-on-surface-variant text-xs leading-relaxed">As métricas de reincidência não atingiram a meta de 75% exigida pelo robô DecoStats.</p>
                   </div>
                ) : (
                   <>
@@ -153,7 +149,6 @@ export default function Odd20() {
                         {ticket.ticket_data.entries.map((match: any, i: number) => (
                            <div key={i} className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-6 relative overflow-hidden group transition-all shadow-sm">
                               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${match.result === 'WON' ? 'bg-emerald-500' : match.result === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}></div>
-                              
                               <div className="flex justify-between items-center mb-6">
                                  <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">
                                     {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
@@ -164,7 +159,6 @@ export default function Odd20() {
                                     </span>
                                  )}
                               </div>
-
                               <div className="flex items-center justify-between gap-4 mb-8">
                                  <div className="flex flex-col items-center gap-2 flex-1">
                                     <img src={match.homeLogo} alt="" className="w-8 h-8 object-contain drop-shadow-lg" />
@@ -176,7 +170,6 @@ export default function Odd20() {
                                     <span className="text-[11px] font-black text-white text-center line-clamp-1">{match.away}</span>
                                  </div>
                               </div>
-
                               <div className="space-y-2.5">
                                  {match.picks.map((pick: any, j: number) => (
                                     <div key={j} className="bg-black/30 rounded-xl p-3.5 border border-white/5 group-hover:border-primary/20 transition-colors">
@@ -207,7 +200,6 @@ export default function Odd20() {
                   <h2 className="text-2xl font-black uppercase tracking-tighter text-white mb-1">Histórico</h2>
                   <p className="text-xs text-on-surface-variant font-bold">Consistência diária do Robô DecoStats</p>
                </div>
-
                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-10">
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
                      <div key={d} className="text-center text-[9px] font-black uppercase text-on-surface-variant/40 pb-2">{d}</div>
@@ -229,7 +221,6 @@ export default function Odd20() {
                      </button>
                   ))}
                </div>
-
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                      { label: 'Greens', val: stats.won, color: 'text-emerald-400' },
