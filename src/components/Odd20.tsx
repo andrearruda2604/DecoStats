@@ -127,7 +127,9 @@ export default function Odd20() {
             <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                <div className="flex justify-between items-center bg-surface-container/20 border border-outline-variant/10 rounded-2xl p-1.5 max-w-[280px] mx-auto mb-8">
                   <button onClick={() => setDateOffset(prev => prev - 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-                  <span className="text-[11px] font-black uppercase tracking-tighter text-white">{dateOffset === 0 ? 'Hoje' : targetDateObj.toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'})}</span>
+                  <span className="text-[11px] font-black uppercase tracking-tighter text-white">
+                     {dateOffset === 0 ? 'Hoje' : targetDateStr.split('-').reverse().slice(0,2).join(' DE ')}
+                  </span>
                   <button onClick={() => setDateOffset(prev => prev + 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronRight className="w-4 h-4" /></button>
                </div>
 
