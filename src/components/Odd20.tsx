@@ -18,11 +18,14 @@ export default function Odd20() {
   const [allTickets, setAllTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
 
-  async function loadCurrentTicket(offset: number) {
     const target = new Date();
     target.setDate(target.getDate() + offset);
     
-    const targetDateStr = target.toISOString().split('T')[0];
+    // FORMATO LOCAL (Evita erro de fuso horário)
+    const y = target.getFullYear();
+    const m = String(target.getMonth() + 1).padStart(2, '0');
+    const d = String(target.getDate()).padStart(2, '0');
+    const targetDateStr = `${y}-${m}-${d}`;
 
     const { data } = await supabase
       .from('odd_tickets')
@@ -172,7 +175,7 @@ export default function Odd20() {
                            const isFinished = live?.status === 'FT';
                            
                            return (
-                           <div key={i} className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-6 relative overflow-hidden group transition-all shadow-sm">
+                           <div key={i} className={`border rounded-2xl p-6 relative overflow-hidden group transition-all shadow-sm ${match.result === 'WON' ? 'bg-emerald-500/5 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-surface/40 border-outline-variant/20'}`}>
                               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${match.result === 'WON' ? 'bg-emerald-500' : match.result === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}></div>
                               <div className="flex justify-between items-center mb-6">
                                  <div className="flex items-center gap-2">
