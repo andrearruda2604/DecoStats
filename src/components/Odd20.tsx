@@ -138,12 +138,30 @@ export default function Odd20() {
                   </div>
                ) : (
                   <>
-                     <div className="text-center mb-12">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl ${ticket.status === 'WON' ? 'bg-emerald-500' : ticket.status === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}><Trophy className="w-6 h-6 text-white" /></div>
-                        <h1 className="text-4xl font-black italic tracking-tighter text-white mb-2 uppercase">ODD {ticket.total_odd}</h1>
-                        <div className="inline-flex bg-surface-container/60 border border-outline-variant/20 rounded-full px-4 py-1.5 items-center gap-2">
-                           <div className={`w-1.5 h-1.5 rounded-full ${ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' : 'bg-white/20'}`}></div>
-                           <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Confiança IA: {ticket.ticket_data.confidence_score}%</span>
+                     <div className="text-center mb-12 relative">
+                        {ticket.status === 'WON' && (
+                           <motion.div 
+                              initial={{ opacity: 0, scale: 0.5 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black px-4 py-1 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] uppercase tracking-widest z-10"
+                           >
+                              Bilhete Vencedor
+                           </motion.div>
+                        )}
+                        
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl transition-all duration-500 ${ticket.status === 'WON' ? 'bg-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.6)]' : ticket.status === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}>
+                           <Trophy className={`w-6 h-6 text-white ${ticket.status === 'WON' ? 'animate-bounce' : ''}`} />
+                        </div>
+
+                        <h1 className="text-4xl font-black italic tracking-tighter text-white mb-2 uppercase">
+                           ODD {ticket.total_odd}
+                        </h1>
+
+                        <div className={`inline-flex border rounded-full px-4 py-1.5 items-center gap-2 transition-all ${ticket.status === 'WON' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-surface-container/60 border-outline-variant/20'}`}>
+                           <div className={`w-1.5 h-1.5 rounded-full ${ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' : ticket.status === 'WON' ? 'bg-emerald-500' : 'bg-white/20'}`}></div>
+                           <span className={`text-[9px] font-black uppercase tracking-widest ${ticket.status === 'WON' ? 'text-emerald-400' : 'text-on-surface-variant'}`}>
+                              {ticket.status === 'WON' ? 'Matemática Confirmada' : `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
+                           </span>
                         </div>
                      </div>
 
