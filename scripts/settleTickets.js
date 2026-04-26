@@ -55,13 +55,13 @@ async function settle() {
                   if (pick.period === 'HT') {
                       actualValue = pick.teamTarget === 'HOME' ? fix.score?.halftime?.home : fix.score?.halftime?.away;
                   } else if (pick.period === '2H') {
-                      const ftH = fix.goals_home || 0;
-                      const ftA = fix.goals_away || 0;
+                      const ftH = fix.home_score || 0;
+                      const ftA = fix.away_score || 0;
                       const htH = fix.score?.halftime?.home || 0;
                       const htA = fix.score?.halftime?.away || 0;
                       actualValue = pick.teamTarget === 'HOME' ? (ftH - htH) : (ftA - htA);
                   } else {
-                      actualValue = pick.teamTarget === 'HOME' ? fix.goals_home : fix.goals_away;
+                      actualValue = pick.teamTarget === 'HOME' ? fix.home_score : fix.away_score;
                   }
                   actualValue = parseInt(actualValue || 0);
               } else {

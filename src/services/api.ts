@@ -25,8 +25,8 @@ export async function fetchMatches(
       home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
       away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
     `)
-    .gte('date', `${date}T00:00:00`)
-    .lte('date', `${date}T23:59:59`)
+    .gte('date', `${date}T00:00:00-03:00`)
+    .lte('date', `${date}T23:59:59-03:00`)
     .order('date', { ascending: true });
 
   if (leagueId) {
@@ -238,7 +238,7 @@ export async function fetchPredictiveData(
   homeTeamId: number,
   awayTeamId: number,
   count: number = 20,
-  options: { mandoOnly?: boolean, seasonOnly?: boolean } = {}
+  options: { mandoOnly?: boolean, seasonOnly?: boolean, leagueId?: number } = {}
 ) {
   if (!isSupabaseConfigured) {
     return generatePredictiveData(homeTeamId, awayTeamId, count);
@@ -248,7 +248,7 @@ export async function fetchPredictiveData(
     let homeQuery = supabase.from('teams_history').select('*').eq('team_id', homeTeamId);
     let awayQuery = supabase.from('teams_history').select('*').eq('team_id', awayTeamId);
 
-    const CURRENT_SEASON = 2025;
+    const CURRENT_SEASON = 2026;
 
     if (options.mandoOnly) {
       homeQuery = homeQuery.eq('is_home', true);
@@ -258,6 +258,12 @@ export async function fetchPredictiveData(
     if (options.seasonOnly) {
       homeQuery = homeQuery.eq('season', CURRENT_SEASON);
       awayQuery = awayQuery.eq('season', CURRENT_SEASON);
+    }
+
+    // Filtra pela liga da partida para não misturar dados de ligas diferentes (ex: Remo na Série B vs Série A)
+    if (options.leagueId) {
+      homeQuery = homeQuery.eq('league_id', options.leagueId);
+      awayQuery = awayQuery.eq('league_id', options.leagueId);
     }
 
     const [homeRes, awayRes] = await Promise.all([

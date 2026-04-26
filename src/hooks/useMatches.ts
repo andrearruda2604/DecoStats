@@ -20,7 +20,10 @@ interface UseMatchesReturn {
 }
 
 function getToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Usa data local do dispositivo (não UTC) para mostrar o dia correto ao usuário
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
+  return local.toISOString().slice(0, 10);
 }
 
 export function useMatches(): UseMatchesReturn {

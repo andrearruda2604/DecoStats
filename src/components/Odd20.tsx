@@ -17,7 +17,7 @@ export default function Odd20() {
   const [loading, setLoading] = useState(true);
   const [allTickets, setAllTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
-
+   const loadCurrentTicket = async (offset: number) => {
     const target = new Date();
     target.setDate(target.getDate() + offset);
     
