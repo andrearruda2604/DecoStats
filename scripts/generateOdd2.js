@@ -60,7 +60,10 @@ async function fetchHistoricalDistributions(homeTeamId, awayTeamId) {
 }
 
 async function generateOdd2() {
-  const today = process.argv[2] || new Date().toISOString().split('T')[0];
+  // Define "Today" em Brasília (UTC-3)
+  const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const today = process.argv[2] || brt.toISOString().split('T')[0];
+  
   const { data: fixtures } = await supabase.from('fixtures')
     .select('*, home:teams!home_team_id(*), away:teams!away_team_id(*)')
     .gte('date', `${today} 00:00:00+00`).lte('date', `${today} 23:59:59+00`);

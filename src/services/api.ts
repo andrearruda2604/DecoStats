@@ -7,6 +7,14 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { MOCK_MATCHES_BY_DATE, MOCK_MATCH_DETAIL, MOCK_LEAGUES } from '../constants';
 import type { MatchCardData, MatchDetailData, StatComparison, ToggleMode } from '../types';
 
+function getTimezoneOffset(): string {
+  const offsetMinutes = new Date().getTimezoneOffset();
+  const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
+  const offsetMins = Math.abs(offsetMinutes % 60);
+  const sign = offsetMinutes > 0 ? "-" : "+";
+  return `${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+}
+
 // ─── Matches List ───────────────────────────────────────────────────
 
 export async function fetchMatches(
@@ -17,6 +25,8 @@ export async function fetchMatches(
     return MOCK_MATCHES_BY_DATE;
   }
 
+  const offset = getTimezoneOffset();
+
   let query = supabase
     .from('fixtures')
     .select(`
@@ -25,8 +35,8 @@ export async function fetchMatches(
       home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
       away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
     `)
-    .gte('date', `${date}T00:00:00`)
-    .lte('date', `${date}T23:59:59`)
+    .gte('date', `${date}T00:00:00${offset}`)
+    .lte('date', `${date}T23:59:59${offset}`)
     .order('date', { ascending: true });
 
   if (leagueId) {

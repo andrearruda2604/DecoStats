@@ -21,16 +21,15 @@ export default function Odd20() {
     const target = new Date();
     target.setDate(target.getDate() + offset);
     
-    // FORMATO LOCAL (Evita erro de fuso horário)
     const y = target.getFullYear();
     const m = String(target.getMonth() + 1).padStart(2, '0');
     const d = String(target.getDate()).padStart(2, '0');
-    const targetDateStr = `${y}-${m}-${d}`;
+    const currentTargetDateStr = `${y}-${m}-${d}`;
 
     const { data } = await supabase
       .from('odd_tickets')
       .select('*')
-      .eq('date', targetDateStr)
+      .eq('date', currentTargetDateStr)
       .maybeSingle();
 
     if (data) {
@@ -114,6 +113,12 @@ export default function Odd20() {
 
   const targetDateObj = new Date();
   targetDateObj.setDate(targetDateObj.getDate() + dateOffset);
+  
+  // FORMATO LOCAL (Evita erro de fuso horário)
+  const y = targetDateObj.getFullYear();
+  const m = String(targetDateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(targetDateObj.getDate()).padStart(2, '0');
+  const targetDateStr = `${y}-${m}-${d}`;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 min-h-screen">
@@ -182,7 +187,7 @@ export default function Odd20() {
                               <div className="flex justify-between items-center mb-6">
                                  <div className="flex items-center gap-2">
                                     <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">
-                                       {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                                       {new Date(match.date_time).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})} - {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
                                     </span>
                                     {isLive && <span className="flex items-center gap-1.5 px-2 py-1 bg-rose-500/10 rounded-md"><span className="w-1 h-1 bg-rose-500 rounded-full animate-pulse"></span><span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">AO VIVO</span></span>}
                                  </div>
