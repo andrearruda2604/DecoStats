@@ -3,97 +3,207 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Trophy, ChevronLeft, ChevronRight, Info, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+const STAT_COL_FT: Record<string, string> = {
+  'ESCANTEIOS': 'corners',
+  'CARTÃO AMARELO': 'yellow_cards',
+  'CHUTES': 'shots_total',
+  'GOLS MARCADOS': 'goals_for',
+};
+
+const STAT_COL_JSONB: Record<string, string> = {
+  'ESCANTEIOS': 'Corner Kicks',
+  'CARTÃO AMARELO': 'Yellow Cards',
+  'CHUTES': 'Total Shots',
+};
+
+function getActualVal(
+  hist: any,
+  stat: string,
+  period: string
+): number | undefined {
+  if (!hist) return undefined;
+  if (period === 'FT') {
+    const col = STAT_COL_FT[stat];
+    return col !== undefined ? (hist[col] ?? undefined) : undefined;
+  }
+  const jsonbCol = period === 'HT' ? 'stats_1h' : 'stats_2h';
+  const apiType = STAT_COL_JSONB[stat];
+  if (!apiType) return undefined;
+  const arr: any[] = hist[jsonbCol] || [];
+  const found = arr.find((s: any) => s.type === apiType);
+  if (!found || found.value === null || found.value === undefined) return 0;
+  if (typeof found.value === 'string') return parseInt(found.value) || 0;
+  return Number(found.value) || 0;
+}
+
+function evaluatePick(pick: any, actualVal: number | undefined): 'WON' | 'LOST' | null {
+  if (actualVal === undefined || actualVal === null) return null;
+  const threshold = parseFloat(String(pick.line).replace(/.*de\s+/i, ''));
+  if (isNaN(threshold)) return null;
+  const won = pick.type === 'OVER' ? actualVal > threshold : actualVal < threshold;
+  return won ? 'WON' : 'LOST';
+}
+
+// ─── component ──────────────────────────────────────────────────────────────
 
 export default function Odd20() {
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [dateOffset, setDateOffset] = useState(0);
   const [ticket, setTicket] = useState<any>(null);
   const [liveScores, setLiveScores] = useState<Record<number, any>>({});
-  const [liveStats, setLiveStats] = useState<Record<string, number>>({});
+  const [histStats, setHistStats] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [allTickets, setAllTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
-   const loadCurrentTicket = async (offset: number) => {
+
+  const loadCurrentTicket = useCallback(async (offset: number) => {
     const target = new Date();
     target.setDate(target.getDate() + offset);
-    
     const y = target.getFullYear();
     const m = String(target.getMonth() + 1).padStart(2, '0');
     const d = String(target.getDate()).padStart(2, '0');
-    const currentTargetDateStr = `${y}-${m}-${d}`;
+    const dateStr = `${y}-${m}-${d}`;
 
     const { data } = await supabase
       .from('odd_tickets')
       .select('*')
-      .eq('date', currentTargetDateStr)
+      .eq('date', dateStr)
       .maybeSingle();
 
     if (data) {
-       setTicket(data);
-       // Carregar placares iniciais dos jogos do bilhete
-       const ids = data.ticket_data.entries.map((e: any) => e.fixture_id);
-       const { data: fixtures } = await supabase.from('fixtures').select('api_id, home_score, away_score, status').in('api_id', ids);
-       const scoreMap: Record<number, any> = {};
-       fixtures?.forEach(f => scoreMap[f.api_id] = f);
-       setLiveScores(scoreMap);
+      setTicket(data);
+      const ids: number[] = data.ticket_data.entries.map((e: any) => e.fixture_id);
 
-       // Carregar estatísticas iniciais
-       const { data: statsData } = await supabase.from('match_stats').select('*').in('fixture_id', ids);
-       const statsMap: Record<string, number> = {};
-       statsData?.forEach(s => statsMap[`${s.fixture_id}-${s.team_id}-${s.type}`] = parseInt(s.value));
-       setLiveStats(statsMap);
+      // Scores
+      const { data: fixtures } = await supabase
+        .from('fixtures')
+        .select('api_id, home_score, away_score, status')
+        .in('api_id', ids);
+      const scoreMap: Record<number, any> = {};
+      fixtures?.forEach(f => { scoreMap[f.api_id] = f; });
+      setLiveScores(scoreMap);
+
+      // Stats from teams_history (keyed as "fixtureId-HOME" / "fixtureId-AWAY")
+      const { data: histData } = await supabase
+        .from('teams_history')
+        .select('fixture_id, is_home, goals_for, corners, yellow_cards, shots_total, stats_1h, stats_2h')
+        .in('fixture_id', ids);
+      const hMap: Record<string, any> = {};
+      histData?.forEach(h => { hMap[`${h.fixture_id}-${h.is_home ? 'HOME' : 'AWAY'}`] = h; });
+      setHistStats(hMap);
     } else {
-       setTicket(null);
+      setTicket(null);
+      setHistStats({});
     }
-  }
+  }, []);
 
   useEffect(() => {
-    async function loadData() {
+    async function load() {
       setLoading(true);
       await loadCurrentTicket(dateOffset);
       setLoading(false);
     }
-    loadData();
-  }, [dateOffset]);
+    load();
+  }, [dateOffset, loadCurrentTicket]);
+
+  // Resolve & persist results once all games are finished
+  useEffect(() => {
+    if (!ticket || ticket.status !== 'PENDING') return;
+
+    const entries: any[] = ticket.ticket_data.entries;
+    const allFinished = entries.every(e => {
+      const live = liveScores[e.fixture_id];
+      return live?.status === 'FT';
+    });
+    if (!allFinished) return;
+
+    // Check we have stats for at least one entry
+    const hasStats = entries.some(e =>
+      histStats[`${e.fixture_id}-HOME`] || histStats[`${e.fixture_id}-AWAY`]
+    );
+    if (!hasStats) return;
+
+    // Build updated entries with pick results
+    let ticketWon = true;
+    const updatedEntries = entries.map(e => {
+      let matchWon = true;
+      const updatedPicks = e.picks.map((pick: any) => {
+        if (pick.result) return pick;
+        const hist = histStats[`${e.fixture_id}-${pick.teamTarget}`];
+        const actual = getActualVal(hist, pick.stat, pick.period);
+        const result = evaluatePick(pick, actual);
+        if (result === 'LOST') matchWon = false;
+        if (result !== 'WON') ticketWon = false;
+        return { ...pick, result: result ?? pick.result };
+      });
+      if (!matchWon) ticketWon = false;
+      return { ...e, result: matchWon ? 'WON' : 'LOST', picks: updatedPicks };
+    });
+
+    const newStatus = ticketWon ? 'WON' : 'LOST';
+    const updatedTicketData = { ...ticket.ticket_data, entries: updatedEntries };
+
+    // Persist to DB
+    supabase
+      .from('odd_tickets')
+      .update({ status: newStatus, ticket_data: updatedTicketData })
+      .eq('date', ticket.date)
+      .then(({ error }) => {
+        if (error) {
+          console.warn('Could not persist ticket resolution:', error.message);
+        }
+      });
+
+    // Update local state immediately regardless
+    setTicket((prev: any) => ({
+      ...prev,
+      status: newStatus,
+      ticket_data: updatedTicketData,
+    }));
+  }, [ticket, liveScores, histStats]);
 
   useEffect(() => {
     async function loadHistory() {
-      const { data } = await supabase.from('odd_tickets').select('*').order('date', { ascending: false });
+      const { data } = await supabase
+        .from('odd_tickets')
+        .select('*')
+        .order('date', { ascending: false });
       if (data) {
         setAllTickets(data);
         const won = data.filter(t => t.status === 'WON').length;
         const lost = data.filter(t => t.status === 'LOST').length;
         const odds = data.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
-        const avg = odds.length > 0 ? (odds.reduce((a,b) => a+b, 0) / odds.length).toFixed(2) : '0.00';
+        const avg = odds.length > 0
+          ? (odds.reduce((a, b) => a + b, 0) / odds.length).toFixed(2)
+          : '0.00';
         setStats({ won, lost, pending: data.filter(t => t.status === 'PENDING').length, avgOdd: avg });
       }
     }
     loadHistory();
 
-    // REAL-TIME CHANNELS
-    const tixChannel = supabase.channel('tix').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'odd_tickets' }, (p) => {
-        setTicket((curr: any) => (curr && p.new.date === curr.date) ? p.new : curr);
+    const tixChannel = supabase.channel('tix')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'odd_tickets' }, p => {
+        setTicket((curr: any) => curr && p.new.date === curr.date ? p.new : curr);
         setAllTickets(prev => prev.map(t => t.date === p.new.date ? p.new : t));
-    }).subscribe();
+      })
+      .subscribe();
 
-    const fixChannel = supabase.channel('fix').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fixtures' }, (p) => {
+    const fixChannel = supabase.channel('fix')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fixtures' }, p => {
         setLiveScores(prev => ({ ...prev, [p.new.api_id]: p.new }));
-    }).subscribe();
-
-    const statsChannel = supabase.channel('stats').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'match_stats' }, (p: any) => {
-        setLiveStats(prev => ({ ...prev, [`${p.new.fixture_id}-${p.new.team_id}-${p.new.type}`]: parseInt(p.new.value) }));
-    }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'match_stats' }, (p: any) => {
-        setLiveStats(prev => ({ ...prev, [`${p.new.fixture_id}-${p.new.team_id}-${p.new.type}`]: parseInt(p.new.value) }));
-    }).subscribe();
+      })
+      .subscribe();
 
     return () => {
       supabase.removeChannel(tixChannel);
       supabase.removeChannel(fixChannel);
-      supabase.removeChannel(statsChannel);
     };
   }, []);
 
@@ -101,7 +211,7 @@ export default function Odd20() {
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const cells = [];
+    const cells: any[] = [];
     for (let i = 0; i < start.getDay(); i++) cells.push(null);
     for (let i = 1; i <= end.getDate(); i++) {
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
@@ -113,186 +223,286 @@ export default function Odd20() {
 
   const targetDateObj = new Date();
   targetDateObj.setDate(targetDateObj.getDate() + dateOffset);
-  
-  // FORMATO LOCAL (Evita erro de fuso horário)
-  const y = targetDateObj.getFullYear();
-  const m = String(targetDateObj.getMonth() + 1).padStart(2, '0');
-  const d = String(targetDateObj.getDate()).padStart(2, '0');
-  const targetDateStr = `${y}-${m}-${d}`;
+  const ty = targetDateObj.getFullYear();
+  const tm = String(targetDateObj.getMonth() + 1).padStart(2, '0');
+  const td = String(targetDateObj.getDate()).padStart(2, '0');
+  const targetDateStr = `${ty}-${tm}-${td}`;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 min-h-screen">
+      {/* Tabs */}
       <div className="flex bg-surface-container/30 backdrop-blur-xl border border-outline-variant/10 rounded-2xl p-1.5 mb-12 max-w-sm mx-auto shadow-2xl relative z-50">
-         <button onClick={() => setActiveTab('today')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'today' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}><Trophy className="w-4 h-4" />Sugestão</button>
-         <button onClick={() => setActiveTab('history')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}><History className="w-4 h-4" />Histórico</button>
+        <button
+          onClick={() => setActiveTab('today')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'today' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}
+        >
+          <Trophy className="w-4 h-4" />Sugestão
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-primary text-white shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : 'text-on-surface-variant hover:text-white'}`}
+        >
+          <History className="w-4 h-4" />Histórico
+        </button>
       </div>
 
       <AnimatePresence mode="wait">
-         {activeTab === 'today' ? (
-            <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-               <div className="flex justify-between items-center bg-surface-container/20 border border-outline-variant/10 rounded-2xl p-1.5 max-w-[280px] mx-auto mb-8">
-                  <button onClick={() => setDateOffset(prev => prev - 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-                  <span className="text-[11px] font-black uppercase tracking-tighter text-white">
-                     {dateOffset === 0 ? 'Hoje' : targetDateStr.split('-').reverse().slice(0,2).join(' DE ')}
-                  </span>
-                  <button onClick={() => setDateOffset(prev => prev + 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronRight className="w-4 h-4" /></button>
-               </div>
+        {activeTab === 'today' ? (
+          <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+            {/* Date nav */}
+            <div className="flex justify-between items-center bg-surface-container/20 border border-outline-variant/10 rounded-2xl p-1.5 max-w-[280px] mx-auto mb-8">
+              <button onClick={() => setDateOffset(prev => prev - 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-[11px] font-black uppercase tracking-tighter text-white">
+                {dateOffset === 0 ? 'Hoje' : targetDateStr.split('-').reverse().slice(0, 2).join(' DE ')}
+              </span>
+              <button onClick={() => setDateOffset(prev => prev + 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronRight className="w-4 h-4" /></button>
+            </div>
 
-                {loading ? (
-                   <div className="flex items-center justify-center min-h-[30vh]"><div className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full"></div></div>
-                ) : !ticket || ticket.matches_count === 0 ? (
-                   <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
-                       <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
-                       <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
-                       <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 75%.</p>
-                   </div>
-                ) : (
-                   <>
-                     {/* ─── TICKET HEADER ─── */}
-                     <div className="text-center mb-12 relative">
-                        <AnimatePresence>
-                           {ticket.status === 'WON' && (
-                              <motion.div 
-                                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                 className="absolute -top-16 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.8)] uppercase tracking-[0.2em] z-10 border border-white/20"
-                              >
-                                 🔥 GREEN CONFIRMADO
-                              </motion.div>
-                           )}
-                           {ticket.status === 'LOST' && (
-                              <motion.div 
-                                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                 className="absolute -top-16 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(244,63,94,0.6)] uppercase tracking-[0.2em] z-10 border border-white/20"
-                              >
-                                 💔 RED
-                              </motion.div>
-                           )}
-                        </AnimatePresence>
-                        
-                        <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-700 ${
-                           ticket.status === 'WON' 
-                              ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_50px_rgba(16,185,129,0.5)] rotate-12 scale-110' 
-                              : ticket.status === 'LOST' 
-                                 ? 'bg-gradient-to-br from-rose-400 to-rose-600 grayscale-[0.5]' 
-                                 : 'bg-primary'
-                        }`}>
-                           <Trophy className={`w-8 h-8 text-white ${ticket.status === 'WON' ? 'animate-bounce' : ''}`} />
+            {loading ? (
+              <div className="flex items-center justify-center min-h-[30vh]">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+              </div>
+            ) : !ticket || ticket.matches_count === 0 ? (
+              <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
+                <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
+                <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
+                <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 75%.</p>
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="text-center mb-12 relative">
+                  <AnimatePresence>
+                    {ticket.status === 'WON' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className="absolute -top-16 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.8)] uppercase tracking-[0.2em] z-10 border border-white/20"
+                      >
+                        🔥 GREEN CONFIRMADO
+                      </motion.div>
+                    )}
+                    {ticket.status === 'LOST' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className="absolute -top-16 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(244,63,94,0.6)] uppercase tracking-[0.2em] z-10 border border-white/20"
+                      >
+                        💔 RED
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-700 ${
+                    ticket.status === 'WON'
+                      ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_50px_rgba(16,185,129,0.5)] rotate-12 scale-110'
+                      : ticket.status === 'LOST'
+                        ? 'bg-gradient-to-br from-rose-400 to-rose-600 grayscale-[0.5]'
+                        : 'bg-primary'
+                  }`}>
+                    <Trophy className={`w-8 h-8 text-white ${ticket.status === 'WON' ? 'animate-bounce' : ''}`} />
+                  </div>
+
+                  <h1 className={`text-6xl font-black italic tracking-tighter mb-4 uppercase transition-all duration-500 ${
+                    ticket.status === 'WON' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-white'
+                  }`}>
+                    ODD {ticket.total_odd}
+                  </h1>
+
+                  <div className={`inline-flex border rounded-full px-5 py-2 items-center gap-3 transition-all duration-500 ${
+                    ticket.status === 'WON'
+                      ? 'bg-emerald-500/10 border-emerald-500/40'
+                      : ticket.status === 'LOST'
+                        ? 'bg-rose-500/10 border-rose-500/40'
+                        : 'bg-surface-container/60 border-outline-variant/20'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${
+                      ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' :
+                      ticket.status === 'WON' ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`} />
+                    <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${
+                      ticket.status === 'WON' ? 'text-emerald-400' :
+                      ticket.status === 'LOST' ? 'text-rose-400' : 'text-on-surface-variant'
+                    }`}>
+                      {ticket.status === 'WON' ? 'Matemática Superada' :
+                       ticket.status === 'LOST' ? 'Matemática Falhou' :
+                       `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Match cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {ticket.ticket_data.entries.map((match: any, i: number) => {
+                    const live = liveScores[match.fixture_id];
+                    const isLive = live?.status && !['NS', 'TBD', 'FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'].includes(live.status);
+                    const isFinished = ['FT', 'AET', 'PEN'].includes(live?.status);
+
+                    // Compute match result from picks
+                    const picksWithResult = match.picks.map((pick: any) => {
+                      if (pick.result) return { ...pick, computedResult: pick.result };
+                      if (!isFinished) return { ...pick, computedResult: null };
+                      const hist = histStats[`${match.fixture_id}-${pick.teamTarget}`];
+                      const actual = getActualVal(hist, pick.stat, pick.period);
+                      return { ...pick, computedResult: evaluatePick(pick, actual), actual };
+                    });
+
+                    const matchResult = match.result
+                      || (isFinished && picksWithResult.every(p => p.computedResult === 'WON') ? 'WON'
+                        : isFinished && picksWithResult.some(p => p.computedResult === 'LOST') ? 'LOST'
+                        : null);
+
+                    return (
+                      <div key={i} className={`border rounded-[32px] p-7 relative overflow-hidden group transition-all duration-500 shadow-xl ${
+                        matchResult === 'WON'
+                          ? 'bg-emerald-500/[0.03] border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]'
+                          : matchResult === 'LOST'
+                            ? 'bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.05)]'
+                            : 'bg-surface/40 border-outline-variant/20'
+                      }`}>
+                        <div className={`absolute left-0 top-0 bottom-0 w-2 transition-all duration-500 ${
+                          matchResult === 'WON' ? 'bg-emerald-500' :
+                          matchResult === 'LOST' ? 'bg-rose-500' : 'bg-primary'
+                        }`} />
+
+                        <div className="flex justify-between items-center mb-6">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">
+                              {new Date(match.date_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                              {' - '}
+                              {new Date(match.date_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isLive && (
+                              <span className="flex items-center gap-1.5 px-2 py-1 bg-rose-500/10 rounded-md">
+                                <span className="w-1 h-1 bg-rose-500 rounded-full animate-pulse" />
+                                <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">AO VIVO</span>
+                              </span>
+                            )}
+                          </div>
+                          {matchResult && (
+                            <span className={`text-[9px] font-black px-2.5 py-1 rounded-md ${matchResult === 'WON' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
+                              {matchResult}
+                            </span>
+                          )}
                         </div>
 
-                        <h1 className={`text-6xl font-black italic tracking-tighter mb-4 uppercase transition-all duration-500 ${
-                           ticket.status === 'WON' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-white'
-                        }`}>
-                           ODD {ticket.total_odd}
-                        </h1>
-
-                        <div className={`inline-flex border rounded-full px-5 py-2 items-center gap-3 transition-all duration-500 ${
-                           ticket.status === 'WON' 
-                              ? 'bg-emerald-500/10 border-emerald-500/40' 
-                              : ticket.status === 'LOST'
-                                 ? 'bg-rose-500/10 border-rose-500/40'
-                                 : 'bg-surface-container/60 border-outline-variant/20'
-                        }`}>
-                           <div className={`w-2 h-2 rounded-full ${
-                              ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' : 
-                              ticket.status === 'WON' ? 'bg-emerald-500' : 'bg-rose-500'
-                           }`}></div>
-                           <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${
-                              ticket.status === 'WON' ? 'text-emerald-400' : 
-                              ticket.status === 'LOST' ? 'text-rose-400' : 'text-on-surface-variant'
-                           }`}>
-                              {ticket.status === 'WON' ? 'Matemática Superada' : 
-                               ticket.status === 'LOST' ? 'Matemática Falhou' :
-                               `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
-                           </span>
+                        <div className="flex items-center justify-between gap-4 mb-8">
+                          <div className="flex flex-col items-center gap-2 flex-1">
+                            <img src={match.homeLogo} className="w-8 h-8 object-contain" />
+                            <span className="text-[10px] font-black text-white text-center line-clamp-1">{match.home}</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            {(isLive || isFinished) ? (
+                              <span className="text-xl font-black text-white italic tabular-nums tracking-tighter">
+                                {live.home_score} - {live.away_score}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black text-on-surface-variant/20 italic">VS</span>
+                            )}
+                            {isLive && live?.status && (
+                              <span className="text-[8px] font-black text-rose-500 mt-1">{live.status}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-center gap-2 flex-1">
+                            <img src={match.awayLogo} className="w-8 h-8 object-contain" />
+                            <span className="text-[10px] font-black text-white text-center line-clamp-1">{match.away}</span>
+                          </div>
                         </div>
-                     </div>
 
-                     {/* ─── TICKET MATCHES ─── */}
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {ticket.ticket_data.entries.map((match: any, i: number) => {
-                           const live = liveScores[match.fixture_id];
-                           const isLive = live?.status && !['NS', 'TBD', 'FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'].includes(live.status);
-                           const isFinished = live?.status === 'FT';
-                           
-                           return (
-                           <div key={i} className={`border rounded-[32px] p-7 relative overflow-hidden group transition-all duration-500 shadow-xl ${
-                              match.result === 'WON' 
-                                 ? 'bg-emerald-500/[0.03] border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]' 
-                                 : match.result === 'LOST'
-                                    ? 'bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.05)]'
-                                    : 'bg-surface/40 border-outline-variant/20'
-                           }`}>
-                              {/* Left Indicator Strip */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-2 transition-all duration-500 ${
-                                 match.result === 'WON' ? 'bg-emerald-500' : 
-                                 match.result === 'LOST' ? 'bg-rose-500' : 'bg-primary'
-                              }`}></div>
-
-                              <div className="flex justify-between items-center mb-6">
-                                 <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">
-                                       {new Date(match.date_time).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})} - {new Date(match.date_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                        <div className="space-y-2.5">
+                          {picksWithResult.map((pick: any, j: number) => {
+                            const result = pick.computedResult;
+                            const actual = pick.actual;
+                            return (
+                              <div key={j} className={`rounded-xl p-3.5 border transition-colors ${
+                                result === 'WON'
+                                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                                  : result === 'LOST'
+                                    ? 'bg-rose-500/10 border-rose-500/30'
+                                    : 'bg-black/30 border-white/5 group-hover:border-primary/20'
+                              }`}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">{pick.period}</span>
+                                  <div className="flex items-center gap-2">
+                                    {result && (
+                                      <span className={`text-[9px] font-black ${result === 'WON' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {result === 'WON' ? '✓ GREEN' : '✗ RED'}
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] font-black text-amber-500 tabular-nums">{pick.probability}%</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-end">
+                                  <p className={`text-[11px] font-black leading-tight ${
+                                    result === 'LOST' ? 'text-rose-400' :
+                                    result === 'WON' ? 'text-emerald-400' : 'text-on-surface'
+                                  }`}>
+                                    {pick.team}: {pick.line} {pick.stat}
+                                  </p>
+                                  {actual !== undefined && (
+                                    <span className={`text-[9px] font-black mb-0.5 tabular-nums ${
+                                      result === 'WON' ? 'text-emerald-400' :
+                                      result === 'LOST' ? 'text-rose-400' : 'text-on-surface-variant'
+                                    }`}>
+                                      FEZ: {actual}
                                     </span>
-                                    {isLive && <span className="flex items-center gap-1.5 px-2 py-1 bg-rose-500/10 rounded-md"><span className="w-1 h-1 bg-rose-500 rounded-full animate-pulse"></span><span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">AO VIVO</span></span>}
-                                 </div>
-                                 {match.result && <span className={`text-[9px] font-black px-2.5 py-1 rounded-md ${match.result === 'WON' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>{match.result}</span>}
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center justify-between gap-4 mb-8">
-                                 <div className="flex flex-col items-center gap-2 flex-1"><img src={match.homeLogo} className="w-8 h-8 object-contain" /><span className="text-[10px] font-black text-white text-center line-clamp-1">{match.home}</span></div>
-                                 <div className="flex flex-col items-center">
-                                    {(isLive || isFinished) ? (
-                                       <span className="text-xl font-black text-white italic tabular-nums tracking-tighter">{live.home_score} - {live.away_score}</span>
-                                    ) : <span className="text-[9px] font-black text-on-surface-variant/20 italic">VS</span>}
-                                    {isLive && live?.status && <span className="text-[8px] font-black text-rose-500 mt-1">{live.status}</span>}
-                                 </div>
-                                 <div className="flex flex-col items-center gap-2 flex-1"><img src={match.awayLogo} className="w-8 h-8 object-contain" /><span className="text-[10px] font-black text-white text-center line-clamp-1">{match.away}</span></div>
-                              </div>
-                              <div className="space-y-2.5">
-                                 {match.picks.map((pick: any, j: number) => {
-                                    const teamId = (pick.teamTarget === 'HOME' ? live?.home_team_id : live?.away_team_id) || (pick.team === match.home ? live?.home_team_id : live?.away_team_id);
-                                    // Mapear estatística do banco
-                                    const statTypeMap: Record<string, string> = { 'ESCANTEIOS': 'Corner Kicks', 'CARTÃO AMARELO': 'Yellow Cards', 'CHUTES': 'Total Shots' };
-                                    const apiStatType = statTypeMap[pick.stat] || pick.stat;
-                                    const currentVal = liveStats[`${match.fixture_id}-${teamId}-${apiStatType}`] ?? (pick.stat === 'GOLS MARCADOS' ? (pick.teamTarget === 'HOME' ? live?.home_score : live?.away_score) : undefined);
-
-                                    return (
-                                    <div key={j} className="bg-black/30 rounded-xl p-3.5 border border-white/5 group-hover:border-primary/20 transition-colors">
-                                       <div className="flex items-center justify-between mb-1">
-                                          <span className="text-[9px] font-black text-primary uppercase tracking-widest">{pick.period}</span>
-                                          <span className="text-[10px] font-black text-amber-500 tabular-nums">{pick.probability}%</span>
-                                       </div>
-                                       <div className="flex justify-between items-end">
-                                          <p className={`text-[11px] font-black leading-tight ${pick.result === 'LOST' ? 'text-rose-400' : pick.result === 'WON' ? 'text-emerald-400' : 'text-on-surface'}`}>{pick.team}: {pick.line} {pick.stat}</p>
-                                          {currentVal !== undefined && <span className={`text-[9px] font-black mb-0.5 ${pick.result === 'WON' ? 'text-emerald-400' : 'text-rose-400/60'}`}>FEZ: {currentVal}</span>}
-                                       </div>
-                                    </div>
-                                 )})}
-                              </div>
-                           </div>
-                        )})}
-                     </div>
-                  </>
-               )}
-            </motion.div>
-         ) : (
-            <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
-               <div className="grid grid-cols-7 gap-2 md:gap-4 mb-10">
-                  {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => <div key={d} className="text-center text-[9px] font-black uppercase text-on-surface-variant/40 pb-2">{d}</div>)}
-                  {getCalendarData().map((cell, i) => (
-                     <button key={i} disabled={!cell} onClick={() => cell && setDateOffset(Math.round((new Date(cell.dateStr + 'T12:00:00').getTime() - new Date().setHours(12,0,0,0))/(1000*60*60*24))) || setActiveTab('today')}
-                        className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all ${!cell?'opacity-0':cell.status==='WON'?'bg-emerald-500/10 border-emerald-500/40 text-emerald-400':cell.status==='LOST'?'bg-rose-500/10 border-rose-500/40 text-rose-400':cell.status==='PENDING'?'bg-amber-500/5 animate-pulse border-amber-500/20':'bg-surface-container/20 border-outline-variant/10 text-on-surface-variant/20 hover:border-primary/40'}`}
-                     >{cell && <span className="text-sm font-black">{cell.day}</span>}</button>
-                  ))}
-               </div>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[ { label: 'Greens', val: stats.won, color: 'text-emerald-400' }, { label: 'Reds', val: stats.lost, color: 'text-rose-400' }, { label: 'Taxa Acerto', val: `${Math.round((stats.won / (stats.won + stats.lost || 1)) * 100)}%`, color: 'text-white' }, { label: 'Avg Odd', val: stats.avgOdd, color: 'text-primary' } ].map((s, i) => (
-                     <div key={i} className="bg-surface/50 p-5 rounded-2xl border border-outline-variant/20 text-center"><span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-1 block">{s.label}</span><p className={`text-2xl font-black ${s.color}`}>{s.val}</p></div>
-                  ))}
-               </div>
-            </motion.div>
-         )}
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
+            <div className="grid grid-cols-7 gap-2 md:gap-4 mb-10">
+              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                <div key={i} className="text-center text-[9px] font-black uppercase text-on-surface-variant/40 pb-2">{d}</div>
+              ))}
+              {getCalendarData().map((cell, i) => (
+                <button
+                  key={i}
+                  disabled={!cell}
+                  onClick={() => {
+                    if (!cell) return;
+                    setDateOffset(Math.round(
+                      (new Date(cell.dateStr + 'T12:00:00').getTime() - new Date().setHours(12, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+                    ));
+                    setActiveTab('today');
+                  }}
+                  className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all ${
+                    !cell ? 'opacity-0' :
+                    cell.status === 'WON' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' :
+                    cell.status === 'LOST' ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' :
+                    cell.status === 'PENDING' ? 'bg-amber-500/5 animate-pulse border-amber-500/20' :
+                    'bg-surface-container/20 border-outline-variant/10 text-on-surface-variant/20 hover:border-primary/40'
+                  }`}
+                >
+                  {cell && <span className="text-sm font-black">{cell.day}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Greens', val: stats.won, color: 'text-emerald-400' },
+                { label: 'Reds', val: stats.lost, color: 'text-rose-400' },
+                { label: 'Taxa Acerto', val: `${Math.round((stats.won / (stats.won + stats.lost || 1)) * 100)}%`, color: 'text-white' },
+                { label: 'Avg Odd', val: stats.avgOdd, color: 'text-primary' },
+              ].map((s, i) => (
+                <div key={i} className="bg-surface/50 p-5 rounded-2xl border border-outline-variant/20 text-center">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-1 block">{s.label}</span>
+                  <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
