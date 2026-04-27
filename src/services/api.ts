@@ -238,7 +238,7 @@ export async function fetchPredictiveData(
   homeTeamId: number,
   awayTeamId: number,
   count: number = 20,
-  options: { mandoOnly?: boolean, seasonOnly?: boolean, leagueId?: number } = {}
+  options: { mandoOnly?: boolean, seasonOnly?: boolean, leagueId?: number, season?: number } = {}
 ) {
   if (!isSupabaseConfigured) {
     return generatePredictiveData(homeTeamId, awayTeamId, count);
@@ -248,16 +248,14 @@ export async function fetchPredictiveData(
     let homeQuery = supabase.from('teams_history').select('*').eq('team_id', homeTeamId);
     let awayQuery = supabase.from('teams_history').select('*').eq('team_id', awayTeamId);
 
-    const CURRENT_SEASON = 2026;
-
     if (options.mandoOnly) {
       homeQuery = homeQuery.eq('is_home', true);
       awayQuery = awayQuery.eq('is_home', false);
     }
 
-    if (options.seasonOnly) {
-      homeQuery = homeQuery.eq('season', CURRENT_SEASON);
-      awayQuery = awayQuery.eq('season', CURRENT_SEASON);
+    if (options.seasonOnly && options.season) {
+      homeQuery = homeQuery.eq('season', options.season);
+      awayQuery = awayQuery.eq('season', options.season);
     }
 
     // Filtra pela liga da partida para não misturar dados de ligas diferentes (ex: Remo na Série B vs Série A)

@@ -21,10 +21,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function backfillStats(leagueApiId, season) {
     if (!leagueApiId) {
         // Se rodar sem arg, pega todas as ativas
-        const { data: leagues } = await supabase.from('leagues').select('api_id');
+        const { data: leagues } = await supabase.from('leagues').select('api_id, current_season').eq('is_active', true);
         for (const l of leagues) {
-            const s = l.api_id === 71 ? 2026 : 2025;
-            await backfillStats(l.api_id, s);
+            await backfillStats(l.api_id, l.current_season);
         }
         return;
     }

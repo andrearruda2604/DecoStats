@@ -55,7 +55,12 @@ export default function App() {
     let isMounted = true;
     if (matchDetail) {
       setPredictiveLoading(true);
-      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, { seasonOnly, mandoOnly, leagueId: matchDetail.league?.api_id })
+      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, { 
+        seasonOnly, 
+        mandoOnly, 
+        leagueId: matchDetail.league?.api_id,
+        season: matchDetail.league?.current_season || matchDetail.fixture?.season
+      })
         .then(res => { if (isMounted) { setPredictiveBlock(res); setPredictiveLoading(false); } })
         .catch(() => { if (isMounted) setPredictiveLoading(false); });
     } else {
@@ -128,7 +133,7 @@ export default function App() {
                       : 'border-outline-variant bg-surface-container text-on-surface-variant/50'
                   }`}
                 >
-                  2025/26
+                  TEMPORADA
                 </button>
 
                 {/* Mando Toggle */}

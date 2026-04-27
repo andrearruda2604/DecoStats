@@ -27,7 +27,7 @@ export const MOCK_LEAGUES: League[] = [
   { id: 4, api_id: 78, name: 'Bundesliga', country: 'Germany', country_code: 'DE', logo_url: 'https://media.api-sports.io/football/leagues/78.png', flag_url: 'https://flagcdn.com/w40/de.png', season: 2025, is_active: true },
   { id: 5, api_id: 61, name: 'Ligue 1', country: 'France', country_code: 'FR', logo_url: 'https://media.api-sports.io/football/leagues/61.png', flag_url: 'https://flagcdn.com/w40/fr.png', season: 2025, is_active: true },
   { id: 6, api_id: 94, name: 'Liga Portugal', country: 'Portugal', country_code: 'PT', logo_url: 'https://media.api-sports.io/football/leagues/94.png', flag_url: 'https://flagcdn.com/w40/pt.png', season: 2025, is_active: true },
-  { id: 7, api_id: 71, name: 'Brasileirão', country: 'Brazil', country_code: 'BR', logo_url: 'https://media.api-sports.io/football/leagues/71.png', flag_url: 'https://flagcdn.com/w40/br.png', season: 2025, is_active: true },
+  { id: 7, api_id: 71, name: 'Brasileirão', country: 'Brazil', country_code: 'BR', logo_url: 'https://media.api-sports.io/football/leagues/71.png', flag_url: 'https://flagcdn.com/w40/br.png', season: 2026, is_active: true },
 ];
 
 // ─── Mock Matches ───────────────────────────────────────────────────
