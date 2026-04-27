@@ -25,8 +25,8 @@ export async function fetchMatches(
       home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
       away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
     `)
-    .gte('date', `${date}T00:00:00-03:00`)
-    .lte('date', `${date}T23:59:59-03:00`)
+    .gte('date', `${date}T00:00:00`)
+    .lte('date', `${date}T23:59:59`)
     .order('date', { ascending: true });
 
   if (leagueId) {

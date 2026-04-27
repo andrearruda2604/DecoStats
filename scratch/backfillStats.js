@@ -18,8 +18,16 @@ const API_KEY = env.VITE_API_FOOTBALL_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function backfillStats(leagueApiId = 71, season = 2026) {
-    console.log(`🚀 Iniciando recuperação de estatísticas para Liga ${leagueApiId}, Temporada ${season}...`);
+async function backfillStats(leagueApiId, season) {
+    if (!leagueApiId) {
+        // Se rodar sem arg, pega todas as ativas
+        const { data: leagues } = await supabase.from('leagues').select('api_id');
+        for (const l of leagues) {
+            const s = l.api_id === 71 ? 2026 : 2025;
+            await backfillStats(l.api_id, s);
+        }
+        return;
+    }
 
     // 1. Pegar todos os jogos finalizados desta liga que estão sem estatísticas
     const { data: fixtures } = await supabase
@@ -116,5 +124,8 @@ async function backfillStats(leagueApiId = 71, season = 2026) {
     console.log("🏁 Carga histórica concluída!");
 }
 
-// Rodar para o Brasileirão 2026
-backfillStats(71, 2026);
+// Pegar argumentos da linha de comando: node backfillStats.js [league_id] [season]
+const argLeague = process.argv[2] ? parseInt(process.argv[2]) : null;
+const argSeason = process.argv[3] ? parseInt(process.argv[3]) : null;
+
+backfillStats(argLeague, argSeason);
