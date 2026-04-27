@@ -138,52 +138,98 @@ export default function Odd20() {
                   <button onClick={() => setDateOffset(prev => prev + 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronRight className="w-4 h-4" /></button>
                </div>
 
-               {loading ? (
-                  <div className="flex items-center justify-center min-h-[30vh]"><div className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full"></div></div>
-               ) : !ticket || ticket.matches_count === 0 ? (
-                  <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
-                      <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
-                      <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
-                      <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 75%.</p>
-                  </div>
-               ) : (
-                  <>
+                {loading ? (
+                   <div className="flex items-center justify-center min-h-[30vh]"><div className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full"></div></div>
+                ) : !ticket || ticket.matches_count === 0 ? (
+                   <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
+                       <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
+                       <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
+                       <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 75%.</p>
+                   </div>
+                ) : (
+                   <>
+                     {/* ─── TICKET HEADER ─── */}
                      <div className="text-center mb-12 relative">
-                        {ticket.status === 'WON' && (
-                           <motion.div 
-                              initial={{ opacity: 0, scale: 0.5 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black px-4 py-1 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] uppercase tracking-widest z-10"
-                           >
-                              Bilhete Vencedor
-                           </motion.div>
-                        )}
+                        <AnimatePresence>
+                           {ticket.status === 'WON' && (
+                              <motion.div 
+                                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 className="absolute -top-16 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.8)] uppercase tracking-[0.2em] z-10 border border-white/20"
+                              >
+                                 🔥 GREEN CONFIRMADO
+                              </motion.div>
+                           )}
+                           {ticket.status === 'LOST' && (
+                              <motion.div 
+                                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 className="absolute -top-16 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(244,63,94,0.6)] uppercase tracking-[0.2em] z-10 border border-white/20"
+                              >
+                                 💔 RED
+                              </motion.div>
+                           )}
+                        </AnimatePresence>
                         
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl transition-all duration-500 ${ticket.status === 'WON' ? 'bg-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.6)]' : ticket.status === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}>
-                           <Trophy className={`w-6 h-6 text-white ${ticket.status === 'WON' ? 'animate-bounce' : ''}`} />
+                        <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-700 ${
+                           ticket.status === 'WON' 
+                              ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_50px_rgba(16,185,129,0.5)] rotate-12 scale-110' 
+                              : ticket.status === 'LOST' 
+                                 ? 'bg-gradient-to-br from-rose-400 to-rose-600 grayscale-[0.5]' 
+                                 : 'bg-primary'
+                        }`}>
+                           <Trophy className={`w-8 h-8 text-white ${ticket.status === 'WON' ? 'animate-bounce' : ''}`} />
                         </div>
 
-                        <h1 className="text-4xl font-black italic tracking-tighter text-white mb-2 uppercase">
+                        <h1 className={`text-6xl font-black italic tracking-tighter mb-4 uppercase transition-all duration-500 ${
+                           ticket.status === 'WON' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-white'
+                        }`}>
                            ODD {ticket.total_odd}
                         </h1>
 
-                        <div className={`inline-flex border rounded-full px-4 py-1.5 items-center gap-2 transition-all ${ticket.status === 'WON' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-surface-container/60 border-outline-variant/20'}`}>
-                           <div className={`w-1.5 h-1.5 rounded-full ${ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' : ticket.status === 'WON' ? 'bg-emerald-500' : 'bg-white/20'}`}></div>
-                           <span className={`text-[9px] font-black uppercase tracking-widest ${ticket.status === 'WON' ? 'text-emerald-400' : 'text-on-surface-variant'}`}>
-                              {ticket.status === 'WON' ? 'Matemática Confirmada' : `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
+                        <div className={`inline-flex border rounded-full px-5 py-2 items-center gap-3 transition-all duration-500 ${
+                           ticket.status === 'WON' 
+                              ? 'bg-emerald-500/10 border-emerald-500/40' 
+                              : ticket.status === 'LOST'
+                                 ? 'bg-rose-500/10 border-rose-500/40'
+                                 : 'bg-surface-container/60 border-outline-variant/20'
+                        }`}>
+                           <div className={`w-2 h-2 rounded-full ${
+                              ticket.status === 'PENDING' ? 'bg-amber-400 animate-pulse' : 
+                              ticket.status === 'WON' ? 'bg-emerald-500' : 'bg-rose-500'
+                           }`}></div>
+                           <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${
+                              ticket.status === 'WON' ? 'text-emerald-400' : 
+                              ticket.status === 'LOST' ? 'text-rose-400' : 'text-on-surface-variant'
+                           }`}>
+                              {ticket.status === 'WON' ? 'Matemática Superada' : 
+                               ticket.status === 'LOST' ? 'Matemática Falhou' :
+                               `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
                            </span>
                         </div>
                      </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                     {/* ─── TICKET MATCHES ─── */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {ticket.ticket_data.entries.map((match: any, i: number) => {
                            const live = liveScores[match.fixture_id];
                            const isLive = live?.status && !['NS', 'TBD', 'FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'].includes(live.status);
                            const isFinished = live?.status === 'FT';
                            
                            return (
-                           <div key={i} className={`border rounded-2xl p-6 relative overflow-hidden group transition-all shadow-sm ${match.result === 'WON' ? 'bg-emerald-500/5 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-surface/40 border-outline-variant/20'}`}>
-                              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${match.result === 'WON' ? 'bg-emerald-500' : match.result === 'LOST' ? 'bg-rose-500' : 'bg-primary'}`}></div>
+                           <div key={i} className={`border rounded-[32px] p-7 relative overflow-hidden group transition-all duration-500 shadow-xl ${
+                              match.result === 'WON' 
+                                 ? 'bg-emerald-500/[0.03] border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]' 
+                                 : match.result === 'LOST'
+                                    ? 'bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.05)]'
+                                    : 'bg-surface/40 border-outline-variant/20'
+                           }`}>
+                              {/* Left Indicator Strip */}
+                              <div className={`absolute left-0 top-0 bottom-0 w-2 transition-all duration-500 ${
+                                 match.result === 'WON' ? 'bg-emerald-500' : 
+                                 match.result === 'LOST' ? 'bg-rose-500' : 'bg-primary'
+                              }`}></div>
+
                               <div className="flex justify-between items-center mb-6">
                                  <div className="flex items-center gap-2">
                                     <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">

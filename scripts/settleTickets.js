@@ -83,6 +83,10 @@ async function settle() {
               
               console.log(`  [${pick.period}] ${pick.team} ${pick.line}: Real ${actualValue} -> ${won ? '✅' : '❌'}`);
           }
+          
+          // Define resultado do jogo (se todos os picks bateram)
+          const matchWon = entry.picks.every(p => p.result === 'WON');
+          entry.result = matchWon ? 'WON' : 'LOST';
       }
 
       if (allFinished) {
