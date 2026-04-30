@@ -66,7 +66,7 @@ async function syncToday() {
   console.log(`Ligas ativas (${activeLeagues.length}): ${activeLeagues.map(l => l.name).join(', ')}\n`);
 
   // 2. Busca jogos de hoje na API
-  const data = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?date=${today}`);
+  const data = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?date=${today}&timezone=America/Sao_Paulo`);
   const matches = (data.response || []).filter(m => activeLeagueApiIds.includes(m.league.id));
 
   console.log(`Encontrados ${matches.length} jogos monitorados hoje.\n`);

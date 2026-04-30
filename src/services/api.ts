@@ -248,41 +248,40 @@ export async function fetchPredictiveData(
   homeTeamId: number,
   awayTeamId: number,
   count: number = 20,
-  options: { mandoOnly?: boolean, seasonOnly?: boolean, leagueId?: number, season?: number } = {}
+  options: { mandoOnly?: boolean, seasonOnly?: boolean, leagueId?: number, season?: number, matchDate?: string } = {}
 ) {
   if (!isSupabaseConfigured) {
     return generatePredictiveData(homeTeamId, awayTeamId, count);
   }
 
   try {
-    let homeQuery = supabase.from('teams_history').select('*').eq('team_id', homeTeamId);
-    let awayQuery = supabase.from('teams_history').select('*').eq('team_id', awayTeamId);
+    const MIN_RECORDS = 3;
 
-    if (options.mandoOnly) {
-      homeQuery = homeQuery.eq('is_home', true);
-      awayQuery = awayQuery.eq('is_home', false);
+    async function fetchTeamData(teamId: number, isHome: boolean) {
+      let q = supabase.from('teams_history').select('*').eq('team_id', teamId);
+      if (options.mandoOnly) q = q.eq('is_home', isHome);
+      if (options.seasonOnly && options.season) q = q.eq('season', options.season);
+      if (options.leagueId) q = q.eq('league_id', options.leagueId);
+      // Ponto no tempo: só usa jogos anteriores à data do fixture analisado
+      if (options.matchDate) q = q.lt('match_date', options.matchDate);
+      const { data } = await q.order('match_date', { ascending: false }).limit(count);
+      if ((data?.length ?? 0) >= MIN_RECORDS) return data!;
+
+      // Fallback sem filtro de liga (mantém temporada, mando e ponto-no-tempo)
+      let fb = supabase.from('teams_history').select('*').eq('team_id', teamId);
+      if (options.mandoOnly) fb = fb.eq('is_home', isHome);
+      if (options.seasonOnly && options.season) fb = fb.eq('season', options.season);
+      if (options.matchDate) fb = fb.lt('match_date', options.matchDate);
+      const { data: fbData } = await fb.order('match_date', { ascending: false }).limit(count);
+      return fbData || [];
     }
 
-    if (options.seasonOnly && options.season) {
-      homeQuery = homeQuery.eq('season', options.season);
-      awayQuery = awayQuery.eq('season', options.season);
-    }
-
-    // Filtra pela liga da partida para não misturar dados de ligas diferentes (ex: Remo na Série B vs Série A)
-    if (options.leagueId) {
-      homeQuery = homeQuery.eq('league_id', options.leagueId);
-      awayQuery = awayQuery.eq('league_id', options.leagueId);
-    }
-
-    const [homeRes, awayRes] = await Promise.all([
-      homeQuery.order('match_date', { ascending: false }).limit(count),
-      awayQuery.order('match_date', { ascending: false }).limit(count)
+    const [homeData, awayData] = await Promise.all([
+      fetchTeamData(homeTeamId, true),
+      fetchTeamData(awayTeamId, false),
     ]);
 
-    const homeData = homeRes.data || [];
-    const awayData = awayRes.data || [];
-
-    if (homeData.length < 3 && awayData.length < 3) {
+    if (homeData.length < MIN_RECORDS && awayData.length < MIN_RECORDS) {
       return generatePredictiveData(homeTeamId, awayTeamId, count);
     }
 

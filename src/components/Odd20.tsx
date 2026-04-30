@@ -26,8 +26,54 @@ const STAT_COL_JSONB: Record<string, string> = {
 function getActualVal(
   hist: any,
   stat: string,
-  period: string
+  period: string,
+  _teamTarget?: string,
+  statKey?: string,
+  liveScore?: any,
+  histOther?: any // the other team's history (for TOTAL picks)
 ): number | undefined {
+  // ── Novo formato: statKey (picks com odds reais) ──
+  if (statKey) {
+    const ftH  = liveScore?.home_score    ?? null;
+    const ftA  = liveScore?.away_score    ?? null;
+    const htH  = liveScore?.ht_home_score ?? null;
+    const htA  = liveScore?.ht_away_score ?? null;
+    const h2H  = (ftH != null && htH != null) ? ftH - htH : null;
+    const h2A  = (ftA != null && htA != null) ? ftA - htA : null;
+
+    switch (statKey) {
+      // Gols totais por período
+      case 'total_goals':
+        return (ftH != null && ftA != null) ? ftH + ftA : undefined;
+      case 'ht_total_goals':
+        return (htH != null && htA != null) ? htH + htA : undefined;
+      case '2h_total_goals':
+        return (h2H != null && h2A != null) ? h2H + h2A : undefined;
+      // Gols por equipe (FT)
+      case 'home_score':  return ftH ?? undefined;
+      case 'away_score':  return ftA ?? undefined;
+      // Gols por equipe (1T)
+      case 'ht_home_score': return htH ?? undefined;
+      case 'ht_away_score': return htA ?? undefined;
+      // Gols por equipe (2T = FT − HT)
+      case '2h_home_score': return h2H ?? undefined;
+      case '2h_away_score': return h2A ?? undefined;
+      // Escanteios (usam histStats para dados finais)
+      case 'total_corners':
+        return (hist?.corners != null && histOther?.corners != null)
+          ? hist.corners + histOther.corners : undefined;
+      case 'home_corners': return hist?.corners ?? undefined;
+      case 'away_corners': return hist?.corners ?? undefined;
+      // Cartões
+      case 'total_cards':
+        return (hist?.yellow_cards != null && histOther?.yellow_cards != null)
+          ? hist.yellow_cards + histOther.yellow_cards : undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  // ── Legado: picks históricos ──
   if (!hist) return undefined;
   if (period === 'FT') {
     const col = STAT_COL_FT[stat];
@@ -84,7 +130,7 @@ export default function Odd20() {
       // Scores
       const { data: fixtures } = await supabase
         .from('fixtures')
-        .select('api_id, home_score, away_score, status')
+        .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
         .in('api_id', ids);
       const scoreMap: Record<number, any> = {};
       fixtures?.forEach(f => { scoreMap[f.api_id] = f; });
@@ -136,8 +182,14 @@ export default function Odd20() {
       let matchWon = true;
       const updatedPicks = e.picks.map((pick: any) => {
         if (pick.result) return pick;
-        const hist = histStats[`${e.fixture_id}-${pick.teamTarget}`];
-        const actual = getActualVal(hist, pick.stat, pick.period);
+        const hist = histStats[`${e.fixture_id}-HOME`];
+        const histAway = histStats[`${e.fixture_id}-AWAY`];
+        const liveScore = liveScores[e.fixture_id];
+        const actual = getActualVal(
+          pick.teamTarget === 'AWAY' ? histAway : hist,
+          pick.stat, pick.period, pick.teamTarget, pick.statKey, liveScore,
+          pick.teamTarget === 'TOTAL' ? histAway : undefined
+        );
         const result = evaluatePick(pick, actual);
         if (result === 'LOST') matchWon = false;
         if (result !== 'WON') ticketWon = false;
@@ -342,8 +394,13 @@ export default function Odd20() {
                     const picksWithResult = match.picks.map((pick: any) => {
                       if (pick.result) return { ...pick, computedResult: pick.result };
                       if (!isFinished) return { ...pick, computedResult: null };
-                      const hist = histStats[`${match.fixture_id}-${pick.teamTarget}`];
-                      const actual = getActualVal(hist, pick.stat, pick.period);
+                      const histH = histStats[`${match.fixture_id}-HOME`];
+                      const histA = histStats[`${match.fixture_id}-AWAY`];
+                      const hist = pick.teamTarget === 'AWAY' ? histA : histH;
+                      const actual = getActualVal(
+                        hist, pick.stat, pick.period, pick.teamTarget, pick.statKey, live,
+                        pick.teamTarget === 'TOTAL' ? histA : undefined
+                      );
                       return { ...pick, computedResult: evaluatePick(pick, actual), actual };
                     });
 

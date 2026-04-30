@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/seedSeasonFixtures.js 72 2026)",
+      "Bash(node scripts/seedLeagueHistory.js 128 2026)",
+      "Bash(node scripts/seedLeagueHistory.js 72 2026)",
+      "Read(//c/Users/camil/AppData/Local/Temp/claude/c--Users-camil-OneDrive-Documentos-Andre-projetos-DecoStats/13994216-2552-4258-8e8a-ea05bcb418f5/tasks//**)",
+      "Read(//c/Users/camil/AppData/Local/Temp/claude/c--Users-camil-OneDrive-Documentos-Andre-projetos-DecoStats/13994216-2552-4258-8e8a-ea05bcb418f5/tasks/**)",
+      "Bash(node scripts/seedSeasonFixtures.js 2 2025)",
+      "Bash(node scripts/seedLeagueHistory.js 2 2025)",
+      "Bash(node scripts/syncToday.js)",
+      "Bash(node scratch/resolveOddTickets.js 2026-04-27)",
+      "Bash(node scripts/generateOdd2.js)"
+    ]
+  }
+}

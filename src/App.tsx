@@ -55,11 +55,12 @@ export default function App() {
     let isMounted = true;
     if (matchDetail) {
       setPredictiveLoading(true);
-      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, { 
-        seasonOnly, 
-        mandoOnly, 
+      fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, {
+        seasonOnly,
+        mandoOnly,
         leagueId: matchDetail.league?.api_id,
-        season: matchDetail.league?.current_season || matchDetail.fixture?.season
+        season: matchDetail.league?.current_season || matchDetail.fixture?.season,
+        matchDate: matchDetail.fixture?.date,
       })
         .then(res => { if (isMounted) { setPredictiveBlock(res); setPredictiveLoading(false); } })
         .catch(() => { if (isMounted) setPredictiveLoading(false); });

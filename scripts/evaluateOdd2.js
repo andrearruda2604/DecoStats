@@ -100,7 +100,7 @@ async function evaluateTicket() {
 
     let matchGreen = true;
     for (const pick of entry.picks) {
-        const line = parseFloat(pick.line.split(' ')[1]);
+        const line = pick.threshold !== undefined ? pick.threshold : parseFloat(pick.line.split(' ').pop());
         const isHome = pick.teamTarget === 'HOME';
         const teamStatsArr = isHome 
             ? teamsStats.find(s => s.team.id === matchDetail.teams.home.id)?.statistics 
