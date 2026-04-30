@@ -12,7 +12,8 @@
       "Bash(node scratch/resolveOddTickets.js 2026-04-27)",
       "Bash(node scripts/generateOdd2.js)",
       "Bash(node --input-type=module)",
-      "Bash(node scripts/seedNewLeagues.js)"
+      "Bash(node scripts/seedNewLeagues.js)",
+      "Bash(node scripts/syncTodayWithHistory.js)"
     ]
   }
 }

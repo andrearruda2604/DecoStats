@@ -331,7 +331,7 @@ export default function Odd20() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         className="absolute -top-16 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[12px] font-black px-8 py-2 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.8)] uppercase tracking-[0.2em] z-10 border border-white/20"
                       >
-                        🔥 GREEN CONFIRMADO
+                        GREEN
                       </motion.div>
                     )}
                     {ticket.status === 'LOST' && (

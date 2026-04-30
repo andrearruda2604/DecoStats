@@ -43,10 +43,11 @@ export default function LeagueFilter({
   const displayDate = formatDisplayDate(selectedDate);
   const prevLabel = formatDisplayDate(shiftDate(selectedDate, -1));
   const nextLabel = formatDisplayDate(shiftDate(selectedDate, 1));
+  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
 
   return (
-    <div className="space-y-3 mb-5">
-      {/* Date Navigation — Tab style */}
+    <div className="space-y-2 mb-5">
+      {/* Date Navigation */}
       <div className="flex items-center justify-between card px-2 py-1.5">
         <button
           onClick={() => onSelectDate(shiftDate(selectedDate, -1))}
@@ -77,39 +78,65 @@ export default function LeagueFilter({
         </button>
       </div>
 
-      {/* League Pills */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 overflow-x-auto sm:overflow-x-visible no-scrollbar pb-0.5">
+      {/* League Filter Rail */}
+      <div className="card px-3 py-2 flex items-center gap-3">
+        {/* TODAS */}
         <button
           onClick={() => onSelectLeague(null)}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border shadow-sm ${
+          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
             selectedLeagueId === null
-              ? 'bg-primary text-on-primary border-primary ring-2 ring-primary/20'
-              : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/40 hover:bg-surface-container-highest'
+              ? 'bg-primary text-on-primary'
+              : 'text-on-surface-variant/40 hover:text-on-surface'
           }`}
         >
           Todas
         </button>
 
-        {leagues.map((league) => (
-          <button
-            key={league.id}
-            onClick={() => onSelectLeague(selectedLeagueId === league.id ? null : league.id)}
-            className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all border shadow-sm ${
-              selectedLeagueId === league.id
-                ? 'bg-primary text-on-primary border-primary ring-2 ring-primary/20'
-                : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/40 hover:bg-surface-container-highest'
-            }`}
-          >
-            <div className="w-4 h-3 overflow-hidden rounded-[2px] shadow-sm border border-white/10">
-              <img 
-                src={league.flag_url || `https://media.api-sports.io/flags/${league.country_code?.toLowerCase()}.svg`} 
-                alt="" 
-                className="w-full h-full object-cover" 
-              />
-            </div>
-            <span>{league.name}</span>
-          </button>
-        ))}
+        {/* Separator */}
+        <div className="w-px h-5 bg-outline-variant/30 flex-shrink-0" />
+
+        {/* Scrollable logo badges */}
+        <div className="relative flex-1 overflow-hidden">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {leagues.map((league) => (
+              <button
+                key={league.id}
+                title={league.name}
+                onClick={() => onSelectLeague(selectedLeagueId === league.id ? null : league.id)}
+                className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all border ${
+                  selectedLeagueId === league.id
+                    ? 'border-primary bg-primary/15 ring-2 ring-primary/25'
+                    : 'border-outline-variant/30 bg-surface-container-high hover:border-primary/30 hover:bg-surface-container-highest'
+                }`}
+              >
+                <img
+                  src={league.logo_url}
+                  alt={league.name}
+                  className="w-5 h-5 object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.opacity = '0.2';
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+          {/* Right fade to hint at scrollability */}
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-surface-container to-transparent pointer-events-none" />
+        </div>
+
+        {/* Selected league name badge */}
+        {selectedLeague && (
+          <div className="flex-shrink-0 flex items-center gap-1.5 pl-2 border-l border-outline-variant/30">
+            <img
+              src={selectedLeague.logo_url}
+              alt=""
+              className="w-4 h-4 object-contain"
+            />
+            <span className="text-[9px] font-bold text-primary uppercase tracking-wide max-w-[90px] truncate">
+              {selectedLeague.name}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
