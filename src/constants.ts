@@ -16,6 +16,10 @@ export const LEAGUE_IDS = {
   LIGA_PORTUGAL: 94,
   BRASILEIRAO: 71,
   CHAMPIONS_LEAGUE: 2,
+  LIBERTADORES: 13,
+  SULAMERICANA: 11,
+  EUROPA_LEAGUE: 3,
+  CONFERENCE_LEAGUE: 848,
 } as const;
 
 // ─── Mock Leagues ───────────────────────────────────────────────────
@@ -28,6 +32,10 @@ export const MOCK_LEAGUES: League[] = [
   { id: 5, api_id: 61, name: 'Ligue 1', country: 'France', country_code: 'FR', logo_url: 'https://media.api-sports.io/football/leagues/61.png', flag_url: 'https://flagcdn.com/w40/fr.png', season: 2025, is_active: true },
   { id: 6, api_id: 94, name: 'Liga Portugal', country: 'Portugal', country_code: 'PT', logo_url: 'https://media.api-sports.io/football/leagues/94.png', flag_url: 'https://flagcdn.com/w40/pt.png', season: 2025, is_active: true },
   { id: 7, api_id: 71, name: 'Brasileirão', country: 'Brazil', country_code: 'BR', logo_url: 'https://media.api-sports.io/football/leagues/71.png', flag_url: 'https://flagcdn.com/w40/br.png', season: 2026, is_active: true },
+  { id: 8, api_id: 13, name: 'Copa Libertadores', country: 'South America', country_code: 'SA', logo_url: 'https://media.api-sports.io/football/leagues/13.png', flag_url: '', season: 2026, is_active: true },
+  { id: 9, api_id: 11, name: 'Copa Sudamericana', country: 'South America', country_code: 'SA', logo_url: 'https://media.api-sports.io/football/leagues/11.png', flag_url: '', season: 2026, is_active: true },
+  { id: 10, api_id: 3, name: 'Europa League', country: 'Europe', country_code: 'EU', logo_url: 'https://media.api-sports.io/football/leagues/3.png', flag_url: '', season: 2026, is_active: true },
+  { id: 11, api_id: 848, name: 'Conference League', country: 'Europe', country_code: 'EU', logo_url: 'https://media.api-sports.io/football/leagues/848.png', flag_url: '', season: 2026, is_active: true },
 ];
 
 // ─── Mock Matches ───────────────────────────────────────────────────

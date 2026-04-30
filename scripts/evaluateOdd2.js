@@ -145,19 +145,19 @@ async function evaluateTicket() {
         const isPickGreen = pick.type === 'UNDER' ? actualValue < line : actualValue > line;
         if (!isPickGreen) { matchGreen = false; allGreen = false; }
         
-        pick.result = isPickGreen ? 'GREEN' : 'RED';
+        pick.result = isPickGreen ? 'WON' : 'LOST';
         pick.actualValue = actualValue;
         
         console.log(`[${pick.result}] ${pick.period} ${pick.stat} ${pick.teamTarget} ${pick.type === 'UNDER' ? '<' : '>'} ${line} (Fez: ${actualValue})`);
     }
     
-    entry.matchResult = matchGreen ? 'GREEN' : 'RED';
+    entry.matchResult = matchGreen ? 'WON' : 'LOST';
     evaluatedEntries.push(entry);
     await new Promise(r => setTimeout(r, 1000));
   }
 
   ticket.ticket_data.entries = evaluatedEntries;
-  const finalStatus = allGreen ? 'GREEN' : 'RED';
+  const finalStatus = allGreen ? 'WON' : 'LOST';
 
   await supabase.from('odd_tickets').update({
      status: finalStatus,
