@@ -59,7 +59,7 @@ export default function App() {
         seasonOnly,
         mandoOnly,
         leagueId: matchDetail.league?.api_id,
-        season: matchDetail.league?.current_season || matchDetail.fixture?.season,
+        season: matchDetail.league?.season || matchDetail.fixture?.season,
         matchDate: matchDetail.fixture?.date,
       })
         .then(res => { if (isMounted) { setPredictiveBlock(res); setPredictiveLoading(false); } })
@@ -82,20 +82,26 @@ export default function App() {
     >
       {/* ═══ LOBBY ═══ */}
       {activeView === 'LOBBY' && (
-        <>
-          <LeagueFilter
-            leagues={leagues}
-            selectedLeagueId={selectedLeagueId}
-            onSelectLeague={setSelectedLeagueId}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-          />
-          {matchesLoading && <LoadingState message="Buscando partidas..." />}
-          {matchesError && <ErrorState message={matchesError} onRetry={refreshMatches} />}
-          {!matchesLoading && !matchesError && (
-            <Lobby matches={matches} onSelectMatch={handleSelectMatch} />
-          )}
-        </>
+        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-5 lg:items-start">
+          {/* Sidebar */}
+          <aside className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto lg:pb-4 no-scrollbar">
+            <LeagueFilter
+              leagues={leagues}
+              selectedLeagueId={selectedLeagueId}
+              onSelectLeague={setSelectedLeagueId}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+            />
+          </aside>
+          {/* Main */}
+          <div>
+            {matchesLoading && <LoadingState message="Buscando partidas..." />}
+            {matchesError && <ErrorState message={matchesError} onRetry={refreshMatches} />}
+            {!matchesLoading && !matchesError && (
+              <Lobby matches={matches} onSelectMatch={handleSelectMatch} />
+            )}
+          </div>
+        </div>
       )}
 
       {/* ═══ MATCH DETAIL ═══ */}
