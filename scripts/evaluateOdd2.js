@@ -102,31 +102,44 @@ async function evaluateTicket() {
     for (const pick of entry.picks) {
         const line = pick.threshold !== undefined ? pick.threshold : parseFloat(pick.line.split(' ').pop());
         const isHome = pick.teamTarget === 'HOME';
-        const teamStatsArr = isHome 
-            ? teamsStats.find(s => s.team.id === matchDetail.teams.home.id)?.statistics 
-            : teamsStats.find(s => s.team.id === matchDetail.teams.away.id)?.statistics;
-        
         let actualValue = 0;
 
-        if (pick.stat === 'GOLS MARCADOS') {
-            actualValue = isHome ? homeGoals : awayGoals;
-        } else if (teamStatsArr) {
-            const translatedType = STAT_MAPPING[pick.stat];
-            const statObj = teamStatsArr.find(s => s.type === translatedType);
-            actualValue = statObj && statObj.value !== null ? parseInt(statObj.value) : 0;
-        }
-        
-        // Simplification for HT stats (since api-football /statistics only gives FT totals)
-        if (pick.period === 'HT' && pick.stat !== 'GOLS MARCADOS') {
-            actualValue = Math.floor(actualValue / 2); // Approximation for retro-evaluating HT corners/shots
-        } else if (pick.period === 'HT' && pick.stat === 'GOLS MARCADOS') {
-            actualValue = isHome ? matchDetail.score.halftime.home : matchDetail.score.halftime.away;
-        } else if (pick.period === '2H' && pick.stat !== 'GOLS MARCADOS') {
-            actualValue = Math.ceil(actualValue / 2); // Approximation for retro-evaluating 2H
-        } else if (pick.period === '2H' && pick.stat === 'GOLS MARCADOS') {
-            const ftG = isHome ? homeGoals : awayGoals;
-            const htG = isHome ? (matchDetail.score.halftime.home || 0) : (matchDetail.score.halftime.away || 0);
-            actualValue = ftG - htG;
+        if (pick.stat === 'GOLS' || pick.stat === 'GOLS MARCADOS') {
+            const htHome = matchDetail.score?.halftime?.home || 0;
+            const htAway = matchDetail.score?.halftime?.away || 0;
+            if (pick.period === 'FT') {
+                actualValue = pick.teamTarget === 'TOTAL' ? (homeGoals + awayGoals) : (isHome ? homeGoals : awayGoals);
+            } else if (pick.period === 'HT') {
+                actualValue = pick.teamTarget === 'TOTAL' ? (htHome + htAway) : (isHome ? htHome : htAway);
+            } else if (pick.period === '2H') {
+                const ftG = pick.teamTarget === 'TOTAL' ? (homeGoals + awayGoals) : (isHome ? homeGoals : awayGoals);
+                const htG = pick.teamTarget === 'TOTAL' ? (htHome + htAway) : (isHome ? htHome : htAway);
+                actualValue = ftG - htG;
+            }
+        } else {
+            const translatedType = STAT_MAPPING[pick.stat] || pick.stat;
+            const homeStatsArr = teamsStats.find(s => s.team.id === matchDetail.teams.home.id)?.statistics || [];
+            const awayStatsArr = teamsStats.find(s => s.team.id === matchDetail.teams.away.id)?.statistics || [];
+            
+            let val = 0;
+            if (pick.teamTarget === 'TOTAL') {
+                const hStat = homeStatsArr.find(s => s.type === translatedType);
+                const aStat = awayStatsArr.find(s => s.type === translatedType);
+                val += hStat && hStat.value !== null ? parseInt(hStat.value) : 0;
+                val += aStat && aStat.value !== null ? parseInt(aStat.value) : 0;
+            } else {
+                const teamStatsArr = isHome ? homeStatsArr : awayStatsArr;
+                const statObj = teamStatsArr.find(s => s.type === translatedType);
+                val = statObj && statObj.value !== null ? parseInt(statObj.value) : 0;
+            }
+            
+            if (pick.period === 'HT') {
+                actualValue = Math.floor(val / 2); // Approximation
+            } else if (pick.period === '2H') {
+                actualValue = Math.ceil(val / 2); // Approximation
+            } else {
+                actualValue = val;
+            }
         }
 
         const isPickGreen = pick.type === 'UNDER' ? actualValue < line : actualValue > line;

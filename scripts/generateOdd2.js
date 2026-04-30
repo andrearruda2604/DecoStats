@@ -229,7 +229,7 @@ async function generateOdd2() {
   // 2. Fixtures do dia (apenas NS = não iniciados)
   const { data: fixtures } = await supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team:teams!fixtures_home_team_id_fkey(name), away_team:teams!fixtures_away_team_id_fkey(name), league:leagues!fixtures_league_id_fkey(api_id)')
+    .select('api_id, date, status, season, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`)
     .in('status', ['NS', 'TBD']);
@@ -259,6 +259,8 @@ async function generateOdd2() {
         ...p,
         home: homeName,
         away: awayName,
+        homeLogo: f.home_team?.logo_url || '',
+        awayLogo: f.away_team?.logo_url || '',
         date_time: f.date,
       })));
       await delay(800);
@@ -291,6 +293,8 @@ async function generateOdd2() {
         fixture_id: pick.fixture_id,
         home: pick.home,
         away: pick.away,
+        homeLogo: pick.homeLogo,
+        awayLogo: pick.awayLogo,
         date_time: pick.date_time,
         picks: [],
       };
