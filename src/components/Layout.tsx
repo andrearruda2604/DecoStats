@@ -71,9 +71,9 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                 onClick={() => onNavigate('ODD20')}
                 className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 ${activeView === 'ODD20' ? 'bg-primary text-on-primary shadow shadow-primary/20' : 'text-primary/70 hover:text-primary'}`}
              >
-                Odd 2.0
+                {dailyOdd ? 'Bilhete do dia' : 'Odd 2.0'}
                 {dailyOdd && (
-                  <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${activeView === 'ODD20' ? 'bg-black/20 text-white' : 'bg-primary/20 text-primary'}`}>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${activeView === 'ODD20' ? 'bg-amber-400 text-black shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-amber-400 text-black shadow-[0_0_10px_rgba(251,191,36,0.3)]'}`}>
                     {dailyOdd}
                   </span>
                 )}
