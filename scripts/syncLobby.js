@@ -23,8 +23,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const LEAGUES_TO_SYNC = [39, 140, 135, 78, 61, 94, 135, 2];
-
 const headers = {
   'x-apisports-key': API_KEY,
   'x-rapidapi-host': 'v3.football.api-sports.io'
@@ -53,6 +51,17 @@ async function fetchWithRetry(url) {
 async function syncLobbyFixtures() {
   console.log('Starting Fixtures Sync (Yesterday + Next 7 days)...');
   
+  // 1. Carrega ligas ativas do banco
+  const { data: activeLeagues, error: leaguesErr } = await supabase
+    .from('leagues')
+    .select('id, api_id, name')
+    .eq('is_active', true);
+
+  if (leaguesErr) throw leaguesErr;
+  const leagueApiIdToDbId = Object.fromEntries(activeLeagues.map(l => [l.api_id, l.id]));
+  const LEAGUES_TO_SYNC = activeLeagues.map(l => l.api_id);
+  console.log(`Ligas ativas monitoradas (${LEAGUES_TO_SYNC.length}): ${activeLeagues.map(l => l.name).join(', ')}`);
+
   // Configurações e Datas
   const argDate = process.argv[2]; // Formato YYYY-MM-DD
   const today = new Date();
@@ -72,7 +81,7 @@ async function syncLobbyFixtures() {
     const dateStr = targetDate.toISOString().split('T')[0];
     
     console.log(`\nFetching fixtures for ${dateStr}...`);
-    const data = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?date=${dateStr}`);
+    const data = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?date=${dateStr}&timezone=America/Sao_Paulo`);
     const matches = data.response || [];
     
     // Filter for our mapped leagues
@@ -105,61 +114,62 @@ async function syncLobbyFixtures() {
       }
     }
     
-    // UPSERT Leagues
-    const leaguesMap = new Map();
-    validMatches.forEach(m => leaguesMap.set(m.league.id, m.league));
-    for (const [id, leagueData] of leaguesMap) {
-      let displayName = leagueData.name;
-      if (id === 71) displayName = 'Brasileirão';
-
-      await supabase.from('leagues').upsert({
-         id: leagueData.id,
-         api_id: leagueData.id,
-         name: displayName,
-         country: leagueData.country,
-         country_code: leagueData.country === 'England' ? 'GB' : (leagueData.flag?.split('/').pop().substring(0,2).toUpperCase() || 'XX'),
-         flag_url: leagueData.flag,
-         logo_url: leagueData.logo,
-         season: leagueData.season,
-         is_active: true
-      }, { onConflict: 'id' });
-    }
-    
     // UPSERT Teams
     const teamsMap = new Map();
     validMatches.forEach(m => {
-      teamsMap.set(m.teams.home.id, { ...m.teams.home, league_id: m.league.id });
-      teamsMap.set(m.teams.away.id, { ...m.teams.away, league_id: m.league.id });
+      const dbLeagueId = leagueApiIdToDbId[m.league.id];
+      teamsMap.set(m.teams.home.id, { ...m.teams.home, league_id: dbLeagueId });
+      teamsMap.set(m.teams.away.id, { ...m.teams.away, league_id: dbLeagueId });
     });
     
     for (const [id, teamData] of teamsMap) {
       await supabase.from('teams').upsert({
-        id: teamData.id,
         api_id: teamData.id,
         name: teamData.name,
         short_name: teamData.name?.substring(0, 3).toUpperCase(),
         logo_url: teamData.logo,
         league_id: teamData.league_id
-      }, { onConflict: 'id' });
+      }, { onConflict: 'api_id' });
     }
+
+    // Prepare Fixtures - We need the internal DB ID for teams as well
+    const { data: dbTeams, error: teamErr } = await supabase
+      .from('teams')
+      .select('id, api_id')
+      .in('api_id', Array.from(teamsMap.keys()));
+
+    if (teamErr) {
+      console.error(`Error fetching internal team IDs for ${dateStr}:`, teamErr.message);
+      continue;
+    }
+
+    const teamApiIdToDbId = Object.fromEntries(dbTeams.map(t => [t.api_id, t.id]));
     
     // UPSERT Fixtures
-    const fixturesToInsert = validMatches.map(m => ({
-       api_id: m.fixture.id,
-       league_id: m.league.id,
-       home_team_id: m.teams.home.id,
-       away_team_id: m.teams.away.id,
-       date: m.fixture.date,
-       status: m.fixture.status.short,
-       home_score: m.goals.home,
-       away_score: m.goals.away,
-       ht_home_score: m.score.halftime.home,
-       ht_away_score: m.score.halftime.away,
-       venue: m.fixture.venue.name,
-       round: m.league.round,
-       season: m.league.season,
-       odds: oddsMap.get(m.fixture.id) || null
-    }));
+    const fixturesToInsert = validMatches.map(m => {
+       const homeDbId = teamApiIdToDbId[m.teams.home.id];
+       const awayDbId = teamApiIdToDbId[m.teams.away.id];
+       if (!homeDbId || !awayDbId) {
+         console.warn(`Missing DB ID for teams in match ${m.fixture.id}`);
+         return null;
+       }
+       return {
+         api_id: m.fixture.id,
+         league_id: leagueApiIdToDbId[m.league.id],
+         home_team_id: homeDbId,
+         away_team_id: awayDbId,
+         date: m.fixture.date,
+         status: m.fixture.status.short,
+         home_score: m.goals.home,
+         away_score: m.goals.away,
+         ht_home_score: m.score.halftime.home,
+         ht_away_score: m.score.halftime.away,
+         venue: m.fixture.venue.name,
+         round: m.league.round,
+         season: m.league.season,
+         odds: oddsMap.get(m.fixture.id) || null
+       };
+    }).filter(f => f !== null);
     
     const batchSize = 100;
     for (let j = 0; j < fixturesToInsert.length; j += batchSize) {
