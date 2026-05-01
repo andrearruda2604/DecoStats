@@ -109,6 +109,10 @@ export default function Odd20() {
   const [allTickets, setAllTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
 
+  const now = new Date();
+  const [calendarMonth, setCalendarMonth] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  const [stake, setStake] = useState('');
+
   const loadCurrentTicket = useCallback(async (offset: number) => {
     const target = new Date();
     target.setDate(target.getDate() + offset);
@@ -260,18 +264,37 @@ export default function Odd20() {
   }, []);
 
   const getCalendarData = () => {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const start = new Date(calendarMonth.year, calendarMonth.month - 1, 1);
+    const end = new Date(calendarMonth.year, calendarMonth.month, 0);
     const cells: any[] = [];
     for (let i = 0; i < start.getDay(); i++) cells.push(null);
     for (let i = 1; i <= end.getDate(); i++) {
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const dateStr = `${calendarMonth.year}-${String(calendarMonth.month).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const t = allTickets.find(x => x.date === dateStr);
       cells.push({ day: i, dateStr, status: t?.status });
     }
     return cells;
   };
+
+  // Monthly stats filtered by selected calendar month
+  const monthStats = (() => {
+    const prefix = `${calendarMonth.year}-${String(calendarMonth.month).padStart(2, '0')}`;
+    const monthTickets = allTickets.filter(t => t.date.startsWith(prefix) && t.matches_count > 0);
+    const won = monthTickets.filter(t => t.status === 'WON').length;
+    const lost = monthTickets.filter(t => t.status === 'LOST').length;
+    const wonOdds = monthTickets.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
+    const avgOdd = wonOdds.length > 0
+      ? (wonOdds.reduce((a, b) => a + b, 0) / wonOdds.length).toFixed(2)
+      : '0.00';
+
+    const stakeVal = parseFloat(stake) || 0;
+    const greenReturn = wonOdds.reduce((sum, odd) => sum + stakeVal * odd, 0);
+    const totalInvested = (won + lost) * stakeVal;
+    const profit = greenReturn - totalInvested;
+    const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+
+    return { won, lost, avgOdd, greenReturn, profit, roi };
+  })();
 
   const targetDateObj = new Date();
   targetDateObj.setDate(targetDateObj.getDate() + dateOffset);
@@ -517,8 +540,34 @@ export default function Odd20() {
             )}
           </motion.div>
         ) : (
-          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
-            <div className="grid grid-cols-7 gap-2 md:gap-4 mb-10">
+          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+            {/* Month Navigation */}
+            <div className="flex justify-between items-center max-w-xs mx-auto">
+              <button
+                onClick={() => setCalendarMonth(prev => {
+                  const d = new Date(prev.year, prev.month - 1, 1);
+                  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+                })}
+                className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-sm font-black uppercase tracking-tighter text-white">
+                {new Date(calendarMonth.year, calendarMonth.month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={() => setCalendarMonth(prev => {
+                  const d = new Date(prev.year, prev.month + 1, 1);
+                  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+                })}
+                className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-2 md:gap-4 mb-2">
               {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
                 <div key={i} className="text-center text-[9px] font-black uppercase text-on-surface-variant/40 pb-2">{d}</div>
               ))}
@@ -545,18 +594,73 @@ export default function Odd20() {
                 </button>
               ))}
             </div>
+
+            {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Greens', val: stats.won, color: 'text-emerald-400' },
-                { label: 'Reds', val: stats.lost, color: 'text-rose-400' },
-                { label: 'Taxa Acerto', val: `${Math.round((stats.won / (stats.won + stats.lost || 1)) * 100)}%`, color: 'text-white' },
-                { label: 'Avg Odd', val: stats.avgOdd, color: 'text-primary' },
+                { label: 'Greens', val: monthStats.won, color: 'text-emerald-400' },
+                { label: 'Reds', val: monthStats.lost, color: 'text-rose-400' },
+                { label: 'Taxa Acerto', val: `${Math.round((monthStats.won / (monthStats.won + monthStats.lost || 1)) * 100)}%`, color: 'text-white' },
+                { label: 'Avg Odd', val: monthStats.avgOdd, color: 'text-primary' },
               ].map((s, i) => (
                 <div key={i} className="bg-surface/50 p-5 rounded-2xl border border-outline-variant/20 text-center">
                   <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-1 block">{s.label}</span>
                   <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Stake Simulator */}
+            <div className="bg-surface/50 border border-outline-variant/20 rounded-2xl p-6 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                💰 Simulador de Stake
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-black text-on-surface-variant">R$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={stake}
+                  onChange={e => setStake(e.target.value)}
+                  placeholder="Ex: 100"
+                  className="flex-1 bg-black/40 border border-outline-variant/20 rounded-xl px-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-primary/50 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
+              {stake && parseFloat(stake) > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-on-surface-variant font-bold">Entradas no mês:</span>
+                    <span className="text-white font-black">{monthStats.won + monthStats.lost}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-on-surface-variant font-bold">Total investido:</span>
+                    <span className="text-white font-black">R$ {((monthStats.won + monthStats.lost) * parseFloat(stake)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-emerald-400 font-bold">Retorno (Greens):</span>
+                    <span className="text-emerald-400 font-black">+ R$ {monthStats.greenReturn.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-rose-400 font-bold">Perdas (Reds):</span>
+                    <span className="text-rose-400 font-black">- R$ {(monthStats.lost * parseFloat(stake)).toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-outline-variant/20 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-black text-white">Resultado:</span>
+                      <span className={`text-lg font-black ${monthStats.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {monthStats.profit >= 0 ? '+' : ''} R$ {monthStats.profit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-[9px] font-bold text-on-surface-variant uppercase">ROI</span>
+                      <span className={`text-xs font-black ${monthStats.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {monthStats.roi >= 0 ? '+' : ''}{monthStats.roi.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
