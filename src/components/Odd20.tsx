@@ -545,8 +545,10 @@ export default function Odd20() {
             <div className="flex justify-between items-center max-w-xs mx-auto">
               <button
                 onClick={() => setCalendarMonth(prev => {
-                  const d = new Date(prev.year, prev.month - 2, 1);
-                  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+                  let m = prev.month - 1;
+                  let y = prev.year;
+                  if (m < 1) { m = 12; y -= 1; }
+                  return { year: y, month: m };
                 })}
                 className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
               >
@@ -557,8 +559,10 @@ export default function Odd20() {
               </span>
               <button
                 onClick={() => setCalendarMonth(prev => {
-                  const d = new Date(prev.year, prev.month, 1);
-                  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+                  let m = prev.month + 1;
+                  let y = prev.year;
+                  if (m > 12) { m = 1; y += 1; }
+                  return { year: y, month: m };
                 })}
                 className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
               >
