@@ -134,35 +134,35 @@ export default function LeagueFilter({
   return (
     <div className="space-y-2 mb-4 lg:mb-0">
       {/* ── Date Navigation ─────────────────────────── */}
-      <div className="flex items-center justify-between card px-2 py-1.5">
+      <div className="flex items-center justify-between card px-1 sm:px-2 py-1.5 overflow-hidden">
         <button
           onClick={() => onSelectDate(shiftDate(selectedDate, -1))}
-          className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface"
+          className="flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface shrink-0"
         >
-          <ChevronLeft className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline">
+          <ChevronLeft className="w-4 h-4 shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline truncate max-w-[50px]">
             {prevLabel}
           </span>
         </button>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-black uppercase tracking-widest text-on-surface">{displayDate}</span>
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 justify-center">
+          <span className="text-[11px] sm:text-sm font-black uppercase tracking-widest text-on-surface truncate">{displayDate}</span>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => onSelectDate(e.target.value)}
-            className="bg-transparent text-[10px] text-on-surface-variant/40 outline-none cursor-pointer border border-outline-variant rounded px-1.5 py-0.5 w-[110px]"
+            className="bg-transparent text-[10px] text-on-surface-variant/40 outline-none cursor-pointer border border-outline-variant rounded px-1 sm:px-1.5 py-0.5 w-[90px] sm:w-[110px] shrink-0"
           />
         </div>
 
         <button
           onClick={() => onSelectDate(shiftDate(selectedDate, 1))}
-          className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface"
+          className="flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface shrink-0"
         >
-          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline">
+          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline truncate max-w-[50px]">
             {nextLabel}
           </span>
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-4 h-4 shrink-0" />
         </button>
       </div>
 

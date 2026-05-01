@@ -4,8 +4,9 @@
  */
 
 import { ArrowLeft, LayoutGrid, BarChart2, Activity, LogOut } from 'lucide-react';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabaseClient';
 
 export type ViewType = 'LOBBY' | 'DATA' | 'ODD20';
 
@@ -20,6 +21,18 @@ import InstallPrompt from './InstallPrompt';
 
 export default function Layout({ children, activeView, onNavigate, showBack = false }: LayoutProps) {
   const { user, signOut } = useAuth();
+  const [dailyOdd, setDailyOdd] = useState<string | null>(null);
+
+  useEffect(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    supabase.from('odd_tickets').select('total_odd, status').eq('date', dateStr).maybeSingle().then(({data}) => {
+      if (data) setDailyOdd(data.total_odd);
+    });
+  }, []);
 
   const avatarUrl = user?.user_metadata?.avatar_url;
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
@@ -47,18 +60,23 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
         </div>
         
         {!showBack && (
-           <div className="flex bg-surface-container-highest/50 rounded-full p-1 border border-outline-variant/20">
+           <div className="flex bg-surface-container-highest/50 rounded-full p-1 border border-outline-variant/20 shadow-inner">
              <button 
                 onClick={() => onNavigate('LOBBY')}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${activeView === 'LOBBY' ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-colors ${activeView === 'LOBBY' ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
              >
                 Jogos
              </button>
              <button 
                 onClick={() => onNavigate('ODD20')}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1 ${activeView === 'ODD20' ? 'bg-primary text-on-primary shadow shadow-primary/20' : 'text-primary/70 hover:text-primary'}`}
+                className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 ${activeView === 'ODD20' ? 'bg-primary text-on-primary shadow shadow-primary/20' : 'text-primary/70 hover:text-primary'}`}
              >
                 Odd 2.0
+                {dailyOdd && (
+                  <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${activeView === 'ODD20' ? 'bg-black/20 text-white' : 'bg-primary/20 text-primary'}`}>
+                    {dailyOdd}
+                  </span>
+                )}
              </button>
            </div>
         )}
@@ -92,7 +110,7 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
 
 
       {/* Main Content */}
-      <main className="pt-16 pb-8 px-3 md:px-6 max-w-6xl mx-auto min-h-screen">
+      <main className="pt-20 pb-8 px-3 sm:px-6 xl:px-10 w-full max-w-[1600px] mx-auto min-h-screen">
         {children}
       </main>
 
