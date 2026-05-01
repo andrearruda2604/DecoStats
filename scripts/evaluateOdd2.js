@@ -66,7 +66,6 @@ async function evaluateTicket() {
     .from('odd_tickets')
     .select('*')
     .eq('date', targetDate)
-    .eq('status', 'PENDING')
     .maybeSingle();
 
   if (error || !ticket) {
