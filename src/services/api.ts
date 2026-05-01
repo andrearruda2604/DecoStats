@@ -19,7 +19,7 @@ function getTimezoneOffset(): string {
 
 export async function fetchMatches(
   date: string,
-  leagueId?: number
+  leagueIds?: number[]
 ): Promise<MatchCardData[]> {
   if (!isSupabaseConfigured) {
     return MOCK_MATCHES_BY_DATE;
@@ -39,8 +39,8 @@ export async function fetchMatches(
     .lte('date', `${date}T23:59:59${offset}`)
     .order('date', { ascending: true });
 
-  if (leagueId) {
-    query = query.eq('league_id', leagueId);
+  if (leagueIds && leagueIds.length > 0) {
+    query = query.in('league_id', leagueIds);
   }
 
   const { data, error } = await query;

@@ -13,14 +13,13 @@ interface UseMatchesReturn {
   loading: boolean;
   error: string | null;
   selectedDate: string;
-  selectedLeagueId: number | null;
+  selectedLeagueIds: number[];
   setSelectedDate: (date: string) => void;
-  setSelectedLeagueId: (id: number | null) => void;
+  setSelectedLeagueIds: (ids: number[]) => void;
   refresh: () => void;
 }
 
 function getToday(): string {
-  // Usa data local do dispositivo (não UTC) para mostrar o dia correto ao usuário
   const d = new Date();
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
   return local.toISOString().slice(0, 10);
@@ -32,13 +31,16 @@ export function useMatches(): UseMatchesReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(getToday());
-  const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<number[]>([]);
 
   const loadMatches = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMatches(selectedDate, selectedLeagueId ?? undefined);
+      const data = await fetchMatches(
+        selectedDate,
+        selectedLeagueIds.length > 0 ? selectedLeagueIds : undefined
+      );
       setMatches(data);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar partidas');
@@ -46,7 +48,7 @@ export function useMatches(): UseMatchesReturn {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, selectedLeagueId]);
+  }, [selectedDate, selectedLeagueIds]);
 
   const loadLeagues = useCallback(async () => {
     try {
@@ -57,13 +59,8 @@ export function useMatches(): UseMatchesReturn {
     }
   }, []);
 
-  useEffect(() => {
-    loadLeagues();
-  }, [loadLeagues]);
-
-  useEffect(() => {
-    loadMatches();
-  }, [loadMatches]);
+  useEffect(() => { loadLeagues(); }, [loadLeagues]);
+  useEffect(() => { loadMatches(); }, [loadMatches]);
 
   return {
     matches,
@@ -71,9 +68,9 @@ export function useMatches(): UseMatchesReturn {
     loading,
     error,
     selectedDate,
-    selectedLeagueId,
+    selectedLeagueIds,
     setSelectedDate,
-    setSelectedLeagueId,
+    setSelectedLeagueIds,
     refresh: loadMatches,
   };
 }

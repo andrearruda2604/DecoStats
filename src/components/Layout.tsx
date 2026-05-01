@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ArrowLeft, LayoutGrid, BarChart2, Activity } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, BarChart2, Activity, LogOut } from 'lucide-react';
 import { ReactNode } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 export type ViewType = 'LOBBY' | 'DATA' | 'ODD20';
 
@@ -18,6 +19,11 @@ interface LayoutProps {
 import InstallPrompt from './InstallPrompt';
 
 export default function Layout({ children, activeView, onNavigate, showBack = false }: LayoutProps) {
+  const { user, signOut } = useAuth();
+
+  const avatarUrl = user?.user_metadata?.avatar_url;
+  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
+
   return (
     <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary pb-16">
       <InstallPrompt />
@@ -56,6 +62,32 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
              </button>
            </div>
         )}
+
+        {/* User Profile & Logout */}
+        <div className="flex items-center gap-2">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="w-7 h-7 rounded-full border border-outline-variant/30 object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase">
+              {displayName.charAt(0)}
+            </div>
+          )}
+          <span className="text-[10px] font-bold text-on-surface-variant/60 hidden sm:block max-w-[100px] truncate">
+            {displayName}
+          </span>
+          <button
+            onClick={signOut}
+            className="p-1.5 rounded-lg text-on-surface-variant/40 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
 

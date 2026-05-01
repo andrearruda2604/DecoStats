@@ -12,8 +12,10 @@ import Odd20 from './components/Odd20';
 import LeagueFilter from './components/LeagueFilter';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
+import LoginPage from './components/LoginPage';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
+import { useAuth } from './contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData } from './services/api';
@@ -21,6 +23,26 @@ import { fetchPredictiveData } from './services/api';
 const VERSION = '1.0.2-live-engine';
 
 export default function App() {
+  const { user, loading: authLoading } = useAuth();
+
+  // Show loading spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return <AuthenticatedApp />;
+}
+
+function AuthenticatedApp() {
   const [activeView, setActiveView] = useState<ViewType>('LOBBY');
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [toggle, setToggle] = useState<ToggleMode>('FT');
@@ -34,7 +56,7 @@ export default function App() {
 
   const {
     matches, leagues, loading: matchesLoading, error: matchesError,
-    selectedDate, selectedLeagueId, setSelectedDate, setSelectedLeagueId, refresh: refreshMatches,
+    selectedDate, selectedLeagueIds, setSelectedDate, setSelectedLeagueIds, refresh: refreshMatches,
   } = useMatches();
 
   const {
@@ -87,8 +109,8 @@ export default function App() {
           <aside className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto lg:pb-4 no-scrollbar">
             <LeagueFilter
               leagues={leagues}
-              selectedLeagueId={selectedLeagueId}
-              onSelectLeague={setSelectedLeagueId}
+              selectedLeagueIds={selectedLeagueIds}
+              onSelectLeagues={setSelectedLeagueIds}
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
             />
