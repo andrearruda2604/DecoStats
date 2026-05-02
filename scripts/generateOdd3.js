@@ -1,6 +1,6 @@
 /**
- * Bilhete Odd 2.0 — odds reais da Bet365 via API-Football
- * Alvo: múltipla ~2.00 usando picks de ALTA PROBABILIDADE HISTÓRICA
+ * Bilhete Odd 3.0 — odds reais da Bet365 via API-Football
+ * Alvo: múltipla ~3.00 usando picks de ALTA PROBABILIDADE HISTÓRICA
  */
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
@@ -21,10 +21,10 @@ try {
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 
-const TARGET_LOW  = 1.90;
-const TARGET_HIGH = 2.10;
-const MIN_PICKS   = 3;
-const MAX_PICKS   = 8; 
+const TARGET_LOW  = 2.80;
+const TARGET_HIGH = 3.20;
+const MIN_PICKS   = 4;
+const MAX_PICKS   = 12; 
 const MAX_PICKS_PER_MATCH_DEFAULT = 2;
 const MAX_PICKS_PER_MATCH_FEW_GAMES = 3; 
 
@@ -263,10 +263,10 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
   return { selected, total: currentOdd };
 }
 
-async function generateOdd2() {
+async function generateOdd3() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const today = process.argv[2] || brt.toISOString().split('T')[0];
-  console.log(`\n=== Gerando Bilhete Odd 2.0 (Classic Lucrative) para ${today} ===\n`);
+  console.log(`\n=== Gerando Bilhete Odd 3.0 para ${today} ===\n`);
 
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
@@ -277,7 +277,7 @@ async function generateOdd2() {
     .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
-  
+
   if (today === brtNow) {
     query = query.in('status', ['NS', 'TBD']);
   }
@@ -352,7 +352,7 @@ async function generateOdd2() {
     console.log('Odds insuficientes disponíveis. Salvando bilhete vazio.');
     await supabase.from('odd_tickets').upsert({
       date: today,
-      mode: '2.0',
+      mode: '3.0',
       matches_count: 0, total_odd: '1.00',
       status: 'PENDING',
       ticket_data: { entries: [], confidence_score: 0, generated_at: new Date().toISOString() }
@@ -412,7 +412,7 @@ async function generateOdd2() {
 
   await supabase.from('odd_tickets').upsert({
     date: today,
-    mode: '2.0',
+    mode: '3.0',
     matches_count: entries.length,
     total_odd: totalOdd.toFixed(2),
     status: 'PENDING',
@@ -426,4 +426,4 @@ async function generateOdd2() {
   console.log('\n✓ Bilhete salvo no banco.\n');
 }
 
-generateOdd2().catch(console.error);
+generateOdd3().catch(console.error);

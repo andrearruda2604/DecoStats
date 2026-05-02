@@ -8,7 +8,8 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
 
-export type ViewType = 'LOBBY' | 'DATA' | 'ODD20';
+export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30';
+
 
 interface LayoutProps {
   children: ReactNode;
@@ -29,10 +30,15 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
     const m = String(today.getMonth() + 1).padStart(2, '0');
     const d = String(today.getDate()).padStart(2, '0');
     const dateStr = `${y}-${m}-${d}`;
-    supabase.from('odd_tickets').select('total_odd, status').eq('date', dateStr).maybeSingle().then(({data}) => {
-      if (data) setDailyOdd(data.total_odd);
-    });
+    supabase.from('odd_tickets')
+      .select('total_odd, mode')
+      .eq('date', dateStr)
+      .then(({data}) => {
+        const ticket20 = data?.find(t => t.mode === '2.0');
+        if (ticket20) setDailyOdd(ticket20.total_odd);
+      });
   }, []);
+
 
   const avatarUrl = user?.user_metadata?.avatar_url;
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
@@ -88,6 +94,19 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                 {/* Efeito de brilho animado */}
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
              </button>
+             {user?.email === 'deco260483@gmail.com' && (
+               <button 
+                 onClick={() => onNavigate('ODD30')}
+                 className={`relative group px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                   activeView === 'ODD30' 
+                     ? 'bg-primary text-on-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)] scale-105' 
+                     : 'bg-primary/90 text-on-primary hover:bg-primary hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] hover:scale-105'
+                 }`}
+               >
+                 ODD 3.0 (Test)
+                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+               </button>
+             )}
            </div>
         )}
 

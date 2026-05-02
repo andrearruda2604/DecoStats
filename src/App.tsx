@@ -54,6 +54,8 @@ function AuthenticatedApp() {
     return (localStorage.getItem('decostats_sort_by') as 'LEAGUE' | 'TIME') || 'LEAGUE';
   });
   const [lobbyScrollPos, setLobbyScrollPos] = useState(0);
+  const [oddScrollPos, setOddScrollPos] = useState(0);
+  const [lastListView, setLastListView] = useState<'LOBBY' | 'ODD20' | 'ODD30'>('LOBBY');
 
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
@@ -69,23 +71,33 @@ function AuthenticatedApp() {
   } = useMatchStats(selectedMatchId);
 
   const handleSelectMatch = (matchId: number) => {
-    setLobbyScrollPos(window.scrollY);
+    if (activeView === 'LOBBY') {
+      setLobbyScrollPos(window.scrollY);
+      setLastListView('LOBBY');
+    } else if (activeView === 'ODD20') {
+      setOddScrollPos(window.scrollY);
+      setLastListView('ODD20');
+    } else if (activeView === 'ODD30') {
+      setOddScrollPos(window.scrollY);
+      setLastListView('ODD30');
+    }
     setSelectedMatchId(matchId);
     setActiveView('DATA');
     window.scrollTo(0, 0);
   };
 
   const handleBack = () => {
-    setActiveView('LOBBY');
     setSelectedMatchId(null);
+    setActiveView(lastListView);
   };
 
   useEffect(() => {
     if (activeView === 'LOBBY') {
-      // Delay slightly to ensure content is rendered
       setTimeout(() => window.scrollTo(0, lobbyScrollPos), 10);
+    } else if (activeView === 'ODD20' || activeView === 'ODD30') {
+      setTimeout(() => window.scrollTo(0, oddScrollPos), 10);
     }
-  }, [activeView, lobbyScrollPos]);
+  }, [activeView, lobbyScrollPos, oddScrollPos]);
 
   useEffect(() => {
     localStorage.setItem('decostats_sort_by', sortBy);
@@ -275,7 +287,12 @@ function AuthenticatedApp() {
 
       {/* ═══ ODD 2.0 ═══ */}
       {activeView === 'ODD20' && (
-        <Odd20 selectedDate={selectedDate} />
+        <Odd20 mode="2.0" />
+      )}
+
+      {/* ═══ ODD 3.0 ═══ */}
+      {activeView === 'ODD30' && (
+        <Odd20 mode="3.0" />
       )}
     </Layout>
   );

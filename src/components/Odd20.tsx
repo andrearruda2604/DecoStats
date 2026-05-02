@@ -99,8 +99,15 @@ function evaluatePick(pick: any, actualVal: number | undefined): 'WON' | 'LOST' 
 
 // ─── component ──────────────────────────────────────────────────────────────
 
-export default function Odd20() {
-  const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
+interface TicketModeProps {
+  mode: '2.0' | '3.0';
+}
+
+export default function Odd20({ mode = '2.0' }: TicketModeProps) {
+
+  const [activeTab, setActiveTab] = useState<'today' | 'history'>(() => 
+    (localStorage.getItem(`decostats_odd_tab_${mode}`) as 'today' | 'history') || 'today'
+  );
   const [dateOffset, setDateOffset] = useState(0);
   const [ticket, setTicket] = useState<any>(null);
   const [liveScores, setLiveScores] = useState<Record<number, any>>({});
@@ -110,8 +117,27 @@ export default function Odd20() {
   const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
 
   const now = new Date();
-  const [calendarMonth, setCalendarMonth] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
-  const [stake, setStake] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const saved = localStorage.getItem(`decostats_calendar_${mode}`);
+    if (saved) return JSON.parse(saved);
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  });
+  const [stake, setStake] = useState(() => 
+    localStorage.getItem(`decostats_stake_${mode}`) || ''
+  );
+
+  // Persist state
+  useEffect(() => {
+    localStorage.setItem(`decostats_odd_tab_${mode}`, activeTab);
+  }, [activeTab, mode]);
+
+  useEffect(() => {
+    localStorage.setItem(`decostats_calendar_${mode}`, JSON.stringify(calendarMonth));
+  }, [calendarMonth, mode]);
+
+  useEffect(() => {
+    localStorage.setItem(`decostats_stake_${mode}`, stake);
+  }, [stake, mode]);
 
   const loadCurrentTicket = useCallback(async (offset: number) => {
     const target = new Date();
@@ -125,7 +151,9 @@ export default function Odd20() {
       .from('odd_tickets')
       .select('*')
       .eq('date', dateStr)
+      .eq('mode', mode)
       .maybeSingle();
+
 
     if (data) {
       setTicket(data);
@@ -211,7 +239,9 @@ export default function Odd20() {
       .from('odd_tickets')
       .update({ status: newStatus, ticket_data: updatedTicketData })
       .eq('date', ticket.date)
+      .eq('mode', mode)
       .then(({ error }) => {
+
         if (error) {
           console.warn('Could not persist ticket resolution:', error.message);
         }
@@ -230,12 +260,25 @@ export default function Odd20() {
       const { data } = await supabase
         .from('odd_tickets')
         .select('*')
+        .eq('mode', mode)
         .order('date', { ascending: false });
+
       if (data) {
         setAllTickets(data);
         const won = data.filter(t => t.status === 'WON').length;
         const lost = data.filter(t => t.status === 'LOST').length;
         const odds = data.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
+        
+        // Auto-switch to previous month if current month is empty and it's the first load
+        const currentPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const hasCurrentMonth = data.some(t => t.date.startsWith(currentPrefix));
+        const savedMonth = localStorage.getItem(`decostats_calendar_${mode}`);
+        
+        if (!hasCurrentMonth && data.length > 0 && !savedMonth) {
+          const lastDate = new Date(data[0].date);
+          setCalendarMonth({ year: lastDate.getFullYear(), month: lastDate.getMonth() + 1 });
+        }
+
         const avg = odds.length > 0
           ? (odds.reduce((a, b) => a + b, 0) / odds.length).toFixed(2)
           : '0.00';
@@ -246,9 +289,11 @@ export default function Odd20() {
 
     const tixChannel = supabase.channel('tix')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'odd_tickets' }, p => {
+        if (p.new.mode !== mode) return;
         setTicket((curr: any) => curr && p.new.date === curr.date ? p.new : curr);
         setAllTickets(prev => prev.map(t => t.date === p.new.date ? p.new : t));
       })
+
       .subscribe();
 
     const fixChannel = supabase.channel('fix')
@@ -341,7 +386,8 @@ export default function Odd20() {
               <div className="text-center p-16 bg-surface border border-outline-variant/30 rounded-3xl max-w-lg mx-auto">
                 <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
                 <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
-                <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 75%.</p>
+                <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 85%.</p>
+
               </div>
             ) : (
               <>
@@ -381,8 +427,9 @@ export default function Odd20() {
                   <h1 className={`text-6xl font-black italic tracking-tighter mb-4 uppercase transition-all duration-500 ${
                     ticket.status === 'WON' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-white'
                   }`}>
-                    ODD {ticket.total_odd}
+                    {mode === '3.0' ? 'PREMIUM' : 'ODD'} {ticket.total_odd}
                   </h1>
+
 
                   <div className={`inline-flex border rounded-full px-5 py-2 items-center gap-3 transition-all duration-500 ${
                     ticket.status === 'WON'

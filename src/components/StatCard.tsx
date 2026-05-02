@@ -196,16 +196,16 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
                               <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
                                 <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${homeOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-emerald-400 shadow-emerald-400/30'}`} style={{ width: `${homeOver}%` }} />
                               </div>
-                              <span className={`text-[12px] font-black w-10 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                {homeOver}%
+                              <span className={`text-[12px] font-black w-16 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                {homeOver}% <span className="text-[9px] opacity-60 font-normal">({Math.round(homeOver * stat.homeDist.length / 100)}/{stat.homeDist.length})</span>
                               </span>
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
                                 <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400 shadow-blue-400/50'}`} style={{ width: `${awayOver}%` }} />
                               </div>
-                              <span className={`text-[12px] font-black w-10 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
-                                {awayOver}%
+                              <span className={`text-[12px] font-black w-16 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
+                                {awayOver}% <span className="text-[9px] opacity-60 font-normal">({Math.round(awayOver * stat.awayDist.length / 100)}/{stat.awayDist.length})</span>
                               </span>
                             </div>
                           </div>
@@ -223,16 +223,16 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
                               <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
                                 <div className={`h-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-600'}`} style={{ width: `${homeUnder}%` }} />
                               </div>
-                              <span className={`text-[11px] font-black w-10 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-600'}`}>
-                                {homeUnder}%
+                              <span className={`text-[11px] font-black w-16 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-600'}`}>
+                                {homeUnder}% <span className="text-[8px] opacity-60 font-normal">({Math.round(homeUnder * stat.homeDist.length / 100)}/{stat.homeDist.length})</span>
                               </span>
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
                                 <div className={`h-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ width: `${awayUnder}%` }} />
                               </div>
-                              <span className={`text-[11px] font-black w-10 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-600'}`}>
-                                {awayUnder}%
+                              <span className={`text-[11px] font-black w-16 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-600'}`}>
+                                {awayUnder}% <span className="text-[8px] opacity-60 font-normal">({Math.round(awayUnder * stat.awayDist.length / 100)}/{stat.awayDist.length})</span>
                               </span>
                             </div>
                           </div>

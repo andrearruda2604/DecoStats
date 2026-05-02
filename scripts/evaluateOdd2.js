@@ -62,16 +62,20 @@ async function evaluateTicket() {
 
   console.log(`\n=== Avaliando Ticket Retro: ${targetDate} ===`);
 
-  const { data: ticket, error } = await supabase
+  const { data: tickets, error } = await supabase
     .from('odd_tickets')
     .select('*')
-    .eq('date', targetDate)
-    .maybeSingle();
+    .eq('date', targetDate);
 
-  if (error || !ticket) {
-    console.log("Nenhum ticket PENDING encontrado para avaliar.");
+
+  if (error || !tickets || tickets.length === 0) {
+    console.log("Nenhum ticket encontrado para avaliar nesta data.");
     return;
   }
+
+  for (const ticket of tickets) {
+    console.log(`\n--- Avaliando Ticket Modo: ${ticket.mode} (Odd ${ticket.total_odd}) ---`);
+
 
   const entries = ticket.ticket_data.entries || [];
   let allGreen = true;
@@ -158,12 +162,15 @@ async function evaluateTicket() {
   ticket.ticket_data.entries = evaluatedEntries;
   const finalStatus = allGreen ? 'WON' : 'LOST';
 
-  await supabase.from('odd_tickets').update({
-     status: finalStatus,
-     ticket_data: ticket.ticket_data
-  }).eq('date', targetDate);
+    await supabase.from('odd_tickets').update({
+       status: finalStatus,
+       ticket_data: ticket.ticket_data
+    }).eq('date', targetDate).eq('mode', ticket.mode);
 
-  console.log(`\nTicket Avaliado como: ${finalStatus}`);
+
+    console.log(`Ticket ${ticket.mode} Avaliado como: ${finalStatus}`);
+  }
 }
+
 
 evaluateTicket().catch(console.error);

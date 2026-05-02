@@ -51,20 +51,33 @@ async function settle() {
               let actualValue = 0;
               const pickTeam = pick.teamTarget === 'HOME' ? fix.home_team_id : fix.away_team_id;
               
-              if (pick.stat === 'GOLS MARCADOS') {
+              if (pick.stat === 'GOLS' || pick.stat === 'GOLS MARCADOS') {
                   if (pick.period === 'HT') {
-                      actualValue = pick.teamTarget === 'HOME' ? fix.score?.halftime?.home : fix.score?.halftime?.away;
+                      if (pick.teamTarget === 'TOTAL') {
+                          actualValue = (fix.score?.halftime?.home || 0) + (fix.score?.halftime?.away || 0);
+                      } else {
+                          actualValue = pick.teamTarget === 'HOME' ? fix.score?.halftime?.home : fix.score?.halftime?.away;
+                      }
                   } else if (pick.period === '2H') {
                       const ftH = fix.home_score || 0;
                       const ftA = fix.away_score || 0;
                       const htH = fix.score?.halftime?.home || 0;
                       const htA = fix.score?.halftime?.away || 0;
-                      actualValue = pick.teamTarget === 'HOME' ? (ftH - htH) : (ftA - htA);
+                      if (pick.teamTarget === 'TOTAL') {
+                          actualValue = (ftH + ftA) - (htH + htA);
+                      } else {
+                          actualValue = pick.teamTarget === 'HOME' ? (ftH - htH) : (ftA - htA);
+                      }
                   } else {
-                      actualValue = pick.teamTarget === 'HOME' ? fix.home_score : fix.away_score;
+                      if (pick.teamTarget === 'TOTAL') {
+                          actualValue = (fix.home_score || 0) + (fix.away_score || 0);
+                      } else {
+                          actualValue = pick.teamTarget === 'HOME' ? fix.home_score : fix.away_score;
+                      }
                   }
                   actualValue = parseInt(actualValue || 0);
-              } else {
+              }
+ else {
                   // Mapeamento de tipos para match_stats
                   const typeMap = { 'ESCANTEIOS': 'Corner Kicks', 'CARTÃO AMARELO': 'Yellow Cards', 'CHUTES': 'Total Shots' };
                   const statType = typeMap[pick.stat] || pick.stat;
@@ -94,7 +107,8 @@ async function settle() {
           await supabase.from('odd_tickets').update({ 
               status: finalStatus,
               ticket_data: t.ticket_data 
-          }).eq('id', t.id);
+          }).eq('date', t.date).eq('mode', t.mode);
+
           console.log(`Resultado Final do Bilhete: ${finalStatus === 'WON' ? '💹 GREEN' : '💔 RED'}`);
       }
   }
