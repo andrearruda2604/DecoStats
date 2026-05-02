@@ -36,10 +36,10 @@ const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 const TARGET_LOW  = 1.90;
 const TARGET_HIGH = 2.10;
 const MIN_PICKS   = 3;
-const MAX_PICKS   = 12;
+const MAX_PICKS   = 15;
 const MAX_PICKS_PER_MATCH_DEFAULT = 2;
 const MAX_PICKS_PER_MATCH_FEW_GAMES = 3; // quando há ≤ 4 jogos disponíveis
-const MIN_IMPLIED_PROB = 60; // % (odds ≤ ~1.67)
+const MIN_IMPLIED_PROB = 75; // % (odds ≤ ~1.33)
 const MIN_ODD = 1.04;        // aceita picks ultra-seguros
 const BOOKMAKER_ID = 8;      // Bet365
 
@@ -195,27 +195,18 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     currentOdd *= candidate.odd;
   }
 
-  // Estratégia: a cada iteração, decide dinamicamente qual pick adicionar.
-  // - Se a odd acumulada precisa subir muito (ratio > 1.5), prioriza odd alta
-  // - Senão, prioriza probabilidade alta (segurança)
+  // Estratégia: a cada iteração, sempre prioriza a pick mais segura (maior probabilidade).
+  // Atingir a Odd 2.0 é consequência de somar múltiplas seguras, e não de forçar odds arriscadas.
   while (selected.length < MAX_PICKS) {
     if (currentOdd >= TARGET_LOW && selected.length >= MIN_PICKS) break;
 
-    const ratio = TARGET_LOW / currentOdd; // quanto falta para o alvo
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
 
     if (available.length === 0) break;
 
-    let pick;
-    if (ratio > 1.3) {
-      // Precisa subir bastante → pega a odd mais alta (ainda segura, ≥60%)
-      available.sort((a, b) => b.odd - a.odd || b.probability - a.probability);
-      pick = available[0];
-    } else {
-      // Perto do alvo → pega o mais seguro
-      available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
-      pick = available[0];
-    }
+    // Sempre pega a mais segura
+    available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
+    const pick = available[0];
 
     doAdd(pick);
   }
