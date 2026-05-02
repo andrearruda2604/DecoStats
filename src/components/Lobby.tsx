@@ -15,6 +15,8 @@ interface LobbyProps {
 
 export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'LEAGUE' | 'TIME'>('LEAGUE');
+
 
   const filtered = useMemo(() => {
     if (!search) return matches;
@@ -28,6 +30,8 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
 
   // Group by league name, preserving order
   const grouped = useMemo(() => {
+    if (sortBy === 'TIME') return null;
+
     const map = new Map<string, { logoUrl: string; matches: MatchCardData[] }>();
     for (const m of filtered) {
       if (!map.has(m.league.name)) {
@@ -36,22 +40,49 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
       map.get(m.league.name)!.matches.push(m);
     }
     return map;
-  }, [filtered]);
+  }, [filtered, sortBy]);
 
-  const multipleLeagues = grouped.size > 1;
+  const sortedByTime = useMemo(() => {
+    if (sortBy !== 'TIME') return null;
+    return [...filtered].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [filtered, sortBy]);
+
+  const multipleLeagues = grouped ? grouped.size > 1 : false;
+
 
   return (
     <div className="space-y-4 animate-in">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/30" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar time ou liga..."
-          className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/30 outline-none focus:border-primary/50 transition-colors"
-        />
+      {/* Search & Sort */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/30" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar time ou liga..."
+            className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/30 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+        
+        <div className="flex p-1 bg-surface-container border border-outline-variant rounded-xl self-start sm:self-center">
+          <button
+            onClick={() => setSortBy('LEAGUE')}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+              sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+            }`}
+          >
+            Liga
+          </button>
+          <button
+            onClick={() => setSortBy('TIME')}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+              sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+            }`}
+          >
+            Horário
+          </button>
+        </div>
       </div>
 
       {/* Empty state */}
@@ -66,8 +97,8 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
         </div>
       )}
 
-      {/* Match groups */}
-      {Array.from(grouped.entries()).map(([leagueName, { logoUrl, matches: group }]) => (
+      {/* Match groups (LEAGUE MODE) */}
+      {sortBy === 'LEAGUE' && grouped && Array.from(grouped.entries()).map(([leagueName, { logoUrl, matches: group }]) => (
         <div key={leagueName} className="space-y-2">
           {/* League header — only when viewing multiple leagues */}
           {multipleLeagues && (
@@ -82,86 +113,20 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
 
           {/* Cards grid */}
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${!multipleLeagues ? 'pb-8' : ''}`}>
-            {group.map((match) => {
-              const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
-              const isLive = statusConfig.pulse;
-              const hasScore = match.homeTeam.score !== null;
-
-              return (
-                <div
-                  key={match.id}
-                  onClick={() => onSelectMatch(match.id)}
-                  className="card p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-[0.99] group flex flex-col justify-between"
-                >
-                  {/* Time / status */}
-                  <div className="flex items-center justify-end mb-3">
-                    <div className="flex items-center gap-1.5">
-                      {isLive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wider"
-                        style={{ color: isLive ? statusConfig.color : undefined }}
-                      >
-                        {isLive ? statusConfig.label : match.time}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Teams */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img
-                          src={match.homeTeam.logoUrl}
-                          alt=""
-                          className="w-6 h-6 object-contain flex-shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                        <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                          {match.homeTeam.name}
-                        </span>
-                      </div>
-                      <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-                        {hasScore ? match.homeTeam.score : ''}
-                      </span>
-                    </div>
-
-                    <div className="border-t border-outline-variant/10 my-0.5" />
-
-                    <div className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img
-                          src={match.awayTeam.logoUrl}
-                          alt=""
-                          className="w-6 h-6 object-contain flex-shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                        <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                          {match.awayTeam.name}
-                        </span>
-                      </div>
-                      <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-                        {hasScore ? match.awayTeam.score : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Finished status */}
-                  {!isLive && match.status !== 'NS' && (
-                    <div className="mt-3 pt-2 border-t border-outline-variant/10 text-center">
-                      <span
-                        className="text-[8px] font-bold uppercase tracking-widest"
-                        style={{ color: statusConfig.color + 'aa' }}
-                      >
-                        {statusConfig.label}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {group.map((match) => <MatchCard key={match.id} match={match} onSelectMatch={onSelectMatch} />)}
           </div>
         </div>
       ))}
+
+      {/* Flat list (TIME MODE) */}
+      {sortBy === 'TIME' && sortedByTime && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+          {sortedByTime.map((match) => (
+            <MatchCard key={match.id} match={match} onSelectMatch={onSelectMatch} showLeagueLabel />
+          ))}
+        </div>
+      )}
+
 
       {/* Footer */}
       {filtered.length > 0 && (
@@ -174,3 +139,89 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
     </div>
   );
 }
+
+function MatchCard({ match, onSelectMatch, showLeagueLabel }: { match: MatchCardData; onSelectMatch: (id: number) => void; showLeagueLabel?: boolean }) {
+  const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
+  const isLive = statusConfig.pulse;
+  const hasScore = match.homeTeam.score !== null;
+
+  return (
+    <div
+      onClick={() => onSelectMatch(match.id)}
+      className="card p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-[0.99] group flex flex-col justify-between"
+    >
+      {/* Time / status */}
+      <div className="flex items-center justify-between mb-3 min-h-[16px]">
+        {showLeagueLabel ? (
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            <img src={match.league.logoUrl} alt="" className="w-3 h-3 object-contain opacity-40 flex-shrink-0" />
+            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/30 truncate">
+              {match.league.name}
+            </span>
+          </div>
+        ) : <div />}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
+          <span
+            className="text-[9px] font-bold uppercase tracking-wider"
+            style={{ color: isLive ? statusConfig.color : undefined }}
+          >
+            {isLive ? statusConfig.label : match.time}
+          </span>
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between py-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <img
+              src={match.homeTeam.logoUrl}
+              alt=""
+              className="w-6 h-6 object-contain flex-shrink-0"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
+              {match.homeTeam.name}
+            </span>
+          </div>
+          <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
+            {hasScore ? match.homeTeam.score : ''}
+          </span>
+        </div>
+
+        <div className="border-t border-outline-variant/10 my-0.5" />
+
+        <div className="flex items-center justify-between py-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <img
+              src={match.awayTeam.logoUrl}
+              alt=""
+              className="w-6 h-6 object-contain flex-shrink-0"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
+              {match.awayTeam.name}
+            </span>
+          </div>
+          <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
+            {hasScore ? match.awayTeam.score : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* Finished status */}
+      {!isLive && match.status !== 'NS' && (
+        <div className="mt-3 pt-2 border-t border-outline-variant/10 text-center">
+          <span
+            className="text-[8px] font-bold uppercase tracking-widest"
+            style={{ color: statusConfig.color + 'aa' }}
+          >
+            {statusConfig.label}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
