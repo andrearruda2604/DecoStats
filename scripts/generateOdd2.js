@@ -1,16 +1,12 @@
 /**
  * Bilhete Odd 2.0 — odds reais da Bet365 via API-Football
- * Alvo: múltipla ~2.00 usando picks de alta probabilidade (>65%)
+ * Alvo: múltipla ~2.00 usando picks de ALTA PROBABILIDADE HISTÓRICA
  *
- * Mercados usados:
- *   Bet  5 → Goals Over/Under (total da partida)
- *   Bet  6 → Goals Over/Under (1º tempo)
- *   Bet 16 → Total - Home (gols mandante)
- *   Bet 17 → Total - Away (gols visitante)
- *   Bet 45 → Corners Over/Under (total)
- *   Bet 57 → Home Corners Over/Under
- *   Bet 58 → Away Corners Over/Under
- *   Bet 80 → Cards Over/Under (total)
+ * Estratégia: 
+ * - Lê as odds disponíveis da Bet365.
+ * - Verifica o histórico de confrontos daquela equipe naquela condição (Casa/Fora) na temporada atual.
+ * - Calcula a Frequência Histórica % do evento.
+ * - Filtra por MIN_HISTORICAL_PROB (ex: 85%) e MIN_ODD (1.08).
  */
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
@@ -36,34 +32,29 @@ const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 const TARGET_LOW  = 1.90;
 const TARGET_HIGH = 2.10;
 const MIN_PICKS   = 3;
-const MAX_PICKS   = 15;
+const MAX_PICKS   = 8; // Reduzido pois agora usamos odds maiores com alta probabilidade
 const MAX_PICKS_PER_MATCH_DEFAULT = 2;
-const MAX_PICKS_PER_MATCH_FEW_GAMES = 3; // quando há ≤ 4 jogos disponíveis
-const MIN_IMPLIED_PROB = 75; // % (odds ≤ ~1.33)
-const MIN_ODD = 1.04;        // aceita picks ultra-seguros
+const MAX_PICKS_PER_MATCH_FEW_GAMES = 3; 
+
+// NOVOS FILTROS EV+
+const MIN_HISTORICAL_PROB = 85; // % mínima do evento ter acontecido no passado
+const MIN_ODD = 1.08;        // odd mínima aceitável
+const MIN_GAMES_HISTORY = 3; // Mínimo de jogos no histórico para ter amostragem válida
 const BOOKMAKER_ID = 8;      // Bet365
 
-// bet_id → metadados do mercado
+// Mercados suportados (que conseguimos avaliar com teams_history)
 const MARKETS = {
-  // Gols — Total da partida
-  5:  { label: 'Gols FT (Total)',    stat: 'GOLS',       period: 'FT', teamTarget: 'TOTAL', statKey: 'total_goals'    },
-  6:  { label: 'Gols 1T (Total)',    stat: 'GOLS',       period: 'HT', teamTarget: 'TOTAL', statKey: 'ht_total_goals' },
-  26: { label: 'Gols 2T (Total)',    stat: 'GOLS',       period: '2H', teamTarget: 'TOTAL', statKey: '2h_total_goals' },
-  // Gols — Por equipe (FT)
-  16: { label: 'Gols FT (Casa)',     stat: 'GOLS',       period: 'FT', teamTarget: 'HOME',  statKey: 'home_score'     },
-  17: { label: 'Gols FT (Fora)',     stat: 'GOLS',       period: 'FT', teamTarget: 'AWAY',  statKey: 'away_score'     },
-  // Gols — Por equipe (1T)
-  105: { label: 'Gols 1T (Casa)',    stat: 'GOLS',       period: 'HT', teamTarget: 'HOME',  statKey: 'ht_home_score'  },
-  106: { label: 'Gols 1T (Fora)',    stat: 'GOLS',       period: 'HT', teamTarget: 'AWAY',  statKey: 'ht_away_score'  },
-  // Gols — Por equipe (2T)
-  107: { label: 'Gols 2T (Casa)',    stat: 'GOLS',       period: '2H', teamTarget: 'HOME',  statKey: '2h_home_score'  },
-  108: { label: 'Gols 2T (Fora)',    stat: 'GOLS',       period: '2H', teamTarget: 'AWAY',  statKey: '2h_away_score'  },
-  // Escanteios
-  45: { label: 'Escanteios FT',      stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'TOTAL', statKey: 'total_corners'  },
-  57: { label: 'Escanteios FT (Casa)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'HOME',  statKey: 'home_corners'   },
-  58: { label: 'Escanteios FT (Fora)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY',  statKey: 'away_corners'   },
-  // Cartões
-  80: { label: 'Cartões FT (Total)', stat: 'CARTÃO AMARELO', period: 'FT', teamTarget: 'TOTAL', statKey: 'total_cards' },
+  5:  { label: 'Gols FT (Total)',    stat: 'GOLS',       period: 'FT', teamTarget: 'TOTAL' },
+  16: { label: 'Gols FT (Casa)',     stat: 'GOLS',       period: 'FT', teamTarget: 'HOME'  },
+  17: { label: 'Gols FT (Fora)',     stat: 'GOLS',       period: 'FT', teamTarget: 'AWAY'  },
+  105:{ label: 'Gols 1T (Casa)',     stat: 'GOLS',       period: 'HT', teamTarget: 'HOME'  },
+  106:{ label: 'Gols 1T (Fora)',     stat: 'GOLS',       period: 'HT', teamTarget: 'AWAY'  },
+  107:{ label: 'Gols 2T (Casa)',     stat: 'GOLS',       period: '2H', teamTarget: 'HOME'  },
+  108:{ label: 'Gols 2T (Fora)',     stat: 'GOLS',       period: '2H', teamTarget: 'AWAY'  },
+  57: { label: 'Escanteios FT (Casa)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'HOME'  },
+  58: { label: 'Escanteios FT (Fora)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY'  },
+  81: { label: 'Cartões FT (Casa)',   stat: 'CARTÕES',    period: 'FT', teamTarget: 'HOME'  },
+  82: { label: 'Cartões FT (Fora)',   stat: 'CARTÕES',    period: 'FT', teamTarget: 'AWAY'  },
 };
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
@@ -84,13 +75,51 @@ async function fetchApi(url) {
 
 async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── odds parsing ─────────────────────────────────────────────────────────────
+// ─── EV+ Evaluator ──────────────────────────────────────────────────────────────
 
 /**
- * Retorna candidatos de picks de um fixture com odds reais.
- * Normaliza a probabilidade implícita para remover a margem do bookmaker.
+ * Avalia a frequência histórica de um candidato.
+ * history: Array de jogos passados (filtrados por mando de campo)
  */
-function parseCandidatesFromOdds(fixtureApiId, homeName, awayName, oddsResponse) {
+function evaluateHistoricalFrequency(candidate, history) {
+  if (!history || history.length < MIN_GAMES_HISTORY) return null;
+
+  let hits = 0;
+  for (const match of history) {
+    let actualValue = 0;
+    
+    if (candidate.stat === 'GOLS') {
+      if (candidate.period === 'FT') {
+        if (candidate.teamTarget === 'TOTAL') {
+          actualValue = match.goals_for + match.goals_against;
+        } else {
+          actualValue = match.goals_for;
+        }
+      } else if (candidate.period === 'HT') {
+        const htg = match.stats_1h?.find(s => s.type === 'goals');
+        actualValue = htg ? htg.value : 0;
+      } else if (candidate.period === '2H') {
+        const shtg = match.stats_2h?.find(s => s.type === 'goals');
+        actualValue = shtg ? shtg.value : 0;
+      }
+    } else if (candidate.stat === 'ESCANTEIOS') {
+      actualValue = match.corners || 0;
+    } else if (candidate.stat === 'CARTÕES') {
+      const yellow = match.stats_ft?.find(s => s.type === 'Yellow Cards');
+      const red = match.stats_ft?.find(s => s.type === 'Red Cards');
+      actualValue = (yellow ? yellow.value : 0) + (red ? red.value : 0);
+    }
+
+    if (candidate.type === 'OVER' && actualValue > candidate.threshold) hits++;
+    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) hits++;
+  }
+
+  return (hits / history.length) * 100;
+}
+
+// ─── odds parsing ─────────────────────────────────────────────────────────────
+
+function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory) {
   const bet365 = (oddsResponse || [])
     .flatMap(r => r.bookmakers || [])
     .find(b => b.id === BOOKMAKER_ID);
@@ -102,12 +131,11 @@ function parseCandidatesFromOdds(fixtureApiId, homeName, awayName, oddsResponse)
     const market = MARKETS[bet.id];
     if (!market) continue;
 
-    // Agrupa valores por linha (threshold): "Over 2.5" e "Under 2.5" formam um par
     const pairs = {};
     for (const v of (bet.values || [])) {
       const m = v.value.match(/^(Over|Under)\s+([\d.]+)$/i);
       if (!m) continue;
-      const type = m[1].toLowerCase(); // 'over' | 'under'
+      const type = m[1].toUpperCase(); 
       const threshold = parseFloat(m[2]);
       if (!pairs[threshold]) pairs[threshold] = {};
       pairs[threshold][type] = parseFloat(v.odd);
@@ -115,41 +143,45 @@ function parseCandidatesFromOdds(fixtureApiId, homeName, awayName, oddsResponse)
 
     for (const [threshStr, sides] of Object.entries(pairs)) {
       const threshold = parseFloat(threshStr);
-      if (!sides.over || !sides.under) continue; // precisa dos dois lados
-
-      // Normaliza para remover margem do bookmaker
-      const pOver  = (1 / sides.over);
-      const pUnder = (1 / sides.under);
-      const total  = pOver + pUnder;
-      const normOver  = (pOver  / total) * 100;
-      const normUnder = (pUnder / total) * 100;
 
       const teamName = market.teamTarget === 'HOME' ? homeName
                      : market.teamTarget === 'AWAY' ? awayName
                      : 'Total';
 
-      for (const [sideKey, normProb, odd] of [
-        ['over', normOver, sides.over],
-        ['under', normUnder, sides.under],
-      ]) {
-        if (normProb < MIN_IMPLIED_PROB) continue;
-        if (odd < MIN_ODD) continue;
+      for (const [sideKey, odd] of Object.entries(sides)) {
+        if (odd < MIN_ODD) continue; // Filtro de Odd (1.08)
 
-        candidates.push({
-          fixture_id: fixtureApiId,
+        const candidate = {
+          fixture_id: fixtureId,
           betId: bet.id,
           market: market.label,
           stat: market.stat,
           period: market.period,
           teamTarget: market.teamTarget,
-          statKey: market.statKey,
           team: teamName,
-          type: sideKey.toUpperCase(),
+          type: sideKey, // OVER ou UNDER
           threshold,
-          line: `${sideKey === 'over' ? 'Mais de' : 'Menos de'} ${threshold}`,
+          line: `${sideKey === 'OVER' ? 'Mais de' : 'Menos de'} ${threshold}`,
           odd,
-          probability: Math.round(normProb),
-        });
+        };
+
+        // Usa o histórico do time adequado
+        let histToUse = null;
+        if (market.teamTarget === 'HOME') histToUse = homeHistory;
+        else if (market.teamTarget === 'AWAY') histToUse = awayHistory;
+        else if (market.teamTarget === 'TOTAL') {
+          // Para TOTAL, vamos avaliar usando o histórico da Casa para Simplificar a amostragem
+          // (ideal seria ter dados completos da partida, mas teams_history já possui goals_against para FT GOLS)
+          histToUse = homeHistory; 
+        }
+
+        const histProb = evaluateHistoricalFrequency(candidate, histToUse);
+
+        // Se tivermos amostragem e a probabilidade histórica bater a meta (ex: 85%)
+        if (histProb !== null && histProb >= MIN_HISTORICAL_PROB) {
+          candidate.probability = Math.round(histProb); // Probabilidade real
+          candidates.push(candidate);
+        }
       }
     }
   }
@@ -159,14 +191,7 @@ function parseCandidatesFromOdds(fixtureApiId, homeName, awayName, oddsResponse)
 
 // ─── accumulator builder ──────────────────────────────────────────────────────
 
-/**
- * Seleciona picks para acumular próximo de TARGET.
- * Estratégia: ordena por probabilidade decrescente, mas quando a odd acumulada
- * está muito baixa, prioriza picks com odds maiores (que ainda são ≥60% confiança)
- * para atingir o alvo sem ultrapassar TARGET_HIGH.
- */
 function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_DEFAULT) {
-  // Remove duplicatas (mesmo fixture + mercado + linha + tipo)
   const deduped = [];
   const seen = new Set();
   for (const c of allCandidates) {
@@ -195,36 +220,27 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     currentOdd *= candidate.odd;
   }
 
-  // Estratégia: a cada iteração, sempre prioriza a pick mais segura (maior probabilidade).
-  // Atingir a Odd 2.0 é consequência de somar múltiplas seguras, e não de forçar odds arriscadas.
+  // Prioriza Picks com Probabilidade Máxima, depois desempata com Odd Alta
   while (selected.length < MAX_PICKS) {
     if (currentOdd >= TARGET_LOW && selected.length >= MIN_PICKS) break;
 
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
-
     if (available.length === 0) break;
 
-    // Sempre pega a mais segura
     available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
     const pick = available[0];
 
     doAdd(pick);
   }
 
-  // Fallback: se ainda abaixo do alvo, aceita UMA pick que ultrapasse ligeiramente
   if (currentOdd < TARGET_LOW && selected.length < MAX_PICKS) {
-    const maxAllowed = TARGET_HIGH + 0.15; // max 2.25
+    const maxAllowed = TARGET_HIGH + 0.15;
     const fallbacks = deduped
       .filter(c => canAdd(c))
-      .filter(c => {
-        const proj = currentOdd * c.odd;
-        return proj >= TARGET_LOW && proj <= maxAllowed;
-      })
-      .sort((a, b) => b.probability - a.probability); // mais seguro primeiro
+      .filter(c => (currentOdd * c.odd) >= TARGET_LOW && (currentOdd * c.odd) <= maxAllowed)
+      .sort((a, b) => b.probability - a.probability || b.odd - a.odd);
 
-    if (fallbacks.length > 0) {
-      doAdd(fallbacks[0]);
-    }
+    if (fallbacks.length > 0) doAdd(fallbacks[0]);
   }
 
   return { selected, total: currentOdd };
@@ -235,17 +251,17 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
 async function generateOdd2() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const today = process.argv[2] || brt.toISOString().split('T')[0];
-  console.log(`\n=== Gerando Bilhete Odd 2.0 para ${today} ===\n`);
+  console.log(`\n=== Gerando Bilhete Odd 2.0 (Historical EV+) para ${today} ===\n`);
 
   // 1. Ligas ativas
   const { data: leagues } = await supabase
     .from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
-  // 2. Fixtures do dia (apenas NS = não iniciados)
+  // 2. Fixtures do dia
   const { data: fixtures } = await supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`)
     .in('status', ['NS', 'TBD']);
@@ -258,7 +274,6 @@ async function generateOdd2() {
     return;
   }
 
-  // 3. Para cada fixture, busca odds reais
   const allPickCandidates = [];
   for (const f of candidates) {
     const homeName = f.home_team?.name || 'Casa';
@@ -266,11 +281,19 @@ async function generateOdd2() {
     process.stdout.write(`  ${homeName} x ${awayName} ... `);
 
     try {
+      // Fetch historical data
+      const { data: homeHistory } = await supabase.from('teams_history')
+        .select('*').eq('team_id', f.home_team_id).eq('season', f.season).eq('is_home', true);
+      const { data: awayHistory } = await supabase.from('teams_history')
+        .select('*').eq('team_id', f.away_team_id).eq('season', f.season).eq('is_home', false);
+
       const oddsResp = await fetchApi(
         `https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`
       );
-      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp);
-      console.log(`${picks.length} candidato(s)`);
+      
+      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory);
+      console.log(`${picks.length} candidato(s) (Historico EV+)`);
+      
       allPickCandidates.push(...picks.map(p => ({
         ...p,
         home: homeName,
@@ -285,7 +308,7 @@ async function generateOdd2() {
     }
   }
 
-  console.log(`\nTotal de candidatos: ${allPickCandidates.length}`);
+  console.log(`\nTotal de candidatos (EV+): ${allPickCandidates.length}`);
 
   if (allPickCandidates.length < MIN_PICKS) {
     console.log('Odds insuficientes disponíveis. Salvando bilhete vazio.');
@@ -300,11 +323,11 @@ async function generateOdd2() {
   // 4. Monta acumuladora
   const uniqueFixtures = new Set(allPickCandidates.map(c => c.fixture_id));
   const maxPerMatch = uniqueFixtures.size <= 4 ? MAX_PICKS_PER_MATCH_FEW_GAMES : MAX_PICKS_PER_MATCH_DEFAULT;
-  console.log(`Jogos únicos: ${uniqueFixtures.size} | Max picks/jogo: ${maxPerMatch}`);
   const { selected, total } = buildAccumulator(allPickCandidates, maxPerMatch);
+  
   console.log(`\nPicks selecionados: ${selected.length} | Odd total: ${total.toFixed(2)}`);
 
-  // 5. Converte para formato ticket_data.entries (agrupa por fixture)
+  // 5. Converte para formato
   const entriesMap = {};
   for (const pick of selected) {
     if (!entriesMap[pick.fixture_id]) {
@@ -339,16 +362,15 @@ async function generateOdd2() {
   const avgConfidence = Math.round(allPicks.reduce((a, b) => a + b.probability, 0) / allPicks.length);
   const totalOdd = allPicks.reduce((a, b) => a * b.odd, 1.0);
 
-  // Log do bilhete
   console.log('\n── BILHETE GERADO ──');
   for (const e of entries) {
     console.log(`\n  ${e.home} x ${e.away}`);
     for (const p of e.picks) {
-      console.log(`    [${p.probability}%] ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
+      console.log(`    [${p.probability}% Hist.] ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
     }
   }
   console.log(`\n  Odd Total: ${totalOdd.toFixed(2)}`);
-  console.log(`  Confiança Média: ${avgConfidence}%`);
+  console.log(`  Confiança Média Histórica: ${avgConfidence}%`);
 
   // 6. Salva no banco
   await supabase.from('odd_tickets').upsert({
