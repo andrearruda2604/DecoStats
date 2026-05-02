@@ -81,6 +81,7 @@ async function evaluateTicket() {
   let allGreen = true;
   let evaluatedEntries = [];
 
+  let hasIncompleteMatch = false;
   for (const entry of entries) {
     console.log(`\nAvaliando ${entry.home} x ${entry.away} (${entry.fixture_id})`);
     
@@ -94,7 +95,9 @@ async function evaluateTicket() {
     
     if (!matchDetail || !['FT', 'AET', 'PEN'].includes(matchDetail.fixture.status.short)) {
        console.log(`Partida não finalizada ou erro na API.`);
-       allGreen = false;
+       hasIncompleteMatch = true;
+       entry.matchResult = 'PENDING';
+       evaluatedEntries.push(entry);
        continue;
     }
 
@@ -160,12 +163,18 @@ async function evaluateTicket() {
   }
 
   ticket.ticket_data.entries = evaluatedEntries;
-  const finalStatus = allGreen ? 'WON' : 'LOST';
+  
+  let finalStatus = 'PENDING';
+  if (!allGreen) {
+    finalStatus = 'LOST';
+  } else if (!hasIncompleteMatch) {
+    finalStatus = 'WON';
+  }
 
-    await supabase.from('odd_tickets').update({
-       status: finalStatus,
-       ticket_data: ticket.ticket_data
-    }).eq('date', targetDate).eq('mode', ticket.mode);
+  await supabase.from('odd_tickets').update({
+     status: finalStatus,
+     ticket_data: ticket.ticket_data
+  }).eq('date', targetDate).eq('mode', ticket.mode);
 
 
     console.log(`Ticket ${ticket.mode} Avaliado como: ${finalStatus}`);
