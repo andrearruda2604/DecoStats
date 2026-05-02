@@ -70,12 +70,14 @@ async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
  * Avalia a frequência histórica com base na equipe alvo. 
  * Comportamento clássico restaurado: usa apenas o histórico da equipe em questão para manter as altas %.
  */
-function evaluateHistoricalFrequency(candidate, history, matchTotals) {
-  if (!history || history.length < MIN_GAMES_HISTORY) return null;
+function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals) {
+  if (!homeHistory || homeHistory.length < MIN_GAMES_HISTORY) return null;
+  if (candidate.teamTarget === 'TOTAL' && (!awayHistory || awayHistory.length < MIN_GAMES_HISTORY)) return null;
 
-  let hits = 0;
+  let homeHits = 0;
+  let awayHits = 0;
 
-  for (const match of history) {
+  for (const match of homeHistory) {
     let actualValue = 0;
     
     if (candidate.stat === 'GOLS') {
@@ -111,11 +113,36 @@ function evaluateHistoricalFrequency(candidate, history, matchTotals) {
       }
     }
     
-    if (candidate.type === 'OVER' && actualValue > candidate.threshold) hits++;
-    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) hits++;
+    if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
+    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
   }
 
-  return (hits / history.length) * 100;
+  if (candidate.teamTarget !== 'TOTAL') {
+    return (homeHits / homeHistory.length) * 100;
+  }
+
+  for (const match of awayHistory) {
+    let actualValue = 0;
+    
+    if (candidate.stat === 'GOLS') {
+      if (candidate.period === 'FT') actualValue = match.goals_for + match.goals_against;
+      else if (candidate.period === 'HT') {
+        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = htg ? htg.value : 0;
+      } else if (candidate.period === '2H') {
+        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = shtg ? shtg.value : 0;
+      }
+    } else if (candidate.stat === 'ESCANTEIOS') {
+      if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.corners_ht || 0;
+      else actualValue = matchTotals[match.fixture_id]?.corners || 0;
+    } else if (candidate.stat === 'CARTÕES') {
+      actualValue = matchTotals[match.fixture_id]?.cards || 0;
+    }
+    
+    if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
+    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
+  }
+
+  return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory, matchTotals) {
@@ -161,15 +188,17 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
           odd,
         };
 
-        // Comportamento original: usa apenas o historico do respectivo mando
-        let histToUse = null;
-        if (market.teamTarget === 'HOME' || market.teamTarget === 'TOTAL') histToUse = homeHistory;
-        else if (market.teamTarget === 'AWAY') histToUse = awayHistory;
+        let prob = null;
+        if (market.teamTarget === 'TOTAL') {
+          prob = evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals);
+        } else if (market.teamTarget === 'HOME') {
+          prob = evaluateHistoricalFrequency(candidate, homeHistory, null, matchTotals);
+        } else if (market.teamTarget === 'AWAY') {
+          prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals);
+        }
 
-        const histProb = evaluateHistoricalFrequency(candidate, histToUse, matchTotals);
-
-        if (histProb !== null && histProb >= MIN_HISTORICAL_PROB) {
-          candidate.probability = Math.round(histProb); 
+        if (prob !== null && prob >= MIN_HISTORICAL_PROB) {
+          candidate.probability = Math.round(prob); 
           candidates.push(candidate);
         }
       }
@@ -265,9 +294,9 @@ async function generateOdd2() {
 
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.home_team_id).eq('season', f.season).eq('is_home', true);
+        .select('*').eq('team_id', f.home_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
       const { data: awayHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.away_team_id).eq('season', f.season).eq('is_home', false);
+        .select('*').eq('team_id', f.away_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
 
       const matchTotals = {};
       
