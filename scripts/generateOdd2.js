@@ -1,6 +1,6 @@
 /**
  * Bilhete Odd 2.0 — odds reais da Bet365 via API-Football
- * Alvo: múltipla ~2.00 usando picks de ALTA PROBABILIDADE HISTÓRICA COMBINADA
+ * Alvo: múltipla ~2.00 usando picks de ALTA PROBABILIDADE HISTÓRICA
  */
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
@@ -29,8 +29,8 @@ const MAX_PICKS_PER_MATCH_DEFAULT = 2;
 const MAX_PICKS_PER_MATCH_FEW_GAMES = 3; 
 
 const MIN_HISTORICAL_PROB = 85; 
-const MIN_ODD = 1.08;        
-const MIN_GAMES_HISTORY = 7; 
+const MIN_ODD = 1.07;        
+const MIN_GAMES_HISTORY = 3; 
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
@@ -41,8 +41,8 @@ const MARKETS = {
   106:{ label: 'Gols 1T (Fora)',     stat: 'GOLS',       period: 'HT', teamTarget: 'AWAY'  },
   107:{ label: 'Gols 2T (Casa)',     stat: 'GOLS',       period: '2H', teamTarget: 'HOME'  },
   108:{ label: 'Gols 2T (Fora)',     stat: 'GOLS',       period: '2H', teamTarget: 'AWAY'  },
-  77: { label: 'Escanteios 1T (Total)',stat:'ESCANTEIOS',period: 'HT', teamTarget: 'TOTAL' },
   45: { label: 'Escanteios FT (Total)',stat:'ESCANTEIOS',period: 'FT', teamTarget: 'TOTAL' },
+  77: { label: 'Escanteios 1T (Total)',stat:'ESCANTEIOS',period: 'HT', teamTarget: 'TOTAL' },
   57: { label: 'Escanteios FT (Casa)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'HOME'  },
   58: { label: 'Escanteios FT (Fora)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY'  },
   80: { label: 'Cartões FT (Total)',  stat: 'CARTÕES',    period: 'FT', teamTarget: 'TOTAL' },
@@ -67,22 +67,22 @@ async function fetchApi(url) {
 async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /**
- * Avalia a frequência histórica combinada (Casa + Fora) usando matchTotals para estatisticas de jogo inteiro.
+ * Avalia a frequência histórica com base na equipe alvo. 
+ * Comportamento clássico restaurado: usa apenas o histórico da equipe em questão para manter as altas %.
  */
-function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals) {
-  if (!homeHistory || !awayHistory) return null;
-  if (homeHistory.length < MIN_GAMES_HISTORY || awayHistory.length < MIN_GAMES_HISTORY) return null;
+function evaluateHistoricalFrequency(candidate, history, matchTotals) {
+  if (!history || history.length < MIN_GAMES_HISTORY) return null;
 
-  let homeHits = 0;
-  let awayHits = 0;
+  let hits = 0;
 
-  for (const match of homeHistory) {
+  for (const match of history) {
     let actualValue = 0;
+    
     if (candidate.stat === 'GOLS') {
       if (candidate.period === 'FT') {
         if (candidate.teamTarget === 'TOTAL') actualValue = match.goals_for + match.goals_against;
-        else if (candidate.teamTarget === 'HOME') actualValue = match.goals_for; 
-        else if (candidate.teamTarget === 'AWAY') actualValue = match.goals_against; 
+        else if (candidate.teamTarget === 'HOME') actualValue = match.is_home ? match.goals_for : match.goals_against; 
+        else if (candidate.teamTarget === 'AWAY') actualValue = match.is_home ? match.goals_against : match.goals_for; 
       } else if (candidate.period === 'HT') {
         const htg = match.stats_1h?.find(s => s.type === 'goals');
         actualValue = htg ? htg.value : 0;
@@ -93,14 +93,15 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
     } else if (candidate.stat === 'ESCANTEIOS') {
       if (candidate.period === 'HT') {
         if (candidate.teamTarget === 'TOTAL') {
-           const ock = matchTotals[match.fixture_id]?.corners_ht || 0; actualValue = ock;
+           actualValue = matchTotals[match.fixture_id]?.corners_ht || 0;
         } else {
-           const ck = match.stats_1h?.find(s => s.type === 'Corner Kicks'); actualValue = ck ? ck.value : 0;
+           const ck = match.stats_1h?.find(s => s.type === 'Corner Kicks');
+           actualValue = ck ? ck.value : 0;
         }
       } else {
         if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.corners || 0;
-        else actualValue = match.corners || 0;
-      } 
+        else actualValue = match.corners || 0; 
+      }
     } else if (candidate.stat === 'CARTÕES') {
       if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards || 0;
       else {
@@ -109,64 +110,12 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
         actualValue = (yellow ? yellow.value : 0) + (red ? red.value : 0);
       }
     }
-    if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
-    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
+    
+    if (candidate.type === 'OVER' && actualValue > candidate.threshold) hits++;
+    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) hits++;
   }
 
-  for (const match of awayHistory) {
-    let actualValue = 0;
-    if (candidate.stat === 'GOLS') {
-      if (candidate.period === 'FT') {
-        if (candidate.teamTarget === 'TOTAL') actualValue = match.goals_for + match.goals_against;
-        else if (candidate.teamTarget === 'HOME') actualValue = match.goals_against; 
-        else if (candidate.teamTarget === 'AWAY') actualValue = match.goals_for;     
-      } else if (candidate.period === 'HT') {
-        const htg = match.stats_1h?.find(s => s.type === 'goals');
-        actualValue = htg ? htg.value : 0; 
-      } else if (candidate.period === '2H') {
-        const shtg = match.stats_2h?.find(s => s.type === 'goals');
-        actualValue = shtg ? shtg.value : 0;
-      }
-    } else if (candidate.stat === 'ESCANTEIOS') {
-      if (candidate.period === 'HT') {
-        if (candidate.teamTarget === 'TOTAL') {
-           const ock = matchTotals[match.fixture_id]?.corners_ht || 0; actualValue = ock;
-        } else {
-           const ck = match.stats_1h?.find(s => s.type === 'Corner Kicks'); actualValue = ck ? ck.value : 0;
-        }
-      } else {
-        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.corners || 0;
-        else actualValue = match.corners || 0;
-      } 
-    } else if (candidate.stat === 'CARTÕES') {
-      if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards || 0;
-      else {
-        const yellow = match.stats_ft?.find(s => s.type === 'Yellow Cards');
-        const red = match.stats_ft?.find(s => s.type === 'Red Cards');
-        actualValue = (yellow ? yellow.value : 0) + (red ? red.value : 0);
-      }
-    }
-    if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
-    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
-  }
-
-  if (candidate.teamTarget === 'TOTAL') {
-    return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
-  } else if (candidate.teamTarget === 'HOME') {
-    if (candidate.stat === 'GOLS' && candidate.period === 'FT') {
-      return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
-    } else {
-      return (homeHits / homeHistory.length) * 100;
-    }
-  } else if (candidate.teamTarget === 'AWAY') {
-    if (candidate.stat === 'GOLS' && candidate.period === 'FT') {
-      return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
-    } else {
-      return (awayHits / awayHistory.length) * 100;
-    }
-  }
-
-  return null;
+  return (hits / history.length) * 100;
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory, matchTotals) {
@@ -212,10 +161,14 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
           odd,
         };
 
-        const histProb = evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals);
+        // Comportamento original: usa apenas o historico do respectivo mando
+        let histToUse = null;
+        if (market.teamTarget === 'HOME' || market.teamTarget === 'TOTAL') histToUse = homeHistory;
+        else if (market.teamTarget === 'AWAY') histToUse = awayHistory;
 
-        const requiredProb = market.stat === 'GOLS' ? 85 : 60;
-        if (histProb !== null && histProb >= requiredProb) {
+        const histProb = evaluateHistoricalFrequency(candidate, histToUse, matchTotals);
+
+        if (histProb !== null && histProb >= MIN_HISTORICAL_PROB) {
           candidate.probability = Math.round(histProb); 
           candidates.push(candidate);
         }
@@ -258,17 +211,11 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
   while (selected.length < MAX_PICKS) {
     if (currentOdd >= TARGET_LOW && selected.length >= MIN_PICKS) break;
 
+    // Remove forced diversification to prioritize strict highest % and odd
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
     if (available.length === 0) break;
 
-    available.sort((a, b) => {
-      const goalsCount = selected.filter(c => c.stat === 'GOLS').length;
-      if (goalsCount >= 2) {
-        if (a.stat === 'GOLS' && b.stat !== 'GOLS') return 1;
-        if (b.stat === 'GOLS' && a.stat !== 'GOLS') return -1;
-      }
-      return b.probability - a.probability || b.odd - a.odd;
-    });
+    available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
     const pick = available[0];
 
     doAdd(pick);
@@ -279,14 +226,7 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const fallbacks = deduped
       .filter(c => canAdd(c))
       .filter(c => (currentOdd * c.odd) >= TARGET_LOW && (currentOdd * c.odd) <= maxAllowed)
-      .sort((a, b) => {
-      const goalsCount = selected.filter(c => c.stat === 'GOLS').length;
-      if (goalsCount >= 2) {
-        if (a.stat === 'GOLS' && b.stat !== 'GOLS') return 1;
-        if (b.stat === 'GOLS' && a.stat !== 'GOLS') return -1;
-      }
-      return b.probability - a.probability || b.odd - a.odd;
-    });
+      .sort((a, b) => b.probability - a.probability || b.odd - a.odd);
 
     if (fallbacks.length > 0) doAdd(fallbacks[0]);
   }
@@ -297,7 +237,7 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
 async function generateOdd2() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const today = process.argv[2] || brt.toISOString().split('T')[0];
-  console.log(`\n=== Gerando Bilhete Odd 2.0 (EV+ Corners & Cards) para ${today} ===\n`);
+  console.log(`\n=== Gerando Bilhete Odd 2.0 (Classic Lucrative) para ${today} ===\n`);
 
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
@@ -331,30 +271,24 @@ async function generateOdd2() {
 
       const matchTotals = {};
       
-      // Se houver histórico, busca os dados da partida inteira para validar Escanteios/Cartões totais
       if (homeHistory?.length > 0 || awayHistory?.length > 0) {
          const historyFixtures = [...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id);
-         
-         // Faz consultas em batches se houver muitos (limite da URL do Supabase in)
-         // Mas como sao ~20 jogos, um in() funciona perfeitamente
          const { data: opponentsData } = await supabase.from('teams_history')
            .select('fixture_id, corners, stats_ft, stats_1h')
            .in('fixture_id', historyFixtures);
            
          for (const row of (opponentsData || [])) {
-           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, cards: 0 };
+           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0 };
            matchTotals[row.fixture_id].corners += (row.corners || 0);
            const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
-           matchTotals[row.fixture_id].corners_ht = (matchTotals[row.fixture_id].corners_ht || 0) + (ck_ht ? ck_ht.value : 0);
+           matchTotals[row.fixture_id].corners_ht += (ck_ht ? ck_ht.value : 0);
            const y = row.stats_ft?.find(s => s.type === 'Yellow Cards')?.value || 0;
            const r = row.stats_ft?.find(s => s.type === 'Red Cards')?.value || 0;
            matchTotals[row.fixture_id].cards += (y + r);
          }
       }
 
-      const oddsResp = await fetchApi(
-        `https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`
-      );
+      const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`);
       
       const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals);
       
