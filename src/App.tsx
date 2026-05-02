@@ -50,6 +50,11 @@ function AuthenticatedApp() {
   const [seasonOnly, setSeasonOnly] = useState(true);
   const [mandoOnly, setMandoOnly] = useState(true);
   const [show100Only, setShow100Only] = useState(false);
+  const [sortBy, setSortBy] = useState<'LEAGUE' | 'TIME'>(() => {
+    return (localStorage.getItem('decostats_sort_by') as 'LEAGUE' | 'TIME') || 'LEAGUE';
+  });
+  const [lobbyScrollPos, setLobbyScrollPos] = useState(0);
+
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
@@ -64,14 +69,28 @@ function AuthenticatedApp() {
   } = useMatchStats(selectedMatchId);
 
   const handleSelectMatch = (matchId: number) => {
+    setLobbyScrollPos(window.scrollY);
     setSelectedMatchId(matchId);
     setActiveView('DATA');
+    window.scrollTo(0, 0);
   };
 
   const handleBack = () => {
     setActiveView('LOBBY');
     setSelectedMatchId(null);
   };
+
+  useEffect(() => {
+    if (activeView === 'LOBBY') {
+      // Delay slightly to ensure content is rendered
+      setTimeout(() => window.scrollTo(0, lobbyScrollPos), 10);
+    }
+  }, [activeView, lobbyScrollPos]);
+
+  useEffect(() => {
+    localStorage.setItem('decostats_sort_by', sortBy);
+  }, [sortBy]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -120,8 +139,14 @@ function AuthenticatedApp() {
             {matchesLoading && <LoadingState message="Buscando partidas..." />}
             {matchesError && <ErrorState message={matchesError} onRetry={refreshMatches} />}
             {!matchesLoading && !matchesError && (
-              <Lobby matches={matches} onSelectMatch={handleSelectMatch} />
+              <Lobby
+                matches={matches}
+                onSelectMatch={handleSelectMatch}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+              />
             )}
+
           </div>
         </div>
       )}

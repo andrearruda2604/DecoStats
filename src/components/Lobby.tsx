@@ -11,11 +11,14 @@ import { useState, useMemo } from 'react';
 interface LobbyProps {
   matches: MatchCardData[];
   onSelectMatch: (matchId: number) => void;
+  sortBy: 'LEAGUE' | 'TIME';
+  onSortChange: (sort: 'LEAGUE' | 'TIME') => void;
 }
 
-export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
+
+export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: LobbyProps) {
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'LEAGUE' | 'TIME'>('LEAGUE');
+
 
 
   const filtered = useMemo(() => {
@@ -67,7 +70,7 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
         
         <div className="flex p-1 bg-surface-container border border-outline-variant rounded-xl self-start sm:self-center">
           <button
-            onClick={() => setSortBy('LEAGUE')}
+            onClick={() => onSortChange('LEAGUE')}
             className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
               sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
             }`}
@@ -75,7 +78,7 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
             Liga
           </button>
           <button
-            onClick={() => setSortBy('TIME')}
+            onClick={() => onSortChange('TIME')}
             className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
               sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
             }`}
@@ -83,6 +86,7 @@ export default function Lobby({ matches, onSelectMatch }: LobbyProps) {
             Horário
           </button>
         </div>
+
       </div>
 
       {/* Empty state */}
