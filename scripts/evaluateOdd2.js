@@ -97,7 +97,7 @@ async function evaluateTicket() {
        console.log(`Partida não finalizada ou erro na API.`);
        hasIncompleteMatch = true;
        entry.matchResult = 'PENDING';
-       evaluatedEntries.push(entry);
+       evaluatedEntries.push(entry); // MUST PUSH TO PRESERVE DATA
        continue;
     }
 
