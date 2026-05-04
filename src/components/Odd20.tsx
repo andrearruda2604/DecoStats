@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp } from 'lucide-react';
+import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp, X, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -83,6 +83,34 @@ function evaluatePick(pick: any, actualVal: number | undefined): 'WON' | 'LOST' 
   if (isNaN(threshold)) return null;
   const won = pick.type === 'OVER' ? actualVal > threshold : actualVal < threshold;
   return won ? 'WON' : 'LOST';
+}
+
+function getHistStatValue(game: any, pick: any): number | null {
+  const { stat, period } = pick;
+  if (stat === 'GOLS') {
+    if (period === 'FT') return game.goals_for ?? null;
+    if (period === 'HT') {
+      const g = game.stats_1h?.find((s: any) => s.type === 'goals');
+      return g != null ? (typeof g.value === 'string' ? parseInt(g.value) : g.value) ?? 0 : null;
+    }
+    if (period === '2H') {
+      const g = game.stats_2h?.find((s: any) => s.type === 'goals');
+      return g != null ? (typeof g.value === 'string' ? parseInt(g.value) : g.value) ?? 0 : null;
+    }
+  }
+  if (stat === 'ESCANTEIOS') {
+    if (period === 'FT') return game.corners ?? null;
+    if (period === 'HT') {
+      const ck = game.stats_1h?.find((s: any) => s.type === 'Corner Kicks');
+      return ck != null ? (typeof ck.value === 'string' ? parseInt(ck.value) : ck.value) ?? 0 : null;
+    }
+  }
+  if (stat === 'CARTÕES') {
+    const yc = game.stats_ft?.find((s: any) => s.type === 'Yellow Cards');
+    const rc = game.stats_ft?.find((s: any) => s.type === 'Red Cards');
+    return (yc?.value ?? 0) + (rc?.value ?? 0);
+  }
+  return null;
 }
 
 // ─── Balance Evolution Chart ─────────────────────────────────────────────────
@@ -169,6 +197,11 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     localStorage.getItem(`decostats_range_end_${mode}`) || ''
   );
 
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [entryHomeHistory, setEntryHomeHistory] = useState<any[]>([]);
+  const [entryAwayHistory, setEntryAwayHistory] = useState<any[]>([]);
+  const [entryHistLoading, setEntryHistLoading] = useState(false);
+
   // Persist state
   useEffect(() => {
     localStorage.setItem(`decostats_odd_tab_${mode}`, activeTab);
@@ -228,6 +261,42 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
       setTicket(null);
       setHistStats({});
     }
+  }, []);
+
+  const loadEntryHistory = useCallback(async (entry: any, ticketDate: string) => {
+    setEntryHistLoading(true);
+    setEntryHomeHistory([]);
+    setEntryAwayHistory([]);
+
+    const { data: fix } = await supabase
+      .from('fixtures')
+      .select('home_team_id, away_team_id')
+      .eq('api_id', entry.fixture_id)
+      .maybeSingle();
+
+    if (!fix) { setEntryHistLoading(false); return; }
+
+    const cutoff = ticketDate + 'T00:00:00';
+    const [{ data: homeHist }, { data: awayHist }] = await Promise.all([
+      supabase
+        .from('teams_history')
+        .select('fixture_id, match_date, is_home, goals_for, goals_against, corners, yellow_cards, red_cards, stats_1h, stats_2h, stats_ft')
+        .eq('team_id', fix.home_team_id)
+        .lt('match_date', cutoff)
+        .order('match_date', { ascending: false })
+        .limit(20),
+      supabase
+        .from('teams_history')
+        .select('fixture_id, match_date, is_home, goals_for, goals_against, corners, yellow_cards, red_cards, stats_1h, stats_2h, stats_ft')
+        .eq('team_id', fix.away_team_id)
+        .lt('match_date', cutoff)
+        .order('match_date', { ascending: false })
+        .limit(20),
+    ]);
+
+    setEntryHomeHistory(homeHist || []);
+    setEntryAwayHistory(awayHist || []);
+    setEntryHistLoading(false);
   }, []);
 
   useEffect(() => {
@@ -536,13 +605,16 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                         : null);
 
                     return (
-                      <div key={i} className={`border rounded-[32px] p-7 relative overflow-hidden group transition-all duration-500 shadow-xl ${
-                        matchResult === 'WON'
-                          ? 'bg-emerald-500/[0.03] border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]'
-                          : matchResult === 'LOST'
-                            ? 'bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.05)]'
-                            : 'bg-surface/40 border-outline-variant/20'
-                      }`}>
+                      <div
+                        key={i}
+                        onClick={() => { setSelectedEntry(match); loadEntryHistory(match, ticket.date); }}
+                        className={`border rounded-[32px] p-7 relative overflow-hidden group transition-all duration-500 shadow-xl cursor-pointer hover:scale-[1.01] ${
+                          matchResult === 'WON'
+                            ? 'bg-emerald-500/[0.03] border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]'
+                            : matchResult === 'LOST'
+                              ? 'bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.05)]'
+                              : 'bg-surface/40 border-outline-variant/20'
+                        }`}>
                         <div className={`absolute left-0 top-0 bottom-0 w-2 transition-all duration-500 ${
                           matchResult === 'WON' ? 'bg-emerald-500' :
                           matchResult === 'LOST' ? 'bg-rose-500' : 'bg-primary'
@@ -870,6 +942,154 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Match History Drawer ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedEntry && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 z-50 backdrop-blur-sm"
+              onClick={() => setSelectedEntry(null)}
+            />
+            <motion.div
+              key="drawer"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-[#0d0d11] border-t border-outline-variant/20 rounded-t-3xl max-h-[82vh] overflow-y-auto shadow-2xl"
+            >
+              <div className="p-5 space-y-5">
+                {/* Handle */}
+                <div className="w-10 h-1 bg-outline-variant/30 rounded-full mx-auto" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={selectedEntry.homeLogo} className="w-7 h-7 object-contain shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-white truncate">
+                        {selectedEntry.home} <span className="text-on-surface-variant/50">vs</span> {selectedEntry.away}
+                      </p>
+                      <p className="text-[9px] text-on-surface-variant font-bold flex items-center gap-1">
+                        <BarChart2 className="w-3 h-3" />
+                        Dados históricos usados no palpite ·{' '}
+                        {new Date(selectedEntry.date_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      </p>
+                    </div>
+                    <img src={selectedEntry.awayLogo} className="w-7 h-7 object-contain shrink-0" />
+                  </div>
+                  <button
+                    onClick={() => setSelectedEntry(null)}
+                    className="p-2 rounded-xl hover:bg-surface-container-highest/20 text-on-surface-variant shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Picks history */}
+                {entryHistLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedEntry.picks.map((pick: any, i: number) => {
+                      const history =
+                        pick.teamTarget === 'AWAY' ? entryAwayHistory :
+                        pick.teamTarget === 'TOTAL' ? [...entryHomeHistory, ...entryAwayHistory].sort((a, b) => b.match_date.localeCompare(a.match_date)) :
+                        entryHomeHistory;
+
+                      const games = history.slice(0, 15);
+                      const values = games.map((g: any) => getHistStatValue(g, pick));
+                      const met = values.map((v: number | null) =>
+                        v !== null ? (pick.type === 'OVER' ? v > pick.threshold : v < pick.threshold) : null
+                      );
+                      const totalValid = met.filter((m: boolean | null) => m !== null).length;
+                      const hitCount = met.filter((m: boolean | null) => m === true).length;
+                      const pct = totalValid > 0 ? Math.round((hitCount / totalValid) * 100) : pick.probability;
+
+                      const pickResult = pick.result;
+
+                      return (
+                        <div key={i} className={`rounded-2xl p-4 border ${
+                          pickResult === 'WON' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                          pickResult === 'LOST' ? 'bg-rose-500/5 border-rose-500/20' :
+                          'bg-surface/40 border-outline-variant/20'
+                        }`}>
+                          {/* Pick label row */}
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className="min-w-0">
+                              <span className="text-[8px] font-black uppercase tracking-widest text-primary block">
+                                {pick.period} · {pick.stat} · {pick.teamTarget === 'HOME' ? selectedEntry.home : pick.teamTarget === 'AWAY' ? selectedEntry.away : 'Total'}
+                              </span>
+                              <p className="text-xs font-black text-white">{pick.line}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {pickResult && (
+                                <span className={`text-[8px] font-black px-2 py-0.5 rounded-md ${
+                                  pickResult === 'WON' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                                }`}>
+                                  {pickResult === 'WON' ? '✓ GREEN' : '✗ RED'}
+                                </span>
+                              )}
+                              <div className="text-right">
+                                <span className="text-base font-black text-emerald-400 block leading-none">{pct}%</span>
+                                <span className="text-[8px] text-on-surface-variant font-bold">{hitCount}/{totalValid} jogos</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div className="h-1 bg-black/40 rounded-full mb-3 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+
+                          {/* Game dots — last 15 games, oldest→newest (right = most recent) */}
+                          {games.length === 0 ? (
+                            <p className="text-[9px] text-on-surface-variant/40 font-bold text-center py-2">
+                              Sem histórico disponível
+                            </p>
+                          ) : (
+                            <div className="flex gap-1 flex-wrap">
+                              {[...games].reverse().map((g: any, j: number) => {
+                                const idx = games.length - 1 - j;
+                                const val = values[idx];
+                                const ok = met[idx];
+                                return (
+                                  <div key={j} className="flex flex-col items-center gap-0.5">
+                                    <div className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] font-black border ${
+                                      ok === null ? 'bg-surface-container/30 border-outline-variant/10 text-on-surface-variant/30' :
+                                      ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' :
+                                      'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                                    }`}>
+                                      {val ?? '–'}
+                                    </div>
+                                    <span className="text-[7px] text-on-surface-variant/30 font-bold">
+                                      {new Date(g.match_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

@@ -13,7 +13,9 @@
       "Bash(node scripts/generateOdd2.js)",
       "Bash(node --input-type=module)",
       "Bash(node scripts/seedNewLeagues.js)",
-      "Bash(node scripts/syncTodayWithHistory.js)"
+      "Bash(node scripts/syncTodayWithHistory.js)",
+      "Bash(node -e ' *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
