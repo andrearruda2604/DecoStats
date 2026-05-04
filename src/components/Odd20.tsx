@@ -276,7 +276,9 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
     if (!fix) { setEntryHistLoading(false); return; }
 
-    const cutoff = ticketDate + 'T00:00:00';
+    // Use the game's own kickoff time as the cutoff so the drawer shows
+    // exactly the history that existed when the pick was generated.
+    const cutoff = entry.date_time;
     const [{ data: homeHist }, { data: awayHist }] = await Promise.all([
       supabase
         .from('teams_history')

@@ -1,12 +1,16 @@
-name: Live Sync Engine
+name: Stats Sync (hourly safety net)
+# Live scores + ticket settlement are now handled by the Supabase Edge Function
+# (sync-live), scheduled every 2 min via pg_cron.
+# This workflow keeps running syncMissingStats to populate teams_history
+# (needed for corner/card picks) and remains a fallback if the Edge Function fails.
 
 on:
   schedule:
-    - cron: '30 * * * *' # Every hour at minute 30
+    - cron: '0 * * * *' # Every hour
   workflow_dispatch:
 
 jobs:
-  sync-live:
+  sync-stats:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,12 +19,9 @@ jobs:
           node-version: 18
       - name: Install Dependencies
         run: npm install
-      - name: Sync Live Scores and Missing Stats
+      - name: Sync Missing Stats
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           VITE_API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-        run: |
-          node scripts/syncLive.js
-          node scripts/syncMissingStats.js
+        run: node scripts/syncMissingStats.js

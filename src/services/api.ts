@@ -265,14 +265,18 @@ export async function fetchPredictiveData(
       if (options.mandoOnly) q = q.eq('is_home', isHome);
       if (options.seasonOnly && options.season) q = q.eq('season', options.season);
       if (options.leagueId) q = q.eq('league_id', options.leagueId);
-      // Ponto no tempo: só usa jogos anteriores à data do fixture analisado
       if (options.matchDate) q = q.lt('match_date', options.matchDate);
       const { data } = await q.order('match_date', { ascending: false }).limit(count);
       if ((data?.length ?? 0) >= effectiveMin) return data!;
 
-      // Fallback sem filtro de liga (mantém temporada, mando e ponto-no-tempo)
+      // When mandoOnly is active we must NOT fall back to cross-league data:
+      // mixing Série B + Copa do Brasil home games would corrupt the distribution.
+      // Return exactly what this league has, even if fewer than count.
+      if (options.mandoOnly) return data || [];
+
+      // Without mando filter: expand to all leagues so teams with little
+      // league-specific history still get meaningful trend data.
       let fb = supabase.from('teams_history').select('*').eq('team_id', teamId);
-      if (options.mandoOnly) fb = fb.eq('is_home', isHome);
       if (options.seasonOnly && options.season) fb = fb.eq('season', options.season);
       if (options.matchDate) fb = fb.lt('match_date', options.matchDate);
       const { data: fbData } = await fb.order('match_date', { ascending: false }).limit(count);
@@ -284,7 +288,8 @@ export async function fetchPredictiveData(
       fetchTeamData(awayTeamId, false),
     ]);
 
-    if (homeData.length < effectiveMin && awayData.length < effectiveMin) {
+    // Show zeros only if both teams have absolutely no data
+    if (homeData.length === 0 && awayData.length === 0) {
       return generatePredictiveData(homeTeamId, awayTeamId, count);
     }
 
