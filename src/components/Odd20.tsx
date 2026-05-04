@@ -447,12 +447,16 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
     const stakeVal = parseFloat(stake) || 0;
     const wonOdds = rangeTickets.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
-    const greenReturn = wonOdds.reduce((sum, odd) => sum + stakeVal * odd, 0);
+    const totalReturn = wonOdds.reduce((sum, odd) => sum + stakeVal * odd, 0);
     const totalInvested = (won + lost) * stakeVal;
-    const profit = greenReturn - totalInvested;
+    const profit = totalReturn - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
 
-    return { won, lost, maxGreen, maxLoss, greenReturn, totalInvested, profit, roi };
+    // Lógica sugerida pelo usuário: Green (Lucro Líquido) e Red (Stake Perdida)
+    const netGreens = totalReturn - (won * stakeVal);
+    const redLoss = lost * stakeVal;
+
+    return { won, lost, maxGreen, maxLoss, totalReturn, totalInvested, profit, roi, netGreens, redLoss };
   })();
 
   const balanceData = (() => {
@@ -897,12 +901,12 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                       <span className="text-white font-black">R$ {rangeStats.totalInvested.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-emerald-400 font-bold">Retorno (Greens):</span>
-                      <span className="text-emerald-400 font-black">+ R$ {rangeStats.greenReturn.toFixed(2)}</span>
+                      <span className="text-emerald-400 font-bold">Greens (Lucro):</span>
+                      <span className="text-emerald-400 font-black">+ R$ {rangeStats.netGreens.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-rose-400 font-bold">Perdas (Reds):</span>
-                      <span className="text-rose-400 font-black">- R$ {(rangeStats.lost * parseFloat(stake)).toFixed(2)}</span>
+                      <span className="text-rose-400 font-bold">Reds (Loss):</span>
+                      <span className="text-rose-400 font-black">- R$ {rangeStats.redLoss.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-outline-variant/15 pt-3">
                       <div className="flex justify-between items-center mb-1">
