@@ -30,7 +30,7 @@ const MAX_PICKS_PER_MATCH_FEW_GAMES = 3;
 
 const MIN_HISTORICAL_PROB = 85; 
 const MIN_ODD = 1.07;        
-const MIN_GAMES_HISTORY = 3; 
+const MIN_GAMES_HISTORY = 7; 
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
@@ -268,13 +268,28 @@ async function generateOdd2() {
   const today = process.argv[2] || brt.toISOString().split('T')[0];
   console.log(`\n=== Gerando Bilhete Odd 2.0 (Classic Lucrative) para ${today} ===\n`);
 
+  // ── Guard: não sobrescrever bilhete existente ──
+  const { data: existing } = await supabase
+    .from('odd_tickets')
+    .select('date, status')
+    .eq('date', today)
+    .eq('mode', '2.0')
+    .maybeSingle();
+
+  if (existing) {
+    console.log(`⚠️  Bilhete 2.0 para ${today} já existe (status: ${existing.status}). Geração cancelada.`);
+    console.log('   Use --force como argumento extra para forçar regereção.');
+    if (!process.argv.includes('--force')) return;
+    console.log('   --force detectado. Regerando...\n');
+  }
+
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   let query = supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
   
@@ -299,9 +314,9 @@ async function generateOdd2() {
 
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.home_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
+        .select('*').eq('team_id', f.home_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
       const { data: awayHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.away_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
+        .select('*').eq('team_id', f.away_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
 
       const matchTotals = {};
       
@@ -328,6 +343,7 @@ async function generateOdd2() {
       
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
          console.log(`Ignorado (Amostragem: Casa ${homeHistory?.length || 0}, Fora ${awayHistory?.length || 0} jogos)`);
+         continue;
       } else {
          console.log(`${picks.length} candidato(s) EV+`);
       }

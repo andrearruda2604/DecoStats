@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Trophy, ChevronLeft, ChevronRight, Info, History } from 'lucide-react';
+import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -30,9 +30,8 @@ function getActualVal(
   _teamTarget?: string,
   statKey?: string,
   liveScore?: any,
-  histOther?: any // the other team's history (for TOTAL picks)
+  histOther?: any
 ): number | undefined {
-  // ── Novo formato: statKey (picks com odds reais) ──
   if (statKey) {
     const ftH  = liveScore?.home_score    ?? null;
     const ftA  = liveScore?.away_score    ?? null;
@@ -42,38 +41,27 @@ function getActualVal(
     const h2A  = (ftA != null && htA != null) ? ftA - htA : null;
 
     switch (statKey) {
-      // Gols totais por período
-      case 'total_goals':
-        return (ftH != null && ftA != null) ? ftH + ftA : undefined;
-      case 'ht_total_goals':
-        return (htH != null && htA != null) ? htH + htA : undefined;
-      case '2h_total_goals':
-        return (h2H != null && h2A != null) ? h2H + h2A : undefined;
-      // Gols por equipe (FT)
-      case 'home_score':  return ftH ?? undefined;
-      case 'away_score':  return ftA ?? undefined;
-      // Gols por equipe (1T)
-      case 'ht_home_score': return htH ?? undefined;
-      case 'ht_away_score': return htA ?? undefined;
-      // Gols por equipe (2T = FT − HT)
-      case '2h_home_score': return h2H ?? undefined;
-      case '2h_away_score': return h2A ?? undefined;
-      // Escanteios (usam histStats para dados finais)
+      case 'total_goals':      return (ftH != null && ftA != null) ? ftH + ftA : undefined;
+      case 'ht_total_goals':   return (htH != null && htA != null) ? htH + htA : undefined;
+      case '2h_total_goals':   return (h2H != null && h2A != null) ? h2H + h2A : undefined;
+      case 'home_score':       return ftH ?? undefined;
+      case 'away_score':       return ftA ?? undefined;
+      case 'ht_home_score':    return htH ?? undefined;
+      case 'ht_away_score':    return htA ?? undefined;
+      case '2h_home_score':    return h2H ?? undefined;
+      case '2h_away_score':    return h2A ?? undefined;
       case 'total_corners':
         return (hist?.corners != null && histOther?.corners != null)
           ? hist.corners + histOther.corners : undefined;
-      case 'home_corners': return hist?.corners ?? undefined;
-      case 'away_corners': return hist?.corners ?? undefined;
-      // Cartões
+      case 'home_corners':     return hist?.corners ?? undefined;
+      case 'away_corners':     return hist?.corners ?? undefined;
       case 'total_cards':
         return (hist?.yellow_cards != null && histOther?.yellow_cards != null)
           ? hist.yellow_cards + histOther.yellow_cards : undefined;
-      default:
-        return undefined;
+      default: return undefined;
     }
   }
 
-  // ── Legado: picks históricos ──
   if (!hist) return undefined;
   if (period === 'FT') {
     const col = STAT_COL_FT[stat];
@@ -97,7 +85,57 @@ function evaluatePick(pick: any, actualVal: number | undefined): 'WON' | 'LOST' 
   return won ? 'WON' : 'LOST';
 }
 
-// ─── component ──────────────────────────────────────────────────────────────
+// ─── Balance Evolution Chart ─────────────────────────────────────────────────
+
+function BalanceChart({ data }: { data: { date: string; balance: number }[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-40 text-on-surface-variant/30 text-[10px] font-black uppercase tracking-widest text-center leading-loose">
+        Sem dados<br />no período
+      </div>
+    );
+  }
+
+  const W = 400, H = 140, PX = 8, PY = 14;
+  const allVals = [0, ...data.map(d => d.balance)];
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const span = max - min || 1;
+
+  const toX = (i: number) => PX + (i / Math.max(data.length - 1, 1)) * (W - PX * 2);
+  const toY = (v: number) => PY + (1 - (v - min) / span) * (H - PY * 2);
+
+  const zeroY = toY(0);
+  const lastVal = data[data.length - 1].balance;
+  const positive = lastVal >= 0;
+  const color = positive ? '#10b981' : '#f43f5e';
+  const fillColor = positive ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)';
+
+  const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i)},${toY(d.balance)}`).join(' ');
+  const area = data.length > 1
+    ? `M${toX(0)},${zeroY} L${toX(0)},${toY(data[0].balance)} ${data.slice(1).map((d, i) => `L${toX(i + 1)},${toY(d.balance)}`).join(' ')} L${toX(data.length - 1)},${zeroY} Z`
+    : '';
+
+  return (
+    <div className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 140 }}>
+        <line x1={PX} y1={zeroY} x2={W - PX} y2={zeroY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="3,4" />
+        {area && <path d={area} fill={fillColor} />}
+        <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={toX(data.length - 1)} cy={toY(lastVal)} r="3.5" fill={color} />
+      </svg>
+      <div className="flex justify-between items-center px-1 mt-1">
+        <span className="text-[8px] text-on-surface-variant/40 font-bold">{data[0].date.slice(5).replace('-', '/')}</span>
+        <span className={`text-[10px] font-black ${positive ? 'text-emerald-400' : 'text-rose-400'}`}>
+          {lastVal >= 0 ? '+' : ''}R$ {lastVal.toFixed(2)}
+        </span>
+        <span className="text-[8px] text-on-surface-variant/40 font-bold">{data[data.length - 1].date.slice(5).replace('-', '/')}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── component ───────────────────────────────────────────────────────────────
 
 interface TicketModeProps {
   mode: '2.0' | '3.0';
@@ -105,7 +143,7 @@ interface TicketModeProps {
 
 export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
-  const [activeTab, setActiveTab] = useState<'today' | 'history'>(() => 
+  const [activeTab, setActiveTab] = useState<'today' | 'history'>(() =>
     (localStorage.getItem(`decostats_odd_tab_${mode}`) as 'today' | 'history') || 'today'
   );
   const [dateOffset, setDateOffset] = useState(0);
@@ -114,7 +152,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
   const [histStats, setHistStats] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [allTickets, setAllTickets] = useState<any[]>([]);
-  const [stats, setStats] = useState({ won: 0, lost: 0, pending: 0, avgOdd: '0.00' });
 
   const now = new Date();
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -122,8 +159,14 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     if (saved) return JSON.parse(saved);
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
-  const [stake, setStake] = useState(() => 
+  const [stake, setStake] = useState(() =>
     localStorage.getItem(`decostats_stake_${mode}`) || ''
+  );
+  const [rangeStart, setRangeStart] = useState<string>(() =>
+    localStorage.getItem(`decostats_range_start_${mode}`) || ''
+  );
+  const [rangeEnd, setRangeEnd] = useState<string>(() =>
+    localStorage.getItem(`decostats_range_end_${mode}`) || ''
   );
 
   // Persist state
@@ -138,6 +181,14 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
   useEffect(() => {
     localStorage.setItem(`decostats_stake_${mode}`, stake);
   }, [stake, mode]);
+
+  useEffect(() => {
+    localStorage.setItem(`decostats_range_start_${mode}`, rangeStart);
+  }, [rangeStart, mode]);
+
+  useEffect(() => {
+    localStorage.setItem(`decostats_range_end_${mode}`, rangeEnd);
+  }, [rangeEnd, mode]);
 
   const loadCurrentTicket = useCallback(async (offset: number) => {
     const target = new Date();
@@ -154,12 +205,10 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
       .eq('mode', mode)
       .maybeSingle();
 
-
     if (data) {
       setTicket(data);
       const ids: number[] = data.ticket_data.entries.map((e: any) => e.fixture_id);
 
-      // Scores
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
@@ -168,7 +217,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
       fixtures?.forEach(f => { scoreMap[f.api_id] = f; });
       setLiveScores(scoreMap);
 
-      // Stats from teams_history (keyed as "fixtureId-HOME" / "fixtureId-AWAY")
       const { data: histData } = await supabase
         .from('teams_history')
         .select('fixture_id, is_home, goals_for, corners, yellow_cards, shots_total, stats_1h, stats_2h')
@@ -202,13 +250,11 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     });
     if (!allFinished) return;
 
-    // Check we have stats for at least one entry
     const hasStats = entries.some(e =>
       histStats[`${e.fixture_id}-HOME`] || histStats[`${e.fixture_id}-AWAY`]
     );
     if (!hasStats) return;
 
-    // Build updated entries with pick results
     let ticketWon = true;
     const updatedEntries = entries.map(e => {
       let matchWon = true;
@@ -234,20 +280,15 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     const newStatus = ticketWon ? 'WON' : 'LOST';
     const updatedTicketData = { ...ticket.ticket_data, entries: updatedEntries };
 
-    // Persist to DB
     supabase
       .from('odd_tickets')
       .update({ status: newStatus, ticket_data: updatedTicketData })
       .eq('date', ticket.date)
       .eq('mode', mode)
       .then(({ error }) => {
-
-        if (error) {
-          console.warn('Could not persist ticket resolution:', error.message);
-        }
+        if (error) console.warn('Could not persist ticket resolution:', error.message);
       });
 
-    // Update local state immediately regardless
     setTicket((prev: any) => ({
       ...prev,
       status: newStatus,
@@ -265,24 +306,15 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
       if (data) {
         setAllTickets(data);
-        const won = data.filter(t => t.status === 'WON').length;
-        const lost = data.filter(t => t.status === 'LOST').length;
-        const odds = data.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
-        
-        // Auto-switch to previous month if current month is empty and it's the first load
+
         const currentPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const hasCurrentMonth = data.some(t => t.date.startsWith(currentPrefix));
         const savedMonth = localStorage.getItem(`decostats_calendar_${mode}`);
-        
+
         if (!hasCurrentMonth && data.length > 0 && !savedMonth) {
           const lastDate = new Date(data[0].date);
           setCalendarMonth({ year: lastDate.getFullYear(), month: lastDate.getMonth() + 1 });
         }
-
-        const avg = odds.length > 0
-          ? (odds.reduce((a, b) => a + b, 0) / odds.length).toFixed(2)
-          : '0.00';
-        setStats({ won, lost, pending: data.filter(t => t.status === 'PENDING').length, avgOdd: avg });
       }
     }
     loadHistory();
@@ -293,7 +325,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
         setTicket((curr: any) => curr && p.new.date === curr.date ? p.new : curr);
         setAllTickets(prev => prev.map(t => t.date === p.new.date ? p.new : t));
       })
-
       .subscribe();
 
     const fixChannel = supabase.channel('fix')
@@ -321,24 +352,52 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     return cells;
   };
 
-  // Monthly stats filtered by selected calendar month
-  const monthStats = (() => {
-    const prefix = `${calendarMonth.year}-${String(calendarMonth.month).padStart(2, '0')}`;
-    const monthTickets = allTickets.filter(t => t.date.startsWith(prefix) && t.matches_count > 0);
-    const won = monthTickets.filter(t => t.status === 'WON').length;
-    const lost = monthTickets.filter(t => t.status === 'LOST').length;
-    const wonOdds = monthTickets.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
-    const avgOdd = wonOdds.length > 0
-      ? (wonOdds.reduce((a, b) => a + b, 0) / wonOdds.length).toFixed(2)
-      : '0.00';
+  // ─── Range-based computations ─────────────────────────────────────────────
+
+  const defaultRangeStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const defaultRangeEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+
+  const effectiveStart = rangeStart || defaultRangeStart;
+  const effectiveEnd = rangeEnd || defaultRangeEnd;
+
+  const rangeTickets = [...allTickets]
+    .filter(t => t.date >= effectiveStart && t.date <= effectiveEnd && t.matches_count > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const rangeStats = (() => {
+    const won = rangeTickets.filter(t => t.status === 'WON').length;
+    const lost = rangeTickets.filter(t => t.status === 'LOST').length;
+
+    let maxGreen = 0, curGreen = 0, maxLoss = 0, curLoss = 0;
+    for (const t of rangeTickets.filter(t => t.status === 'WON' || t.status === 'LOST')) {
+      if (t.status === 'WON') { curGreen++; curLoss = 0; }
+      else { curLoss++; curGreen = 0; }
+      maxGreen = Math.max(maxGreen, curGreen);
+      maxLoss = Math.max(maxLoss, curLoss);
+    }
 
     const stakeVal = parseFloat(stake) || 0;
+    const wonOdds = rangeTickets.filter(t => t.status === 'WON').map(t => parseFloat(t.total_odd));
     const greenReturn = wonOdds.reduce((sum, odd) => sum + stakeVal * odd, 0);
     const totalInvested = (won + lost) * stakeVal;
     const profit = greenReturn - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
 
-    return { won, lost, avgOdd, greenReturn, profit, roi };
+    return { won, lost, maxGreen, maxLoss, greenReturn, totalInvested, profit, roi };
+  })();
+
+  const balanceData = (() => {
+    const stakeVal = parseFloat(stake) || 0;
+    if (stakeVal === 0) return [] as { date: string; balance: number }[];
+    let running = 0;
+    const points: { date: string; balance: number }[] = [];
+    for (const t of rangeTickets.filter(t => t.status === 'WON' || t.status === 'LOST')) {
+      running += t.status === 'WON'
+        ? stakeVal * parseFloat(t.total_odd) - stakeVal
+        : -stakeVal;
+      points.push({ date: t.date, balance: running });
+    }
+    return points;
   })();
 
   const targetDateObj = new Date();
@@ -387,7 +446,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                 <Info className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
                 <h2 className="text-lg font-black text-on-surface mb-2">Sem sinais</h2>
                 <p className="text-on-surface-variant text-xs">As métricas não atingiram a meta de 85%.</p>
-
               </div>
             ) : (
               <>
@@ -430,7 +488,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     {mode === '3.0' ? 'PREMIUM' : 'ODD'} {ticket.total_odd}
                   </h1>
 
-
                   <div className={`inline-flex border rounded-full px-5 py-2 items-center gap-3 transition-all duration-500 ${
                     ticket.status === 'WON'
                       ? 'bg-emerald-500/10 border-emerald-500/40'
@@ -460,7 +517,6 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     const isLive = live?.status && !['NS', 'TBD', 'FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'].includes(live.status);
                     const isFinished = ['FT', 'AET', 'PEN'].includes(live?.status);
 
-                    // Compute match result from picks
                     const picksWithResult = match.picks.map((pick: any) => {
                       if (pick.result) return { ...pick, computedResult: pick.result };
                       if (!isFinished) return { ...pick, computedResult: null };
@@ -587,131 +643,231 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
             )}
           </motion.div>
         ) : (
-          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-            {/* Month Navigation */}
-            <div className="flex justify-between items-center max-w-xs mx-auto">
-              <button
-                onClick={() => setCalendarMonth(prev => {
-                  let m = prev.month - 1;
-                  let y = prev.year;
-                  if (m < 1) { m = 12; y -= 1; }
-                  return { year: y, month: m };
-                })}
-                className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm font-black uppercase tracking-tighter text-white">
-                {new Date(calendarMonth.year, calendarMonth.month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-              </span>
-              <button
-                onClick={() => setCalendarMonth(prev => {
-                  let m = prev.month + 1;
-                  let y = prev.year;
-                  if (m > 12) { m = 1; y += 1; }
-                  return { year: y, month: m };
-                })}
-                className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+          /* ─── Histórico 2.0 — novo layout 2×2 ─────────────────────────── */
+          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2 md:gap-4 mb-2">
-              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[9px] font-black uppercase text-on-surface-variant/40 pb-2">{d}</div>
-              ))}
-              {getCalendarData().map((cell, i) => (
-                <button
-                  key={i}
-                  disabled={!cell}
-                  onClick={() => {
-                    if (!cell) return;
-                    setDateOffset(Math.round(
-                      (new Date(cell.dateStr + 'T12:00:00').getTime() - new Date().setHours(12, 0, 0, 0)) / (1000 * 60 * 60 * 24)
-                    ));
-                    setActiveTab('today');
-                  }}
-                  className={`aspect-square rounded-xl flex flex-col items-center justify-center border transition-all ${
-                    !cell ? 'opacity-0' :
-                    cell.status === 'WON' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' :
-                    cell.status === 'LOST' ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' :
-                    cell.status === 'PENDING' ? 'bg-amber-500/5 animate-pulse border-amber-500/20' :
-                    'bg-surface-container/20 border-outline-variant/10 text-on-surface-variant/20 hover:border-primary/40'
-                  }`}
-                >
-                  {cell && <span className="text-sm font-black">{cell.day}</span>}
-                </button>
-              ))}
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Greens', val: monthStats.won, color: 'text-emerald-400' },
-                { label: 'Reds', val: monthStats.lost, color: 'text-rose-400' },
-                { label: 'Taxa Acerto', val: `${Math.round((monthStats.won / (monthStats.won + monthStats.lost || 1)) * 100)}%`, color: 'text-white' },
-                { label: 'Avg Odd', val: monthStats.avgOdd, color: 'text-primary' },
-              ].map((s, i) => (
-                <div key={i} className="bg-surface/50 p-5 rounded-2xl border border-outline-variant/20 text-center">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-1 block">{s.label}</span>
-                  <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+              {/* ── Top-left: Calendário ─────────────────────────────────── */}
+              <div className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-5">
+                {/* Month nav */}
+                <div className="flex justify-between items-center mb-4">
+                  <button
+                    onClick={() => setCalendarMonth(prev => {
+                      let m = prev.month - 1, y = prev.year;
+                      if (m < 1) { m = 12; y -= 1; }
+                      return { year: y, month: m };
+                    })}
+                    className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-black uppercase tracking-tighter text-white">
+                    {new Date(calendarMonth.year, calendarMonth.month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={() => setCalendarMonth(prev => {
+                      let m = prev.month + 1, y = prev.year;
+                      if (m > 12) { m = 1; y += 1; }
+                      return { year: y, month: m };
+                    })}
+                    className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-xl hover:bg-surface-container-highest/20"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
-            </div>
 
-            {/* Stake Simulator */}
-            <div className="bg-surface/50 border border-outline-variant/20 rounded-2xl p-6 space-y-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                💰 Simulador de Stake
-              </h3>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-black text-on-surface-variant">R$</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="10"
-                  value={stake}
-                  onChange={e => setStake(e.target.value)}
-                  placeholder="Ex: 100"
-                  className="flex-1 bg-black/40 border border-outline-variant/20 rounded-xl px-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-primary/50 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+                {/* Day-of-week header */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                    <div key={i} className="text-center text-[8px] font-black uppercase text-on-surface-variant/40 py-1">{d}</div>
+                  ))}
+                </div>
+
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {getCalendarData().map((cell, i) => (
+                    <button
+                      key={i}
+                      disabled={!cell}
+                      onClick={() => {
+                        if (!cell) return;
+                        setDateOffset(Math.round(
+                          (new Date(cell.dateStr + 'T12:00:00').getTime() - new Date().setHours(12, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+                        ));
+                        setActiveTab('today');
+                      }}
+                      className={`aspect-square rounded-lg flex items-center justify-center border text-[11px] font-black transition-all ${
+                        !cell ? 'opacity-0 pointer-events-none' :
+                        cell.status === 'WON' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20' :
+                        cell.status === 'LOST' ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 hover:bg-rose-500/20' :
+                        cell.status === 'PENDING' ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 animate-pulse' :
+                        'bg-surface-container/20 border-outline-variant/10 text-on-surface-variant/30 hover:border-primary/40 hover:text-on-surface-variant'
+                      }`}
+                    >
+                      {cell?.day}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Month quick stats (compact) */}
+                <div className="flex gap-2 mt-4 pt-4 border-t border-outline-variant/10">
+                  {(() => {
+                    const prefix = `${calendarMonth.year}-${String(calendarMonth.month).padStart(2, '0')}`;
+                    const mt = allTickets.filter(t => t.date.startsWith(prefix) && t.matches_count > 0);
+                    const mw = mt.filter(t => t.status === 'WON').length;
+                    const ml = mt.filter(t => t.status === 'LOST').length;
+                    const rate = mw + ml > 0 ? Math.round((mw / (mw + ml)) * 100) : 0;
+                    return (
+                      <>
+                        <div className="flex-1 text-center">
+                          <span className="text-[8px] font-black uppercase text-on-surface-variant/50 block">Greens</span>
+                          <span className="text-sm font-black text-emerald-400">{mw}</span>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <span className="text-[8px] font-black uppercase text-on-surface-variant/50 block">Reds</span>
+                          <span className="text-sm font-black text-rose-400">{ml}</span>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <span className="text-[8px] font-black uppercase text-on-surface-variant/50 block">Acerto</span>
+                          <span className="text-sm font-black text-white">{rate}%</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-              {stake && parseFloat(stake) > 0 && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-on-surface-variant font-bold">Entradas no mês:</span>
-                    <span className="text-white font-black">{monthStats.won + monthStats.lost}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-on-surface-variant font-bold">Total investido:</span>
-                    <span className="text-white font-black">R$ {((monthStats.won + monthStats.lost) * parseFloat(stake)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-emerald-400 font-bold">Retorno (Greens):</span>
-                    <span className="text-emerald-400 font-black">+ R$ {monthStats.greenReturn.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-rose-400 font-bold">Perdas (Reds):</span>
-                    <span className="text-rose-400 font-black">- R$ {(monthStats.lost * parseFloat(stake)).toFixed(2)}</span>
-                  </div>
-                  <div className="border-t border-outline-variant/20 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-black text-white">Resultado:</span>
-                      <span className={`text-lg font-black ${monthStats.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {monthStats.profit >= 0 ? '+' : ''} R$ {monthStats.profit.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-[9px] font-bold text-on-surface-variant uppercase">ROI</span>
-                      <span className={`text-xs font-black ${monthStats.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {monthStats.roi >= 0 ? '+' : ''}{monthStats.roi.toFixed(1)}%
-                      </span>
-                    </div>
+
+              {/* ── Top-right: Filtros + Stats ───────────────────────────── */}
+              <div className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-5 space-y-5">
+                {/* Date range filter */}
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">Filtro de data (range)</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={rangeStart}
+                      onChange={e => setRangeStart(e.target.value)}
+                      className="flex-1 bg-black/40 border border-outline-variant/20 rounded-xl px-3 py-2 text-white text-[11px] font-bold focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    />
+                    <span className="text-on-surface-variant/40 text-xs font-black">→</span>
+                    <input
+                      type="date"
+                      value={rangeEnd}
+                      onChange={e => setRangeEnd(e.target.value)}
+                      className="flex-1 bg-black/40 border border-outline-variant/20 rounded-xl px-3 py-2 text-white text-[11px] font-bold focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    />
+                    {(rangeStart || rangeEnd) && (
+                      <button
+                        onClick={() => { setRangeStart(''); setRangeEnd(''); }}
+                        className="text-[8px] font-black uppercase tracking-wide text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap px-2 py-2 rounded-lg hover:bg-surface-container-highest/20"
+                      >
+                        Mês atual
+                      </button>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Stake */}
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">Stake</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-on-surface-variant">R$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="10"
+                      value={stake}
+                      onChange={e => setStake(e.target.value)}
+                      placeholder="Ex: 100"
+                      className="flex-1 bg-black/40 border border-outline-variant/20 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:outline-none focus:border-primary/50 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 4 stat cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Qtde Green', val: rangeStats.won, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20' },
+                    { label: 'Qtde de Loss', val: rangeStats.lost, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/20' },
+                    { label: 'Max Greens Seguidos', val: rangeStats.maxGreen, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20' },
+                    { label: 'Max Loss Seguidos', val: rangeStats.maxLoss, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/20' },
+                  ].map((s, i) => (
+                    <div key={i} className={`${s.bg} border rounded-xl p-3 text-center`}>
+                      <span className="text-[8px] font-black uppercase tracking-wide text-on-surface-variant/60 block mb-1 leading-tight">{s.label}</span>
+                      <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Bottom-left: Simulador ───────────────────────────────── */}
+              <div className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-5">
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-4 flex items-center gap-2">
+                  <span>💰</span> Simulador de Stake
+                </h3>
+
+                {!stake || parseFloat(stake) <= 0 ? (
+                  <div className="flex items-center justify-center h-32 text-on-surface-variant/30 text-[10px] font-black uppercase tracking-widest text-center leading-loose">
+                    Configure o stake<br />para simular
+                  </div>
+                ) : rangeStats.won + rangeStats.lost === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-on-surface-variant/30 text-[10px] font-black uppercase tracking-widest text-center leading-loose">
+                    Sem entradas<br />no período
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-on-surface-variant font-bold">Entradas:</span>
+                      <span className="text-white font-black">{rangeStats.won + rangeStats.lost}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-on-surface-variant font-bold">Total investido:</span>
+                      <span className="text-white font-black">R$ {rangeStats.totalInvested.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-emerald-400 font-bold">Retorno (Greens):</span>
+                      <span className="text-emerald-400 font-black">+ R$ {rangeStats.greenReturn.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-rose-400 font-bold">Perdas (Reds):</span>
+                      <span className="text-rose-400 font-black">- R$ {(rangeStats.lost * parseFloat(stake)).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-outline-variant/15 pt-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-black text-white">Resultado:</span>
+                        <span className={`text-lg font-black ${rangeStats.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {rangeStats.profit >= 0 ? '+' : ''}R$ {rangeStats.profit.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-bold text-on-surface-variant uppercase">ROI</span>
+                        <span className={`text-xs font-black ${rangeStats.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {rangeStats.roi >= 0 ? '+' : ''}{rangeStats.roi.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Bottom-right: Gráfico de evolução do saldo ──────────── */}
+              <div className="bg-surface/40 border border-outline-variant/20 rounded-2xl p-5">
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5" /> Evolução do saldo
+                  {!rangeStart && !rangeEnd && (
+                    <span className="text-[8px] font-bold text-on-surface-variant/40 normal-case tracking-normal ml-auto">mês atual</span>
+                  )}
+                </h3>
+
+                {!stake || parseFloat(stake) <= 0 ? (
+                  <div className="flex items-center justify-center h-40 text-on-surface-variant/30 text-[10px] font-black uppercase tracking-widest text-center leading-loose">
+                    Configure o stake<br />para ver o gráfico
+                  </div>
+                ) : (
+                  <BalanceChart data={balanceData} />
+                )}
+              </div>
+
             </div>
           </motion.div>
         )}

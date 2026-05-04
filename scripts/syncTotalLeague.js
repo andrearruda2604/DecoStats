@@ -40,7 +40,7 @@ async function fetchWithRetry(url) {
 async function syncLeague() {
     console.log(`\n🚀 SINCRONIZAÇÃO TOTAL V4 (Resiliente) - LIGA ID: ${targetLeague}`);
     
-    const { data: dbTeams } = await supabase.from('teams').select('id, name').eq('league_id', targetLeague);
+    const { data: dbTeams } = await supabase.from('teams').select('id, api_id, name').eq('league_id', targetLeague);
     let teamsToProcess = dbTeams || [];
 
     if (teamsToProcess.length === 0) {
@@ -59,29 +59,29 @@ async function syncLeague() {
     for (const t of teamsToProcess) {
         console.log(`\n➡️ Processando: ${t.name} (ID: ${t.id})`);
         
-        const { count } = await supabase.from('teams_history').select('*', { count: 'exact', head: true }).eq('team_id', t.id);
+        const { count } = await supabase.from('teams_history').select('*', { count: 'exact', head: true }).eq('team_id', t.api_id);
         if (count >= 30) {
             console.log(`   ✅ Já possui ${count} jogos. Pulando.`);
             continue;
         }
 
         console.log(`   ⏳ Solicitando últimos 30 jogos na API...`);
-        const fRes = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?team=${t.id}&last=30`);
+        const fRes = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?team=${t.api_id}&last=30`);
         const games = (fRes.response || []).filter(g => ['FT', 'AET', 'PEN'].includes(g.fixture.status.short));
 
         for (const g of games) {
             try {
                 const fid = g.fixture.id;
-                const { data: existing } = await supabase.from('teams_history').select('id').eq('fixture_id', fid).eq('team_id', t.id).maybeSingle();
+                const { data: existing } = await supabase.from('teams_history').select('id').eq('fixture_id', fid).eq('team_id', t.api_id).maybeSingle();
                 if (existing) continue;
 
                 const sRes = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${fid}&half=true`);
                 await new Promise(r => setTimeout(r, 800)); 
 
-                const myStatsRaw = (sRes.response || []).find(ts => ts.team.id === t.id);
+                const myStatsRaw = (sRes.response || []).find(ts => ts.team.id === t.api_id);
                 if (!myStatsRaw) continue;
 
-                const isHome = g.teams.home.id === t.id;
+                const isHome = g.teams.home.id === t.api_id;
                 const htGoals = isHome ? (g.score.halftime.home ?? 0) : (g.score.halftime.away ?? 0);
                 const ftGoals = isHome ? (g.goals.home ?? 0) : (g.goals.away ?? 0);
                 
@@ -91,7 +91,7 @@ async function syncLeague() {
                 if (!s2h.find(s => s.type === 'goals')) s2h.push({ type: 'goals', value: ftGoals - htGoals });
 
                 const { error: insErr } = await supabase.from('teams_history').insert([{
-                    fixture_id: fid, team_id: t.id, opponent_id: isHome ? g.teams.away.id : g.teams.home.id,
+                    fixture_id: fid, team_id: t.api_id, opponent_id: isHome ? g.teams.away.id : g.teams.home.id,
                     is_home: isHome, season: g.league.season, league_id: g.league.id, match_date: g.fixture.date,
                     goals_for: ftGoals, goals_against: isHome ? g.goals.away : g.goals.home,
                     shots_total: myStatsRaw.statistics.find(s => s.type === 'Total Shots')?.value || 0,

@@ -1,4 +1,4 @@
-name: Generate Odd 3.0
+name: Daily Automation Engine
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate:
+  maintenance-and-generation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,10 +15,10 @@ jobs:
           node-version: 18
       - name: Install Dependencies
         run: npm install
-      - name: Generate Ticket
+      - name: Run Master Daily Script
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           VITE_API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-        run: node scripts/generateOdd3.js
+        run: node scripts/masterDaily.js

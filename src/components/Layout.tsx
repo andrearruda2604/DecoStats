@@ -94,7 +94,7 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                 {/* Efeito de brilho animado */}
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
              </button>
-             {user?.email === 'deco260483@gmail.com' && (
+             {user?.email?.toLowerCase() === 'deco260483@gmail.com' && (
                <button 
                  onClick={() => onNavigate('ODD30')}
                  className={`relative group px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${

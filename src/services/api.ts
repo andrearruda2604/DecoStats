@@ -255,7 +255,7 @@ export async function fetchPredictiveData(
   }
 
   try {
-    const MIN_RECORDS = 3;
+    const MIN_RECORDS = 7;
 
     async function fetchTeamData(teamId: number, isHome: boolean) {
       let q = supabase.from('teams_history').select('*').eq('team_id', teamId);

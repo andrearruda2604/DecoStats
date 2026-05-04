@@ -1,12 +1,12 @@
-name: Evaluate Tickets
+name: Live Sync Engine
 
 on:
   schedule:
-    - cron: '0 4 * * *' # 04:00 UTC (01:00 Brasília)
+    - cron: '30 * * * *' # Every hour at minute 30
   workflow_dispatch:
 
 jobs:
-  evaluate:
+  sync-live:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,10 +15,12 @@ jobs:
           node-version: 18
       - name: Install Dependencies
         run: npm install
-      - name: Evaluate Tickets
+      - name: Sync Live Scores and Missing Stats
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           VITE_API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-        run: node scripts/evaluateOdd2.js
+        run: |
+          node scripts/syncLive.js
+          node scripts/syncMissingStats.js

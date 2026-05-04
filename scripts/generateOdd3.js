@@ -30,7 +30,7 @@ const MAX_PICKS_PER_MATCH_FEW_GAMES = 3;
 
 const MIN_HISTORICAL_PROB = 85; 
 const MIN_ODD = 1.07;        
-const MIN_GAMES_HISTORY = 3; 
+const MIN_GAMES_HISTORY = 7; 
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
@@ -145,8 +145,9 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
 }
 
-function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory, matchTotals) {
-  const bet365 = (oddsResponse || [])
+function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks = new Set()) {
+  if (!oddsResp || oddsResp.length === 0) return [];
+  const bet365 = (oddsResp || [])
     .flatMap(r => r.bookmakers || [])
     .find(b => b.id === BOOKMAKER_ID);
   if (!bet365) return [];
@@ -199,7 +200,14 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
 
         if (prob !== null && prob >= MIN_HISTORICAL_PROB) {
           candidate.probability = Math.round(prob); 
-          candidates.push(candidate);
+          
+          // Verificar se esta entrada já está no bilhete 2.0
+          const forbiddenKey = `${candidate.fixture_id}|${candidate.stat}|${candidate.period}|${candidate.line}`.toUpperCase();
+          if (forbiddenPicks.has(forbiddenKey)) {
+            console.log(`      [Diversificação] Ignorado 3.0 (já está no 2.0): ${candidate.market} ${candidate.line}`);
+          } else {
+            candidates.push(candidate);
+          }
         }
       }
     }
@@ -268,13 +276,28 @@ async function generateOdd3() {
   const today = process.argv[2] || brt.toISOString().split('T')[0];
   console.log(`\n=== Gerando Bilhete Odd 3.0 para ${today} ===\n`);
 
+  // ── Guard: não sobrescrever bilhete existente ──
+  const { data: existing } = await supabase
+    .from('odd_tickets')
+    .select('date, status')
+    .eq('date', today)
+    .eq('mode', '3.0')
+    .maybeSingle();
+
+  if (existing) {
+    console.log(`⚠️  Bilhete 3.0 para ${today} já existe (status: ${existing.status}). Geração cancelada.`);
+    console.log('   Use --force como argumento extra para forçar regereção.');
+    if (!process.argv.includes('--force')) return;
+    console.log('   --force detectado. Regerando...\n');
+  }
+
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   let query = supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(name, logo_url), away_team:teams!fixtures_away_team_id_fkey(name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
 
@@ -285,6 +308,26 @@ async function generateOdd3() {
 
   const candidates = (fixtures || []).filter(f => activeLeagueApiIds.has(f.league?.api_id));
   console.log(`Fixtures disponíveis: ${candidates.length}`);
+
+  // ── Buscar bilhete 2.0 para evitar duplicidade de entrada ──
+  const { data: ticket20 } = await supabase
+    .from('odd_tickets')
+    .select('ticket_data')
+    .eq('date', today)
+    .eq('mode', '2.0')
+    .maybeSingle();
+
+  const forbiddenPicks = new Set();
+  if (ticket20?.ticket_data?.entries) {
+    for (const entry of ticket20.ticket_data.entries) {
+      if (!entry.picks) continue;
+      for (const pick of entry.picks) {
+        // Chave: fixture_id | stat | period | line (normalizado)
+        const key = `${entry.fixture_id}|${pick.stat}|${pick.period}|${pick.line}`.toUpperCase();
+        forbiddenPicks.add(key);
+      }
+    }
+  }
 
   if (candidates.length === 0) {
     console.log('Nenhum fixture não-iniciado encontrado para hoje. Abortando.');
@@ -299,9 +342,9 @@ async function generateOdd3() {
 
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.home_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
+        .select('*').eq('team_id', f.home_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
       const { data: awayHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.away_team_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
+        .select('*').eq('team_id', f.away_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
 
       const matchTotals = {};
       
@@ -324,10 +367,11 @@ async function generateOdd3() {
 
       const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`);
       
-      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals);
+      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks);
       
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
          console.log(`Ignorado (Amostragem: Casa ${homeHistory?.length || 0}, Fora ${awayHistory?.length || 0} jogos)`);
+         continue;
       } else {
          console.log(`${picks.length} candidato(s) EV+`);
       }
