@@ -256,6 +256,9 @@ export async function fetchPredictiveData(
 
   try {
     const MIN_RECORDS = 7;
+    // When count < MIN_RECORDS (e.g. count=5), the effective threshold must not
+    // exceed what we actually requested — otherwise data always falls to zeros.
+    const effectiveMin = Math.min(count, MIN_RECORDS);
 
     async function fetchTeamData(teamId: number, isHome: boolean) {
       let q = supabase.from('teams_history').select('*').eq('team_id', teamId);
@@ -265,7 +268,7 @@ export async function fetchPredictiveData(
       // Ponto no tempo: só usa jogos anteriores à data do fixture analisado
       if (options.matchDate) q = q.lt('match_date', options.matchDate);
       const { data } = await q.order('match_date', { ascending: false }).limit(count);
-      if ((data?.length ?? 0) >= MIN_RECORDS) return data!;
+      if ((data?.length ?? 0) >= effectiveMin) return data!;
 
       // Fallback sem filtro de liga (mantém temporada, mando e ponto-no-tempo)
       let fb = supabase.from('teams_history').select('*').eq('team_id', teamId);
@@ -281,7 +284,7 @@ export async function fetchPredictiveData(
       fetchTeamData(awayTeamId, false),
     ]);
 
-    if (homeData.length < MIN_RECORDS && awayData.length < MIN_RECORDS) {
+    if (homeData.length < effectiveMin && awayData.length < effectiveMin) {
       return generatePredictiveData(homeTeamId, awayTeamId, count);
     }
 

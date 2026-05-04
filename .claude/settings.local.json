@@ -15,7 +15,9 @@
       "Bash(node scripts/seedNewLeagues.js)",
       "Bash(node scripts/syncTodayWithHistory.js)",
       "Bash(node -e ' *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "WebFetch(domain:www.api-football.com)",
+      "WebSearch"
     ]
   }
 }
