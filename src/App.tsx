@@ -14,6 +14,7 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import LoginPage from './components/LoginPage';
 import TestView from './components/TestView';
+import TeamFormTab from './components/TeamFormTab';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
 import { useAuth } from './contexts/AuthContext';
@@ -66,6 +67,7 @@ function AuthenticatedApp() {
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
+  const [activeDataTab, setActiveDataTab] = useState<'stats' | 'form'>('stats');
 
   const {
     matches, leagues, loading: matchesLoading, error: matchesError,
@@ -89,6 +91,7 @@ function AuthenticatedApp() {
     }
     setSelectedMatchId(matchId);
     setActiveView('DATA');
+    setActiveDataTab('stats');
     window.scrollTo(0, 0);
   };
 
@@ -179,100 +182,101 @@ function AuthenticatedApp() {
             <>
               <Scoreboard data={matchDetail} />
 
-              {/* Filter Bar — compact scrollable */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
-                {/* Match Count */}
-                <div className="flex items-center gap-1.5 px-3 py-2 card flex-shrink-0">
-                  <label className="text-[8px] uppercase font-bold tracking-widest text-on-surface-variant/40">Jogos</label>
-                  <select
-                    value={statsCount}
-                    onChange={(e) => setStatsCount(Number(e.target.value))}
-                    className="bg-transparent text-[11px] font-bold text-on-surface outline-none cursor-pointer"
+              {/* ── Tab switcher ── */}
+              <div className="flex gap-1 bg-surface/40 border border-outline-variant/20 rounded-xl p-1 max-w-[240px]">
+                {(['stats', 'form'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveDataTab(tab)}
+                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                      activeDataTab === tab
+                        ? 'bg-primary text-on-primary shadow-[0_0_12px_rgba(var(--primary-rgb),0.4)]'
+                        : 'text-on-surface-variant/55 hover:text-on-surface'
+                    }`}
                   >
-                    <option value={5} className="bg-black">5</option>
-                    <option value={10} className="bg-black">10</option>
-                    <option value={15} className="bg-black">15</option>
-                    <option value={20} className="bg-black">20</option>
-                  </select>
-                </div>
+                    {tab === 'stats' ? 'Estatísticas' : 'Forma'}
+                  </button>
+                ))}
+              </div>
 
-                {/* Season Toggle */}
-                <button
-                  onClick={() => setSeasonOnly(!seasonOnly)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${
-                    seasonOnly
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-outline-variant bg-surface-container text-on-surface-variant/50'
-                  }`}
-                >
-                  TEMPORADA
-                </button>
-
-                {/* Mando Toggle */}
-                <button
-                  onClick={() => setMandoOnly(!mandoOnly)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${
-                    mandoOnly
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-outline-variant bg-surface-container text-on-surface-variant/50'
-                  }`}
-                >
-                  Mando
-                </button>
-
-                {/* 100% Filter */}
-                <button
-                  onClick={() => setShow100Only(!show100Only)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${
-                    show100Only
-                      ? 'border-amber-400 bg-amber-400/10 text-amber-400'
-                      : 'border-outline-variant bg-surface-container text-on-surface-variant/50'
-                  }`}
-                >
-                  🎯 100%
-                </button>
-
-                {/* HT / 2H / FT */}
-                <div className="flex items-center p-0.5 card flex-shrink-0">
-                  {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
+              {/* ── Estatísticas tab ── */}
+              {activeDataTab === 'stats' && (
+                <>
+                  {/* Filter Bar */}
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
+                    <div className="flex items-center gap-1.5 px-3 py-2 card flex-shrink-0">
+                      <label className="text-[8px] uppercase font-bold tracking-widest text-on-surface-variant/40">Jogos</label>
+                      <select
+                        value={statsCount}
+                        onChange={(e) => setStatsCount(Number(e.target.value))}
+                        className="bg-transparent text-[11px] font-bold text-on-surface outline-none cursor-pointer"
+                      >
+                        <option value={5} className="bg-black">5</option>
+                        <option value={10} className="bg-black">10</option>
+                        <option value={15} className="bg-black">15</option>
+                        <option value={20} className="bg-black">20</option>
+                      </select>
+                    </div>
                     <button
-                      key={mode}
-                      onClick={() => setToggle(mode)}
-                      className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
-                        toggle === mode
-                          ? 'bg-primary text-on-primary'
-                          : 'text-on-surface-variant/30 hover:text-on-surface'
-                      }`}
-                    >
-                      {mode === 'FT' ? 'TOTAL' : mode}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="relative min-h-[200px]">
-                {predictiveLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
-                    <div className="w-7 h-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                      onClick={() => setSeasonOnly(!seasonOnly)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${seasonOnly ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
+                    >TEMPORADA</button>
+                    <button
+                      onClick={() => setMandoOnly(!mandoOnly)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${mandoOnly ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
+                    >Mando</button>
+                    <button
+                      onClick={() => setShow100Only(!show100Only)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
+                    >🎯 100%</button>
+                    <div className="flex items-center p-0.5 card flex-shrink-0">
+                      {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setToggle(mode)}
+                          className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${toggle === mode ? 'bg-primary text-on-primary' : 'text-on-surface-variant/30 hover:text-on-surface'}`}
+                        >
+                          {mode === 'FT' ? 'TOTAL' : mode}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
-                <StatsTable
-                  predictiveStats={currentPredictive}
-                  homeTeamName={matchDetail.homeTeam.name}
-                  awayTeamName={matchDetail.awayTeam.name}
-                  toggle={toggle}
-                  show100Only={show100Only}
-                />
-              </div>
 
-              {/* Match Events */}
-              {matchDetail.events && matchDetail.events.length > 0 && !['NS', 'TBD', 'PST', 'CANC'].includes(matchDetail.fixture.status) && (
-                <MatchEvents
-                  events={matchDetail.events}
-                  homeTeamId={matchDetail.homeTeam.id}
-                  homeTeamName={matchDetail.homeTeam.name}
-                  awayTeamName={matchDetail.awayTeam.name}
+                  {/* Stats Cards */}
+                  <div className="relative min-h-[200px]">
+                    {predictiveLoading && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
+                        <div className="w-7 h-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                      </div>
+                    )}
+                    <StatsTable
+                      predictiveStats={currentPredictive}
+                      homeTeamName={matchDetail.homeTeam.name}
+                      awayTeamName={matchDetail.awayTeam.name}
+                      toggle={toggle}
+                      show100Only={show100Only}
+                    />
+                  </div>
+
+                  {/* Match Events */}
+                  {matchDetail.events && matchDetail.events.length > 0 && !['NS', 'TBD', 'PST', 'CANC'].includes(matchDetail.fixture.status) && (
+                    <MatchEvents
+                      events={matchDetail.events}
+                      homeTeamId={matchDetail.homeTeam.id}
+                      homeTeamName={matchDetail.homeTeam.name}
+                      awayTeamName={matchDetail.awayTeam.name}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* ── Forma tab ── */}
+              {activeDataTab === 'form' && (
+                <TeamFormTab
+                  homeTeam={matchDetail.homeTeam}
+                  awayTeam={matchDetail.awayTeam}
+                  leagueDbId={matchDetail.fixture.league_id}
+                  leagueName={matchDetail.league?.name ?? ''}
                 />
               )}
             </>
