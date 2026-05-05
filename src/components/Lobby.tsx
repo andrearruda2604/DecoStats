@@ -58,13 +58,13 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
       {/* Search & Sort */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/30" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar time ou liga..."
-            className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/30 outline-none focus:border-primary/50 transition-colors"
+            className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/55 outline-none focus:border-primary/50 transition-colors"
           />
         </div>
         
@@ -107,11 +107,11 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           {/* League header — only when viewing multiple leagues */}
           {multipleLeagues && (
             <div className="flex items-center gap-2 px-1">
-              <img src={logoUrl} alt="" className="w-4 h-4 object-contain opacity-70" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40">
+              <img src={logoUrl} alt="" className="w-4 h-4 object-contain opacity-80" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/75">
                 {leagueName}
               </span>
-              <div className="flex-1 h-px bg-outline-variant/15" />
+              <div className="flex-1 h-px bg-outline-variant/25" />
             </div>
           )}
 
