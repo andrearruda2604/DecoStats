@@ -583,6 +583,25 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                        `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
                     </span>
                   </div>
+
+                  {/* Bet365 branding */}
+                  <a
+                    href="https://www.bet365.com.br/#/AC/B1/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all group"
+                  >
+                    <span className="text-[9px] text-on-surface-variant/50 font-bold uppercase tracking-widest">odds by</span>
+                    <span
+                      className="inline-flex items-center rounded-[3px] px-1.5 py-0.5 text-[9px] font-black text-white tracking-tight"
+                      style={{ background: '#00884c' }}
+                    >
+                      bet365
+                    </span>
+                    <svg className="w-2.5 h-2.5 text-on-surface-variant/40 group-hover:text-on-surface-variant/70 transition-colors" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M1 9L9 1M9 1H4M9 1V6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </a>
                 </div>
 
                 {/* Match cards */}
