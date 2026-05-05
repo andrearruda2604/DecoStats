@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ArrowLeft, LayoutGrid, BarChart2, Activity, LogOut, ExternalLink } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, BarChart2, Activity, LogOut } from 'lucide-react';
 import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
@@ -75,48 +75,25 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                   Jogos
                </button>
              )}
-             <div className="flex items-center gap-1">
-               <button
-                  onClick={() => onNavigate('ODD20')}
-                  className={`relative group pl-3 pr-3 py-2 rounded-l-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
-                    activeView === 'ODD20'
-                      ? 'bg-amber-400 text-black shadow-[0_0_20px_rgba(251,191,36,0.6)] scale-105'
-                      : 'bg-amber-400/90 text-black hover:bg-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)] hover:scale-105'
-                  }`}
-               >
-                  {/* Badge Bet365 */}
-                  <span
-                    className="inline-flex items-center rounded-[3px] px-1.5 py-0.5 text-[8px] font-black text-white tracking-tight shrink-0"
-                    style={{ background: '#00884c' }}
-                  >
-                    bet365
+             <button 
+                onClick={() => onNavigate('ODD20')}
+                className={`relative group px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                  activeView === 'ODD20' 
+                    ? 'bg-amber-400 text-black shadow-[0_0_20px_rgba(251,191,36,0.6)] scale-105' 
+                    : 'bg-amber-400/90 text-black hover:bg-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)] hover:scale-105'
+                }`}
+             >
+                {dailyOdd ? 'Bilhete do dia' : 'Odd 2.0'}
+                {dailyOdd && (
+                  <span className={`px-2 py-0.5 rounded-md text-[11px] font-black ${
+                    activeView === 'ODD20' ? 'bg-black/20' : 'bg-black/10'
+                  }`}>
+                    {dailyOdd}
                   </span>
-                  {dailyOdd ? 'Bilhete' : 'Odd 2.0'}
-                  {dailyOdd && (
-                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-black ${
-                      activeView === 'ODD20' ? 'bg-black/20' : 'bg-black/10'
-                    }`}>
-                      {dailyOdd}
-                    </span>
-                  )}
-                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
-               </button>
-               {/* Link direto Bet365 */}
-               <a
-                 href="https://www.bet365.com.br/#/AC/B1/"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 onClick={e => e.stopPropagation()}
-                 title="Abrir Bet365"
-                 className={`py-2 px-2 rounded-r-xl transition-all flex items-center ${
-                   activeView === 'ODD20'
-                     ? 'bg-amber-400 text-black/60 hover:text-black shadow-[0_0_20px_rgba(251,191,36,0.6)]'
-                     : 'bg-amber-400/90 text-black/50 hover:bg-amber-400 hover:text-black'
-                 }`}
-               >
-                 <ExternalLink className="w-3.5 h-3.5" />
-               </a>
-             </div>
+                )}
+                {/* Efeito de brilho animado */}
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+             </button>
              {user?.email?.toLowerCase() === 'deco260483@gmail.com' && (
                <button 
                  onClick={() => onNavigate('ODD30')}
