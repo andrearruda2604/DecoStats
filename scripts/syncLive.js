@@ -72,6 +72,9 @@ function evalPick(pick, fix, homeHist, awayHist) {
     } else if (['CARTÃO AMARELO', 'CARTÕES'].includes(stat)) {
       const h = pick.teamTarget === 'AWAY' ? awayHist : homeHist;
       actual = h?.yellow_cards ?? null;
+    } else if (stat === 'CHUTES') {
+      const h = pick.teamTarget === 'AWAY' ? awayHist : homeHist;
+      actual = h?.shots_total ?? null;
     }
   }
 
@@ -107,7 +110,7 @@ async function settleTickets() {
     // Load teams_history (for corners/cards picks; may be empty for very recent FT games)
     const { data: histRows } = await supabase
       .from('teams_history')
-      .select('fixture_id, is_home, corners, yellow_cards, goals_for, goals_against')
+      .select('fixture_id, is_home, corners, yellow_cards, shots_total, goals_for, goals_against')
       .in('fixture_id', fixtureIds);
 
     const histMap = {};

@@ -71,6 +71,8 @@ function evalPick(
       actual = (teamTarget === 'AWAY' ? awayHist : homeHist)?.corners ?? null
     } else if (['CARTÃO AMARELO', 'CARTÕES'].includes(stat)) {
       actual = (teamTarget === 'AWAY' ? awayHist : homeHist)?.yellow_cards ?? null
+    } else if (stat === 'CHUTES') {
+      actual = (teamTarget === 'AWAY' ? awayHist : homeHist)?.shots_total ?? null
     }
   }
 
@@ -194,7 +196,6 @@ Deno.serve(async (_req: Request) => {
         away_score:    g.goals.away,
         ht_home_score: ht?.home ?? null,
         ht_away_score: ht?.away ?? null,
-        score:         g.score,
       }).eq('api_id', g.fixture.id)
     }))
 

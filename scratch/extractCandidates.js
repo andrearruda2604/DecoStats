@@ -201,7 +201,7 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
 }
 
 async function run() {
-  const today = '2026-05-02';
+  const today = '2026-05-05';
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 

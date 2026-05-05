@@ -72,7 +72,7 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           <button
             onClick={() => onSortChange('LEAGUE')}
             className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-              sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+              sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/75 hover:text-on-surface'
             }`}
           >
             Liga
@@ -80,7 +80,7 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           <button
             onClick={() => onSortChange('TIME')}
             className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-              sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+              sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/75 hover:text-on-surface'
             }`}
           >
             Horário
@@ -107,11 +107,11 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           {/* League header — only when viewing multiple leagues */}
           {multipleLeagues && (
             <div className="flex items-center gap-2 px-1">
-              <img src={logoUrl} alt="" className="w-4 h-4 object-contain opacity-70" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40">
+              <img src={logoUrl} alt="" className="w-4 h-4 object-contain opacity-80" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/70">
                 {leagueName}
               </span>
-              <div className="flex-1 h-px bg-outline-variant/15" />
+              <div className="flex-1 h-px bg-outline-variant/30" />
             </div>
           )}
 
@@ -158,8 +158,8 @@ function MatchCard({ match, onSelectMatch, showLeagueLabel }: { match: MatchCard
       <div className="flex items-center justify-between mb-3 min-h-[16px]">
         {showLeagueLabel ? (
           <div className="flex items-center gap-1.5 overflow-hidden">
-            <img src={match.league.logoUrl} alt="" className="w-3 h-3 object-contain opacity-40 flex-shrink-0" />
-            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/30 truncate">
+            <img src={match.league.logoUrl} alt="" className="w-3 h-3 object-contain opacity-70 flex-shrink-0" />
+            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/65 truncate">
               {match.league.name}
             </span>
           </div>

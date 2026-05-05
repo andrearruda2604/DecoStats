@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp, X, BarChart2 } from 'lucide-react';
+import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp, X, BarChart2, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -640,11 +640,26 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                               </span>
                             )}
                           </div>
-                          {matchResult && (
-                            <span className={`text-[9px] font-black px-2.5 py-1 rounded-md ${matchResult === 'WON' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
-                              {matchResult}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {matchResult && (
+                              <span className={`text-[9px] font-black px-2.5 py-1 rounded-md ${matchResult === 'WON' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
+                                {matchResult}
+                              </span>
+                            )}
+                            {/* Link direto Bet365 */}
+                            <a
+                              href={`https://www.bet365.com.br/#/AC/B1/`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              title="Apostar na bet365"
+                              className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:opacity-100 opacity-80 transition-opacity"
+                              style={{ background: '#00884c' }}
+                            >
+                              <span className="text-[8px] font-black tracking-tight">bet365</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between gap-4 mb-8">
