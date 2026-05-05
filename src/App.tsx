@@ -13,6 +13,7 @@ import LeagueFilter from './components/LeagueFilter';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import LoginPage from './components/LoginPage';
+import TestView from './components/TestView';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
 import { useAuth } from './contexts/AuthContext';
@@ -37,6 +38,11 @@ export default function App() {
   // Show login page if not authenticated
   if (!user) {
     return <LoginPage />;
+  }
+
+  // Test view — access via ?view=teste
+  if (new URLSearchParams(window.location.search).get('view') === 'teste') {
+    return <TestView />;
   }
 
   return <AuthenticatedApp />;
