@@ -264,21 +264,23 @@ export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName
   const [awayHistory, setAwayHistory] = useState<MatchRow[]>([]);
   const [loading, setLoading]         = useState(false);
   const [count, setCount]             = useState(10);
-  const [mando, setMando]             = useState<MandoFilter>('all');
+  const [mandoGame, setMandoGame]     = useState(false);
   const [liga, setLiga]               = useState<LigaFilter>('game');
 
   useEffect(() => {
     setLoading(true);
-    const lgId = liga === 'game' ? leagueDbId : undefined;
+    const lgId       = liga === 'game' ? leagueDbId : undefined;
+    const homeMando: MandoFilter = mandoGame ? 'home' : 'all';
+    const awayMando: MandoFilter = mandoGame ? 'away' : 'all';
     Promise.all([
-      loadHistory(homeTeam.api_id, count, mando, lgId),
-      loadHistory(awayTeam.api_id, count, mando, lgId),
+      loadHistory(homeTeam.api_id, count, homeMando, lgId),
+      loadHistory(awayTeam.api_id, count, awayMando, lgId),
     ]).then(([home, away]) => {
       setHomeHistory(home);
       setAwayHistory(away);
       setLoading(false);
     });
-  }, [homeTeam.api_id, awayTeam.api_id, count, mando, liga, leagueDbId]);
+  }, [homeTeam.api_id, awayTeam.api_id, count, mandoGame, liga, leagueDbId]);
 
   const btn = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${
@@ -312,9 +314,8 @@ export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName
 
         {/* Mando */}
         <div className="flex gap-1">
-          <button onClick={() => setMando('all')}  className={btn(mando === 'all')}>Todos</button>
-          <button onClick={() => setMando('home')} className={btn(mando === 'home')}>Casa</button>
-          <button onClick={() => setMando('away')} className={btn(mando === 'away')}>Fora</button>
+          <button onClick={() => setMandoGame(false)} className={btn(!mandoGame)}>Todos</button>
+          <button onClick={() => setMandoGame(true)}  className={btn(mandoGame)}>Casa/Fora</button>
         </div>
       </div>
 
