@@ -54,8 +54,8 @@ function AuthenticatedApp() {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [toggle, setToggle] = useState<ToggleMode>('FT');
   const [statsCount, setStatsCount] = useState<number>(20);
-  const [seasonOnly, setSeasonOnly] = useState(true);
-  const [mandoOnly, setMandoOnly] = useState(true);
+  const [ligaFilter, setLigaFilter] = useState<'all' | 'game'>('game');
+  const [mandoGame, setMandoGame] = useState(false);
   const [show100Only, setShow100Only] = useState(false);
   const [sortBy, setSortBy] = useState<'LEAGUE' | 'TIME'>(() => {
     return (localStorage.getItem('decostats_sort_by') as 'LEAGUE' | 'TIME') || 'LEAGUE';
@@ -118,8 +118,8 @@ function AuthenticatedApp() {
     if (matchDetail) {
       setPredictiveLoading(true);
       fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, {
-        seasonOnly,
-        mandoOnly,
+        seasonOnly: ligaFilter === 'game',
+        mandoOnly: mandoGame,
         leagueId: matchDetail.league?.api_id,
         season: matchDetail.league?.season || matchDetail.fixture?.season,
         matchDate: matchDetail.fixture?.date,
@@ -130,7 +130,7 @@ function AuthenticatedApp() {
       setPredictiveBlock(null);
     }
     return () => { isMounted = false; };
-  }, [matchDetail, statsCount, seasonOnly, mandoOnly]);
+  }, [matchDetail, statsCount, ligaFilter, mandoGame]);
 
   const currentPredictive = predictiveBlock
     ? predictiveBlock[toggle] || []
@@ -204,31 +204,48 @@ function AuthenticatedApp() {
                 <>
                   {/* Filter Bar */}
                   <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
-                    <div className="flex items-center gap-1.5 px-3 py-2 card flex-shrink-0">
-                      <label className="text-[8px] uppercase font-bold tracking-widest text-on-surface-variant/40">Jogos</label>
-                      <select
-                        value={statsCount}
-                        onChange={(e) => setStatsCount(Number(e.target.value))}
-                        className="bg-transparent text-[11px] font-bold text-on-surface outline-none cursor-pointer"
-                      >
-                        <option value={5} className="bg-black">5</option>
-                        <option value={10} className="bg-black">10</option>
-                        <option value={15} className="bg-black">15</option>
-                        <option value={20} className="bg-black">20</option>
-                      </select>
-                    </div>
+                    {/* Count */}
+                    {([5, 10, 15, 20] as const).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setStatsCount(n)}
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${statsCount === n ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                      >{n}</button>
+                    ))}
+
+                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+
+                    {/* Liga */}
                     <button
-                      onClick={() => setSeasonOnly(!seasonOnly)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${seasonOnly ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
-                    >TEMPORADA</button>
+                      onClick={() => setLigaFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'all' ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >Todas</button>
                     <button
-                      onClick={() => setMandoOnly(!mandoOnly)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${mandoOnly ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
-                    >Mando</button>
+                      onClick={() => setLigaFilter('game')}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'game' ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >{matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}</button>
+
+                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+
+                    {/* Mando */}
+                    <button
+                      onClick={() => setMandoGame(false)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!mandoGame ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >Todos</button>
+                    <button
+                      onClick={() => setMandoGame(true)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${mandoGame ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >Casa/Fora</button>
+
+                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+
+                    {/* 100% */}
                     <button
                       onClick={() => setShow100Only(!show100Only)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-[14px] border transition-all flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant bg-surface-container text-on-surface-variant/50'}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all flex-shrink-0 text-[9px] font-black uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant/30 bg-surface-container text-on-surface-variant/55 hover:text-on-surface'}`}
                     >🎯 100%</button>
+
+                    {/* HT/2H/FT */}
                     <div className="flex items-center p-0.5 card flex-shrink-0">
                       {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
                         <button
