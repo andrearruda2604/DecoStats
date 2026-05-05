@@ -586,7 +586,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
                   {/* Bet365 branding */}
                   <a
-                    href="https://www.bet365.com.br/#/AC/B1/"
+                    href="https://www.bet365.bet.br/#/HO/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all group"
