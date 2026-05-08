@@ -418,7 +418,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
     for (let i = 1; i <= end.getDate(); i++) {
       const dateStr = `${calendarMonth.year}-${String(calendarMonth.month).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const t = allTickets.find(x => x.date === dateStr);
-      cells.push({ day: i, dateStr, status: t?.status });
+      cells.push({ day: i, dateStr, status: (t && t.matches_count > 0) ? t.status : undefined });
     }
     return cells;
   };
