@@ -157,6 +157,54 @@ async function settleTickets() {
   }
 }
 
+const FINAL_STATUSES = ['FT', 'AET', 'PEN', 'CANC', 'PST', 'ABD'];
+
+// ── Stale game sweep ──────────────────────────────────────────────────────────
+// Fixes games stuck in a non-final status from the past 3 days.
+// Runs one API call per affected date (max 3 calls total).
+
+async function sweepStaleGames(leagueDbIds, leagueApiSet) {
+  const nowUtc   = new Date();
+  const staleFrom = new Date(nowUtc.getTime() - 3 * 24 * 3600 * 1000).toISOString();
+  const staleTo   = new Date(nowUtc.getTime() - 2 * 3600 * 1000).toISOString(); // >2h ago
+
+  const { data: stale } = await supabase
+    .from('fixtures')
+    .select('api_id, date')
+    .in('league_id', leagueDbIds)
+    .gte('date', staleFrom)
+    .lte('date', staleTo)
+    .not('status', 'in', `(${FINAL_STATUSES.join(',')})`);
+
+  if (!stale?.length) return;
+
+  const dates = [...new Set(stale.map(f => f.date.slice(0, 10)))];
+  console.log(`🔧 Stale sweep: ${stale.length} fixture(s) across ${dates.join(', ')}`);
+
+  for (const date of dates) {
+    const res  = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}&timezone=America/Sao_Paulo`, { headers: API_HEADERS });
+    const json = await res.json();
+    const games = (json.response || []).filter(g =>
+      leagueApiSet.has(g.league.id) && FINAL_STATUSES.includes(g.fixture.status.short)
+    );
+
+    await Promise.all(games.map(g => {
+      const ht = g.score?.halftime;
+      console.log(`  ✓ [${g.fixture.status.short}] ${g.teams.home.name} ${g.goals.home}-${g.goals.away} ${g.teams.away.name}`);
+      return supabase.from('fixtures').update({
+        status:        g.fixture.status.short,
+        home_score:    g.goals.home,
+        away_score:    g.goals.away,
+        ht_home_score: ht?.home ?? null,
+        ht_away_score: ht?.away ?? null,
+      }).eq('api_id', g.fixture.id)
+        .not('status', 'in', `(${FINAL_STATUSES.join(',')})`);
+    }));
+
+    await new Promise(r => setTimeout(r, 1200));
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function syncLive() {
@@ -167,8 +215,12 @@ async function syncLive() {
 
   const leagueDbIds    = leagues.map(l => l.id);
   const leagueApiParam = leagues.map(l => l.api_id).join('-');
+  const leagueApiSet   = new Set(leagues.map(l => l.api_id));
 
-  // 2. Smart gate — only proceed if a game is live or starting soon
+  // 2. Stale sweep — fix games from past 3 days stuck in non-final status
+  await sweepStaleGames(leagueDbIds, leagueApiSet);
+
+  // 3. Smart gate — only call live endpoint if a game is live or starting soon
   const nowUtc  = new Date();
   const brtDate = new Date(nowUtc - 3 * 3600 * 1000).toISOString().split('T')[0];
   const soonIso = new Date(nowUtc.getTime() + SOON_MINUTES * 60 * 1000).toISOString();
@@ -182,14 +234,14 @@ async function syncLive() {
     .or(`status.in.(${LIVE_STATUSES.join(',')}),and(status.eq.NS,date.lte.${soonIso})`);
 
   if (!relevant?.length) {
-    // No live games, but still settle any tickets whose games finished earlier today
     await settleTickets();
+    console.log('✓ No live games today.');
     return;
   }
 
-  console.log(`📡 ${relevant.length} fixture(s) active/soon — calling API...`);
+  console.log(`📡 ${relevant.length} fixture(s) active/soon — calling live API...`);
 
-  // 3. One API call covers all active leagues
+  // 4. One API call covers all active leagues
   const res   = await fetch(`https://v3.football.api-sports.io/fixtures?live=${leagueApiParam}`, { headers: API_HEADERS });
   const json  = await res.json();
   const games = json.response || [];
@@ -200,7 +252,7 @@ async function syncLive() {
     return;
   }
 
-  // 4. Parallel fixture updates
+  // 5. Parallel fixture updates
   await Promise.all(games.map(g => {
     const ht = g.score?.halftime;
     console.log(`⚽ ${g.teams.home.name} ${g.goals.home ?? 0}-${g.goals.away ?? 0} ${g.teams.away.name} [${g.fixture.status.short}]`);
@@ -214,7 +266,7 @@ async function syncLive() {
     }).eq('api_id', g.fixture.id);
   }));
 
-  // 5. Settle tickets after scores are up-to-date
+  // 6. Settle tickets after scores are up-to-date
   await settleTickets();
 
   console.log('✓ Sync complete.');

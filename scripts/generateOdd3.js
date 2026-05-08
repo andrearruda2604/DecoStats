@@ -34,20 +34,21 @@ const MIN_GAMES_HISTORY = 7;
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
-  5:  { label: 'Gols FT (Total)',    stat: 'GOLS',       period: 'FT', teamTarget: 'TOTAL' },
-  16: { label: 'Gols FT (Casa)',     stat: 'GOLS',       period: 'FT', teamTarget: 'HOME'  },
-  17: { label: 'Gols FT (Fora)',     stat: 'GOLS',       period: 'FT', teamTarget: 'AWAY'  },
-  105:{ label: 'Gols 1T (Casa)',     stat: 'GOLS',       period: 'HT', teamTarget: 'HOME'  },
-  106:{ label: 'Gols 1T (Fora)',     stat: 'GOLS',       period: 'HT', teamTarget: 'AWAY'  },
-  107:{ label: 'Gols 2T (Casa)',     stat: 'GOLS',       period: '2H', teamTarget: 'HOME'  },
-  108:{ label: 'Gols 2T (Fora)',     stat: 'GOLS',       period: '2H', teamTarget: 'AWAY'  },
-  45: { label: 'Escanteios FT (Total)',stat:'ESCANTEIOS',period: 'FT', teamTarget: 'TOTAL' },
-  77: { label: 'Escanteios 1T (Total)',stat:'ESCANTEIOS',period: 'HT', teamTarget: 'TOTAL' },
-  57: { label: 'Escanteios FT (Casa)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'HOME'  },
-  58: { label: 'Escanteios FT (Fora)',stat:'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY'  },
-  80: { label: 'Cartões FT (Total)',  stat: 'CARTÕES',    period: 'FT', teamTarget: 'TOTAL' },
-  82: { label: 'Cartões FT (Casa)',   stat: 'CARTÕES',    period: 'FT', teamTarget: 'HOME'  },
-  83: { label: 'Cartões FT (Fora)',   stat: 'CARTÕES',    period: 'FT', teamTarget: 'AWAY'  },
+  5:  { label: 'Gols FT (Total)',        stat: 'GOLS',       period: 'FT', teamTarget: 'TOTAL' },
+  16: { label: 'Gols FT (Casa)',         stat: 'GOLS',       period: 'FT', teamTarget: 'HOME'  },
+  17: { label: 'Gols FT (Fora)',         stat: 'GOLS',       period: 'FT', teamTarget: 'AWAY'  },
+  105:{ label: 'Gols 1T (Casa)',         stat: 'GOLS',       period: 'HT', teamTarget: 'HOME'  },
+  106:{ label: 'Gols 1T (Fora)',         stat: 'GOLS',       period: 'HT', teamTarget: 'AWAY'  },
+  107:{ label: 'Gols 2T (Casa)',         stat: 'GOLS',       period: '2H', teamTarget: 'HOME'  },
+  108:{ label: 'Gols 2T (Fora)',         stat: 'GOLS',       period: '2H', teamTarget: 'AWAY'  },
+  45: { label: 'Escanteios FT (Total)',  stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'TOTAL' },
+  77: { label: 'Escanteios 1T (Total)', stat: 'ESCANTEIOS', period: 'HT', teamTarget: 'TOTAL' },
+  57: { label: 'Escanteios FT (Casa)',   stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'HOME'  },
+  58: { label: 'Escanteios FT (Fora)',   stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY'  },
+  80: { label: 'Cartões FT (Total)',     stat: 'CARTÕES',    period: 'FT', teamTarget: 'TOTAL' },
+  82: { label: 'Cartões FT (Casa)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'HOME'  },
+  83: { label: 'Cartões FT (Fora)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'AWAY'  },
+  87: { label: 'Chutes ao Gol (Total)',  stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'TOTAL' },
 };
 
 async function fetchApi(url) {
@@ -105,14 +106,23 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
         else actualValue = match.corners || 0; 
       }
     } else if (candidate.stat === 'CARTÕES') {
-      if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards || 0;
-      else {
-        const yellow = match.stats_ft?.find(s => s.type === 'Yellow Cards');
-        const red = match.stats_ft?.find(s => s.type === 'Red Cards');
-        actualValue = (yellow ? yellow.value : 0) + (red ? red.value : 0);
+      if (candidate.period === 'HT') {
+        const yc1h = match.stats_1h?.find(s => s.type === 'Yellow Cards');
+        const rc1h = match.stats_1h?.find(s => s.type === 'Red Cards');
+        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
+        else actualValue = (yc1h?.value || 0) + (rc1h?.value || 0);
+      } else {
+        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards || 0;
+        else {
+          const yellow = match.stats_ft?.find(s => s.type === 'Yellow Cards');
+          const red    = match.stats_ft?.find(s => s.type === 'Red Cards');
+          actualValue = (yellow?.value || 0) + (red?.value || 0);
+        }
       }
+    } else if (candidate.stat === 'CHUTES_GOL') {
+      actualValue = match.shots_on_goal || 0;
     }
-    
+
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
     if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
   }
@@ -123,21 +133,24 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
 
   for (const match of awayHistory) {
     let actualValue = 0;
-    
+
     if (candidate.stat === 'GOLS') {
       if (candidate.period === 'FT') actualValue = match.goals_for + match.goals_against;
       else if (candidate.period === 'HT') {
-        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = htg ? htg.value : 0;
+        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = htg?.value || 0;
       } else if (candidate.period === '2H') {
-        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = shtg ? shtg.value : 0;
+        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = shtg?.value || 0;
       }
     } else if (candidate.stat === 'ESCANTEIOS') {
       if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.corners_ht || 0;
       else actualValue = matchTotals[match.fixture_id]?.corners || 0;
     } else if (candidate.stat === 'CARTÕES') {
-      actualValue = matchTotals[match.fixture_id]?.cards || 0;
+      if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
+      else actualValue = matchTotals[match.fixture_id]?.cards || 0;
+    } else if (candidate.stat === 'CHUTES_GOL') {
+      actualValue = match.shots_on_goal || 0;
     }
-    
+
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
     if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
   }
@@ -355,13 +368,16 @@ async function generateOdd3() {
            .in('fixture_id', historyFixtures);
            
          for (const row of (opponentsData || [])) {
-           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0 };
+           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0 };
            matchTotals[row.fixture_id].corners += (row.corners || 0);
            const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
            matchTotals[row.fixture_id].corners_ht += (ck_ht ? ck_ht.value : 0);
-           const y = row.stats_ft?.find(s => s.type === 'Yellow Cards')?.value || 0;
-           const r = row.stats_ft?.find(s => s.type === 'Red Cards')?.value || 0;
-           matchTotals[row.fixture_id].cards += (y + r);
+           const y   = row.stats_ft?.find(s => s.type === 'Yellow Cards')?.value || 0;
+           const r   = row.stats_ft?.find(s => s.type === 'Red Cards')?.value   || 0;
+           const y1h = row.stats_1h?.find(s => s.type === 'Yellow Cards')?.value || 0;
+           const r1h = row.stats_1h?.find(s => s.type === 'Red Cards')?.value   || 0;
+           matchTotals[row.fixture_id].cards    += (y + r);
+           matchTotals[row.fixture_id].cards_ht += (y1h + r1h);
          }
       }
 
@@ -453,6 +469,11 @@ async function generateOdd3() {
   }
   console.log(`\n  Odd Total: ${totalOdd.toFixed(2)}`);
   console.log(`  Confiança Média Histórica: ${avgConfidence}%`);
+
+  if (process.argv.includes('--preview')) {
+    console.log('\n👀 MODO PREVIEW: O bilhete acima NÃO foi salvo no banco.');
+    return;
+  }
 
   await supabase.from('odd_tickets').upsert({
     date: today,

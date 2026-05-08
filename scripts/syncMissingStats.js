@@ -1,20 +1,27 @@
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
-// Load Env
-const envFile = fs.readFileSync('.env.local', 'utf8');
-const env = {};
-envFile.split(/\r?\n/).forEach(line => {
-  const match = line.match(/^([^=]+)=(.*)$/);
-  if (match) {
-    let val = match[2].trim();
-    if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-    env[match[1].trim()] = val;
-  }
-});
+// Load Env (process.env first, fallback to .env.local)
+let env = { ...process.env };
+try {
+  const envFile = fs.readFileSync('.env.local', 'utf8');
+  envFile.split(/\r?\n/).forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      let val = match[2].trim();
+      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+      if (!env[match[1].trim()]) env[match[1].trim()] = val;
+    }
+  });
+} catch (_) {}
 
-const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-const API_KEY = env.VITE_API_FOOTBALL_KEY;
+const SUPABASE_URL = env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = env.VITE_SUPABASE_ANON_KEY;
+const API_KEY      = env.VITE_API_FOOTBALL_KEY || env.API_FOOTBALL_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) { console.error('Missing Supabase credentials'); process.exit(1); }
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const headers = { 'x-apisports-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io' };
 
 async function fetchWithRetry(url) {
