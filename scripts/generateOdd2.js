@@ -121,7 +121,16 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
         }
       }
     } else if (candidate.stat === 'CHUTES_GOL') {
-      actualValue = match.shots_on_goal || 0;
+      // For TOTAL: use matchTotals (sum of both teams). For HOME/AWAY: individual shots_on_goal.
+      // Skip if no real data (null counts as missing, not as 0).
+      if (candidate.teamTarget === 'TOTAL') {
+        const tot = matchTotals[match.fixture_id];
+        if (!tot || tot.shots_on_goal_count < 2) continue; // both teams must have data
+        actualValue = tot.shots_on_goal;
+      } else {
+        if (match.shots_on_goal == null) continue;
+        actualValue = match.shots_on_goal;
+      }
     }
 
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
@@ -129,7 +138,7 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   if (candidate.teamTarget !== 'TOTAL') {
-    return (homeHits / homeHistory.length) * 100;
+    return homeHistory.length ? (homeHits / homeHistory.length) * 100 : null;
   }
 
   for (const match of awayHistory) {
@@ -149,7 +158,8 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
       if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
       else actualValue = matchTotals[match.fixture_id]?.cards || 0;
     } else if (candidate.stat === 'CHUTES_GOL') {
-      actualValue = match.shots_on_goal || 0;
+      // For TOTAL: already evaluated in homeHistory loop above (uses matchTotals per fixture)
+      continue;
     }
 
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
@@ -337,11 +347,11 @@ async function generateOdd2() {
       if (homeHistory?.length > 0 || awayHistory?.length > 0) {
          const historyFixtures = [...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id);
          const { data: opponentsData } = await supabase.from('teams_history')
-           .select('fixture_id, corners, stats_ft, stats_1h')
+           .select('fixture_id, corners, shots_on_goal, stats_ft, stats_1h')
            .in('fixture_id', historyFixtures);
-           
+
          for (const row of (opponentsData || [])) {
-           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0 };
+           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0 };
            matchTotals[row.fixture_id].corners += (row.corners || 0);
            const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
            matchTotals[row.fixture_id].corners_ht += (ck_ht?.value || 0);
@@ -351,6 +361,10 @@ async function generateOdd2() {
            const r1h  = row.stats_1h?.find(s => s.type === 'Red Cards')?.value   || 0;
            matchTotals[row.fixture_id].cards    += (y + r);
            matchTotals[row.fixture_id].cards_ht += (y1h + r1h);
+           if (row.shots_on_goal != null) {
+             matchTotals[row.fixture_id].shots_on_goal += row.shots_on_goal;
+             matchTotals[row.fixture_id].shots_on_goal_count++;
+           }
          }
       }
 

@@ -120,7 +120,14 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
         }
       }
     } else if (candidate.stat === 'CHUTES_GOL') {
-      actualValue = match.shots_on_goal || 0;
+      if (candidate.teamTarget === 'TOTAL') {
+        const tot = matchTotals[match.fixture_id];
+        if (!tot || tot.shots_on_goal_count < 2) continue;
+        actualValue = tot.shots_on_goal;
+      } else {
+        if (match.shots_on_goal == null) continue;
+        actualValue = match.shots_on_goal;
+      }
     }
 
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
@@ -128,7 +135,7 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   if (candidate.teamTarget !== 'TOTAL') {
-    return (homeHits / homeHistory.length) * 100;
+    return homeHistory.length ? (homeHits / homeHistory.length) * 100 : null;
   }
 
   for (const match of awayHistory) {
@@ -148,7 +155,7 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
       if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
       else actualValue = matchTotals[match.fixture_id]?.cards || 0;
     } else if (candidate.stat === 'CHUTES_GOL') {
-      actualValue = match.shots_on_goal || 0;
+      continue; // TOTAL already evaluated in homeHistory loop via matchTotals
     }
 
     if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
@@ -364,20 +371,24 @@ async function generateOdd3() {
       if (homeHistory?.length > 0 || awayHistory?.length > 0) {
          const historyFixtures = [...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id);
          const { data: opponentsData } = await supabase.from('teams_history')
-           .select('fixture_id, corners, stats_ft, stats_1h')
+           .select('fixture_id, corners, shots_on_goal, stats_ft, stats_1h')
            .in('fixture_id', historyFixtures);
-           
+
          for (const row of (opponentsData || [])) {
-           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0 };
+           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0 };
            matchTotals[row.fixture_id].corners += (row.corners || 0);
            const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
-           matchTotals[row.fixture_id].corners_ht += (ck_ht ? ck_ht.value : 0);
+           matchTotals[row.fixture_id].corners_ht += (ck_ht?.value || 0);
            const y   = row.stats_ft?.find(s => s.type === 'Yellow Cards')?.value || 0;
            const r   = row.stats_ft?.find(s => s.type === 'Red Cards')?.value   || 0;
            const y1h = row.stats_1h?.find(s => s.type === 'Yellow Cards')?.value || 0;
            const r1h = row.stats_1h?.find(s => s.type === 'Red Cards')?.value   || 0;
            matchTotals[row.fixture_id].cards    += (y + r);
            matchTotals[row.fixture_id].cards_ht += (y1h + r1h);
+           if (row.shots_on_goal != null) {
+             matchTotals[row.fixture_id].shots_on_goal += row.shots_on_goal;
+             matchTotals[row.fixture_id].shots_on_goal_count++;
+           }
          }
       }
 
