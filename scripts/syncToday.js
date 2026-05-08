@@ -49,7 +49,7 @@ async function fetchWithRetry(url) {
 async function syncToday() {
   // Usa data no horário de Brasília (UTC-3) para bater com a data local dos jogos na API
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const today = brt.toISOString().split('T')[0];
+  const today = process.argv[2] || brt.toISOString().split('T')[0];
   console.log(`=== Sincronizando Jogos de Hoje (${today} BRT) ===\n`);
 
   // 1. Carrega ligas ativas do banco (source of truth)

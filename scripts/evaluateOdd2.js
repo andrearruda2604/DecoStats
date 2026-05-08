@@ -47,6 +47,7 @@ const STAT_MAPPING = {
   'ESCANTEIOS': 'Corner Kicks',
   'FALTAS COMETIDAS': 'Fouls',
   'CARTÃO AMARELO': 'Yellow Cards',
+  'CARTÕES': 'Yellow Cards',
   'GOLS MARCADOS': 'Goals'
 };
 
@@ -133,10 +134,22 @@ async function evaluateTicket() {
                 const aStat = awayStatsArr.find(s => s.type === translatedType);
                 val += hStat && hStat.value !== null ? parseInt(hStat.value) : 0;
                 val += aStat && aStat.value !== null ? parseInt(aStat.value) : 0;
+
+                if (pick.stat === 'CARTÕES') {
+                    const hRed = homeStatsArr.find(s => s.type === 'Red Cards');
+                    const aRed = awayStatsArr.find(s => s.type === 'Red Cards');
+                    val += hRed && hRed.value !== null ? parseInt(hRed.value) : 0;
+                    val += aRed && aRed.value !== null ? parseInt(aRed.value) : 0;
+                }
             } else {
                 const teamStatsArr = isHome ? homeStatsArr : awayStatsArr;
                 const statObj = teamStatsArr.find(s => s.type === translatedType);
                 val = statObj && statObj.value !== null ? parseInt(statObj.value) : 0;
+
+                if (pick.stat === 'CARTÕES') {
+                    const redStat = teamStatsArr.find(s => s.type === 'Red Cards');
+                    val += redStat && redStat.value !== null ? parseInt(redStat.value) : 0;
+                }
             }
             
             if (pick.period === 'HT') {
