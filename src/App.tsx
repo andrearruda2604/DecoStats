@@ -18,7 +18,7 @@ import TeamFormTab from './components/TeamFormTab';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
 import { useAuth } from './contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData } from './services/api';
 
@@ -69,6 +69,10 @@ function AuthenticatedApp() {
   const [predictiveLoading, setPredictiveLoading] = useState(false);
   const [activeDataTab, setActiveDataTab] = useState<'stats' | 'form'>('stats');
 
+  // Tracks when the app's own back button triggered history.back() so the
+  // popstate handler knows not to double-navigate.
+  const appInitiatedBackRef = useRef(false);
+
   const {
     matches, leagues, loading: matchesLoading, error: matchesError,
     selectedDate, selectedLeagueIds, setSelectedDate, setSelectedLeagueIds, refresh: refreshMatches,
@@ -93,12 +97,33 @@ function AuthenticatedApp() {
     setActiveView('DATA');
     setActiveDataTab('stats');
     window.scrollTo(0, 0);
+    window.history.pushState({ inApp: true }, '');
   };
 
   const handleBack = () => {
+    appInitiatedBackRef.current = true;
     setSelectedMatchId(null);
     setActiveView(lastListView);
+    window.history.back();
   };
+
+  // Intercept browser / mobile back button
+  useEffect(() => {
+    const onPopState = () => {
+      if (appInitiatedBackRef.current) {
+        appInitiatedBackRef.current = false;
+        return;
+      }
+      if (activeView === 'DATA') {
+        setSelectedMatchId(null);
+        setActiveView(lastListView);
+      } else if (activeView === 'ODD20' || activeView === 'ODD30') {
+        setActiveView('LOBBY');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [activeView, lastListView]);
 
   useEffect(() => {
     if (activeView === 'LOBBY') {
@@ -139,7 +164,14 @@ function AuthenticatedApp() {
   return (
     <Layout
       activeView={activeView}
-      onNavigate={(view) => { if (view === 'LOBBY') handleBack(); else setActiveView(view); }}
+      onNavigate={(view) => {
+        if (view === 'LOBBY') {
+          handleBack();
+        } else {
+          setActiveView(view);
+          window.history.pushState({ inApp: true }, '');
+        }
+      }}
       showBack={activeView !== 'LOBBY'}
     >
       {/* ═══ LOBBY ═══ */}
