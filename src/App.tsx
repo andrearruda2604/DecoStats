@@ -236,71 +236,88 @@ function AuthenticatedApp() {
               {activeDataTab === 'stats' && (
                 <>
                   {/* Filter Bar */}
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
-                    {/* Count */}
-                    {([5, 10, 15, 20, 999] as const).map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setStatsCount(n)}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${statsCount === n ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                      >{n === 999 ? 'Todas' : n}</button>
-                    ))}
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1 py-1 pb-3">
+                    {/* Partidas */}
+                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Partidas</span>
+                      <div className="flex items-center gap-1">
+                        {([5, 10, 15, 20, 999] as const).map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setStatsCount(n)}
+                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${statsCount === n ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                          >{n === 999 ? 'Todas' : n}</button>
+                        ))}
+                      </div>
+                    </div>
 
-                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
-
-                    {/* Liga */}
-                    <button
-                      onClick={() => setLigaFilter('all')}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'all' ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >Todas</button>
-                    <button
-                      onClick={() => setLigaFilter('game')}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'game' ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >{matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}</button>
-
-                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+                    {/* Ligas */}
+                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Ligas</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setLigaFilter('all')}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'all' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >Todas</button>
+                        <button
+                          onClick={() => setLigaFilter('game')}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'game' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >{matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}</button>
+                      </div>
+                    </div>
 
                     {/* Temporada */}
-                    <button
-                      onClick={() => setSeasonOnly(false)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!seasonOnly ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >Sempre</button>
-                    <button
-                      onClick={() => setSeasonOnly(true)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${seasonOnly ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >Temporada</button>
-
-                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Temporada</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setSeasonOnly(false)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!seasonOnly ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >Todas</button>
+                        <button
+                          onClick={() => setSeasonOnly(true)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${seasonOnly ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >Atual</button>
+                      </div>
+                    </div>
 
                     {/* Mando */}
-                    <button
-                      onClick={() => setMandoGame(false)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!mandoGame ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >Todos</button>
-                    <button
-                      onClick={() => setMandoGame(true)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${mandoGame ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >Casa/Fora</button>
+                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Mando</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setMandoGame(false)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!mandoGame ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >Todos</button>
+                        <button
+                          onClick={() => setMandoGame(true)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${mandoGame ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                        >Casa/Fora</button>
+                      </div>
+                    </div>
 
-                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+                    {/* Tempo */}
+                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Tempo</span>
+                      <div className="flex items-center gap-1">
+                        {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setToggle(mode)}
+                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${toggle === mode ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                          >
+                            {mode === 'FT' ? 'TOTAL' : mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                     {/* 100% */}
-                    <button
-                      onClick={() => setShow100Only(!show100Only)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all flex-shrink-0 text-[9px] font-black uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant/30 bg-surface-container text-on-surface-variant/55 hover:text-on-surface'}`}
-                    >🎯 100%</button>
-
-                    {/* HT/2H/FT */}
-                    <div className="flex items-center p-0.5 card flex-shrink-0">
-                      {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setToggle(mode)}
-                          className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${toggle === mode ? 'bg-primary text-on-primary' : 'text-on-surface-variant/30 hover:text-on-surface'}`}
-                        >
-                          {mode === 'FT' ? 'TOTAL' : mode}
-                        </button>
-                      ))}
+                    <div className="flex items-center self-stretch">
+                      <button
+                        onClick={() => setShow100Only(!show100Only)}
+                        className={`h-full flex items-center gap-1.5 px-4 rounded-xl border transition-all flex-shrink-0 text-[10px] font-black uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant/10 bg-surface/30 text-on-surface-variant/55 hover:text-on-surface hover:bg-surface-container-highest/30'}`}
+                      >🎯 100%</button>
                     </div>
                   </div>
 

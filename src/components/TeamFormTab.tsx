@@ -290,45 +290,51 @@ export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName
   const btn = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${
       active
-        ? 'bg-primary text-on-primary'
-        : 'bg-surface border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface hover:border-outline-variant/60'
+        ? 'bg-primary text-on-primary shadow-sm'
+        : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'
     }`;
 
   return (
     <div className="space-y-4">
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {/* Jogos */}
-        <div className="flex gap-1">
-          {([5, 10, 15, 20] as const).map(n => (
-            <button key={n} onClick={() => setCount(n)} className={btn(count === n)}>{n}</button>
-          ))}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1 py-1 pb-3">
+        {/* Partidas */}
+        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Partidas</span>
+          <div className="flex items-center gap-1">
+            {([5, 10, 15, 20] as const).map(n => (
+              <button key={n} onClick={() => setCount(n)} className={btn(count === n)}>{n}</button>
+            ))}
+          </div>
         </div>
 
-        <div className="h-5 w-px bg-outline-variant/20 mx-0.5" />
-
-        {/* Liga */}
-        <div className="flex gap-1">
-          <button onClick={() => setLiga('all')}  className={btn(liga === 'all')}>Todas</button>
-          <button onClick={() => setLiga('game')} className={btn(liga === 'game')}>
-            {leagueName ? leagueName.split(' ').slice(0,2).join(' ') : 'Do Jogo'}
-          </button>
+        {/* Ligas */}
+        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Ligas</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setLiga('all')}  className={btn(liga === 'all')}>Todas</button>
+            <button onClick={() => setLiga('game')} className={btn(liga === 'game')}>
+              {leagueName ? leagueName.split(' ').slice(0,2).join(' ') : 'Do Jogo'}
+            </button>
+          </div>
         </div>
-
-        <div className="h-5 w-px bg-outline-variant/20 mx-0.5" />
-
-        {/* Mando */}
-        <div className="flex gap-1">
-          <button onClick={() => setMandoGame(false)} className={btn(!mandoGame)}>Todos</button>
-          <button onClick={() => setMandoGame(true)}  className={btn(mandoGame)}>Casa/Fora</button>
-        </div>
-
-        <div className="h-5 w-px bg-outline-variant/20 mx-0.5" />
 
         {/* Temporada */}
-        <div className="flex gap-1">
-          <button onClick={() => setSeasonOnly(false)} className={btn(!seasonOnly)}>Sempre</button>
-          <button onClick={() => setSeasonOnly(true)}  className={btn(seasonOnly)}>Temporada</button>
+        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Temporada</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSeasonOnly(false)} className={btn(!seasonOnly)}>Sempre</button>
+            <button onClick={() => setSeasonOnly(true)}  className={btn(seasonOnly)}>Temporada</button>
+          </div>
+        </div>
+
+        {/* Mando */}
+        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
+          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Mando</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setMandoGame(false)} className={btn(!mandoGame)}>Todos</button>
+            <button onClick={() => setMandoGame(true)}  className={btn(mandoGame)}>Casa/Fora</button>
+          </div>
         </div>
       </div>
 
