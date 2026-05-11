@@ -270,7 +270,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
     const { data: fix } = await supabase
       .from('fixtures')
-      .select('home_team_id, away_team_id')
+      .select('home_team_id, away_team_id, league_id')
       .eq('api_id', entry.fixture_id)
       .maybeSingle();
 
@@ -284,6 +284,8 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
         .from('teams_history')
         .select('fixture_id, match_date, is_home, goals_for, goals_against, corners, yellow_cards, red_cards, stats_1h, stats_2h, stats_ft')
         .eq('team_id', fix.home_team_id)
+        .eq('league_id', fix.league_id)
+        .eq('is_home', true)
         .lt('match_date', cutoff)
         .order('match_date', { ascending: false })
         .limit(20),
@@ -291,6 +293,8 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
         .from('teams_history')
         .select('fixture_id, match_date, is_home, goals_for, goals_against, corners, yellow_cards, red_cards, stats_1h, stats_2h, stats_ft')
         .eq('team_id', fix.away_team_id)
+        .eq('league_id', fix.league_id)
+        .eq('is_home', false)
         .lt('match_date', cutoff)
         .order('match_date', { ascending: false })
         .limit(20),
@@ -1031,7 +1035,9 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                         pick.teamTarget === 'TOTAL' ? [...entryHomeHistory, ...entryAwayHistory].sort((a, b) => b.match_date.localeCompare(a.match_date)) :
                         entryHomeHistory;
 
-                      const games = history.slice(0, 15);
+                      const games = history
+                        .filter((g: any) => g.fixture_id !== selectedEntry.fixture_id)
+                        .slice(0, 15);
                       const values = games.map((g: any) => getHistStatValue(g, pick));
                       const met = values.map((v: number | null) =>
                         v !== null ? (pick.type === 'OVER' ? v > pick.threshold : v < pick.threshold) : null

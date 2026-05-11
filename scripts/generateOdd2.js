@@ -28,9 +28,9 @@ const MAX_PICKS   = 8;
 const MAX_PICKS_PER_MATCH_DEFAULT = 1;
 const MAX_PICKS_PER_MATCH_FEW_GAMES = 1; 
 
-const MIN_HISTORICAL_PROB = 85; 
-const MIN_ODD = 1.02;        
-const MIN_GAMES_HISTORY = 7; 
+const MIN_HISTORICAL_PROB = 90; // Aumentado para 90% (nata da nata)
+const MIN_ODD = 1.03;        // Pequeno aumento na odd mínima para evitar lixo de 1.01
+const MIN_GAMES_HISTORY = 10; // Exige no mínimo 10 jogos de histórico para validar a consistência
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
