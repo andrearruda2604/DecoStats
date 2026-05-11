@@ -39,6 +39,7 @@ interface Props {
   awayTeam:    TeamInfo;
   leagueDbId:  number;   // fixtures.league_id → teams_history.league_id
   leagueName:  string;
+  season?:     number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ async function loadHistory(
   count:       number,
   mando:       MandoFilter,
   leagueDbId?: number,
+  seasonFilter?: number,
 ): Promise<MatchRow[]> {
   let q = supabase
     .from('teams_history')
@@ -70,6 +72,7 @@ async function loadHistory(
   if (mando  === 'home') q = q.eq('is_home', true);
   if (mando  === 'away') q = q.eq('is_home', false);
   if (leagueDbId)        q = q.eq('league_id', leagueDbId);
+  if (seasonFilter)      q = q.eq('season', seasonFilter);
 
   const { data: rows } = await q;
   if (!rows?.length) return [];
@@ -259,28 +262,30 @@ function TeamPanel({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName }: Props) {
+export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName, season }: Props) {
   const [homeHistory, setHomeHistory] = useState<MatchRow[]>([]);
   const [awayHistory, setAwayHistory] = useState<MatchRow[]>([]);
   const [loading, setLoading]         = useState(false);
   const [count, setCount]             = useState(10);
   const [mandoGame, setMandoGame]     = useState(false);
   const [liga, setLiga]               = useState<LigaFilter>('game');
+  const [seasonOnly, setSeasonOnly]   = useState(true);
 
   useEffect(() => {
     setLoading(true);
     const lgId       = liga === 'game' ? leagueDbId : undefined;
+    const seasonF    = seasonOnly ? season : undefined;
     const homeMando: MandoFilter = mandoGame ? 'home' : 'all';
     const awayMando: MandoFilter = mandoGame ? 'away' : 'all';
     Promise.all([
-      loadHistory(homeTeam.api_id, count, homeMando, lgId),
-      loadHistory(awayTeam.api_id, count, awayMando, lgId),
+      loadHistory(homeTeam.api_id, count, homeMando, lgId, seasonF),
+      loadHistory(awayTeam.api_id, count, awayMando, lgId, seasonF),
     ]).then(([home, away]) => {
       setHomeHistory(home);
       setAwayHistory(away);
       setLoading(false);
     });
-  }, [homeTeam.api_id, awayTeam.api_id, count, mandoGame, liga, leagueDbId]);
+  }, [homeTeam.api_id, awayTeam.api_id, count, mandoGame, liga, leagueDbId, seasonOnly, season]);
 
   const btn = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${
@@ -316,6 +321,14 @@ export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName
         <div className="flex gap-1">
           <button onClick={() => setMandoGame(false)} className={btn(!mandoGame)}>Todos</button>
           <button onClick={() => setMandoGame(true)}  className={btn(mandoGame)}>Casa/Fora</button>
+        </div>
+
+        <div className="h-5 w-px bg-outline-variant/20 mx-0.5" />
+
+        {/* Temporada */}
+        <div className="flex gap-1">
+          <button onClick={() => setSeasonOnly(false)} className={btn(!seasonOnly)}>Sempre</button>
+          <button onClick={() => setSeasonOnly(true)}  className={btn(seasonOnly)}>Temporada</button>
         </div>
       </div>
 

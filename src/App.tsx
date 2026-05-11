@@ -55,6 +55,7 @@ function AuthenticatedApp() {
   const [toggle, setToggle] = useState<ToggleMode>('FT');
   const [statsCount, setStatsCount] = useState<number>(20);
   const [ligaFilter, setLigaFilter] = useState<'all' | 'game'>('game');
+  const [seasonOnly, setSeasonOnly] = useState<boolean>(true);
   const [mandoGame, setMandoGame] = useState(false);
   const [show100Only, setShow100Only] = useState(false);
   const [sortBy, setSortBy] = useState<'LEAGUE' | 'TIME'>(() => {
@@ -143,9 +144,9 @@ function AuthenticatedApp() {
     if (matchDetail) {
       setPredictiveLoading(true);
       fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, {
-        seasonOnly: ligaFilter === 'game',
+        seasonOnly: seasonOnly,
         mandoOnly: mandoGame,
-        leagueId: matchDetail.league?.api_id,
+        leagueId: ligaFilter === 'game' ? matchDetail.league?.api_id : undefined,
         season: matchDetail.league?.season || matchDetail.fixture?.season,
         matchDate: matchDetail.fixture?.date,
       })
@@ -155,7 +156,7 @@ function AuthenticatedApp() {
       setPredictiveBlock(null);
     }
     return () => { isMounted = false; };
-  }, [matchDetail, statsCount, ligaFilter, mandoGame]);
+  }, [matchDetail, statsCount, ligaFilter, seasonOnly, mandoGame]);
 
   const currentPredictive = predictiveBlock
     ? predictiveBlock[toggle] || []
@@ -237,12 +238,12 @@ function AuthenticatedApp() {
                   {/* Filter Bar */}
                   <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
                     {/* Count */}
-                    {([5, 10, 15, 20] as const).map(n => (
+                    {([5, 10, 15, 20, 999] as const).map(n => (
                       <button
                         key={n}
                         onClick={() => setStatsCount(n)}
                         className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${statsCount === n ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
-                      >{n}</button>
+                      >{n === 999 ? 'Todas' : n}</button>
                     ))}
 
                     <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
@@ -256,6 +257,18 @@ function AuthenticatedApp() {
                       onClick={() => setLigaFilter('game')}
                       className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'game' ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
                     >{matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}</button>
+
+                    <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
+
+                    {/* Temporada */}
+                    <button
+                      onClick={() => setSeasonOnly(false)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!seasonOnly ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >Sempre</button>
+                    <button
+                      onClick={() => setSeasonOnly(true)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${seasonOnly ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant/30 text-on-surface-variant/55 hover:text-on-surface'}`}
+                    >Temporada</button>
 
                     <div className="h-5 w-px bg-outline-variant/20 flex-shrink-0" />
 
