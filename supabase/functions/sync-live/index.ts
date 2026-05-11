@@ -157,6 +157,7 @@ Deno.serve(async (_req: Request) => {
 
     const leagueDbIds    = leagues.map(l => l.id)
     const leagueApiParam = leagues.map(l => l.api_id).join('-')
+    const leagueApiSet   = new Set(leagues.map(l => l.api_id))
 
     // 2. Smart gate — skip API call if nothing is live or starting soon
     const nowUtc  = new Date()
@@ -181,28 +182,70 @@ Deno.serve(async (_req: Request) => {
     const json  = await res.json()
     const games: any[] = json.response ?? []
 
-    if (!games.length) {
-      await settleTickets()
-      return Response.json({ ok: true, msg: 'api: no live games' })
+    // Set of fixture IDs currently live according to the API
+    const liveApiIds = new Set(games.map(g => g.fixture.id))
+
+    // 4. Update live fixtures
+    if (games.length) {
+      await Promise.all(games.map(g => {
+        const ht = g.score?.halftime
+        console.log(`⚽ ${g.teams.home.name} ${g.goals.home ?? 0}-${g.goals.away ?? 0} ${g.teams.away.name} [${g.fixture.status.short}]`)
+        return supabase.from('fixtures').update({
+          status:        g.fixture.status.short,
+          home_score:    g.goals.home,
+          away_score:    g.goals.away,
+          ht_home_score: ht?.home ?? null,
+          ht_away_score: ht?.away ?? null,
+        }).eq('api_id', g.fixture.id)
+      }))
     }
 
-    // 4. Parallel fixture updates
-    await Promise.all(games.map(g => {
-      const ht = g.score?.halftime
-      console.log(`⚽ ${g.teams.home.name} ${g.goals.home ?? 0}-${g.goals.away ?? 0} ${g.teams.away.name} [${g.fixture.status.short}]`)
-      return supabase.from('fixtures').update({
-        status:        g.fixture.status.short,
-        home_score:    g.goals.home,
-        away_score:    g.goals.away,
-        ht_home_score: ht?.home ?? null,
-        ht_away_score: ht?.away ?? null,
-      }).eq('api_id', g.fixture.id)
-    }))
+    // 5. Detect "just finished" games — DB still has live status but API no longer returns them
+    const { data: dbLive } = await supabase
+      .from('fixtures')
+      .select('api_id')
+      .in('league_id', leagueDbIds)
+      .gte('date', `${brtDate}T00:00:00`)
+      .lte('date', `${brtDate}T23:59:59`)
+      .in('status', LIVE_STATUSES)
 
-    // 5. Settle tickets with updated scores
+    const stuckIds = (dbLive ?? [])
+      .map(f => f.api_id)
+      .filter(id => !liveApiIds.has(id))
+
+    if (stuckIds.length) {
+      console.log(`🔧 ${stuckIds.length} game(s) just finished — fetching final status...`)
+      const dateRes  = await fetch(
+        `https://v3.football.api-sports.io/fixtures?date=${brtDate}&timezone=America/Sao_Paulo`,
+        { headers: API_HEADERS }
+      )
+      const dateJson = await dateRes.json()
+      const allGames: any[] = dateJson.response ?? []
+
+      const stuckSet = new Set(stuckIds)
+      const finished = allGames.filter(g =>
+        stuckSet.has(g.fixture.id) && leagueApiSet.has(g.league.id)
+      )
+
+      if (finished.length) {
+        await Promise.all(finished.map(g => {
+          const ht = g.score?.halftime
+          console.log(`  ✓ [${g.fixture.status.short}] ${g.teams.home.name} ${g.goals.home}-${g.goals.away} ${g.teams.away.name}`)
+          return supabase.from('fixtures').update({
+            status:        g.fixture.status.short,
+            home_score:    g.goals.home,
+            away_score:    g.goals.away,
+            ht_home_score: ht?.home ?? null,
+            ht_away_score: ht?.away ?? null,
+          }).eq('api_id', g.fixture.id)
+        }))
+      }
+    }
+
+    // 6. Settle tickets with updated scores
     await settleTickets()
 
-    return Response.json({ ok: true, updated: games.length })
+    return Response.json({ ok: true, updated: games.length, swept: stuckIds.length })
   } catch (e: any) {
     console.error('sync-live:', e.message)
     return Response.json({ error: e.message }, { status: 500 })
