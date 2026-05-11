@@ -6,7 +6,7 @@
 import { STATUS_LABELS } from '../constants';
 import type { MatchCardData } from '../types';
 import { Search } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface LobbyProps {
   matches: MatchCardData[];
@@ -18,18 +18,30 @@ interface LobbyProps {
 
 export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: LobbyProps) {
   const [search, setSearch] = useState('');
+  const [hideFinished, setHideFinished] = useState(() => {
+    const saved = localStorage.getItem('decostats_hide_finished');
+    return saved === 'true';
+  });
 
-
+  useEffect(() => {
+    localStorage.setItem('decostats_hide_finished', String(hideFinished));
+  }, [hideFinished]);
 
   const filtered = useMemo(() => {
-    if (!search) return matches;
+    let result = matches;
+
+    if (hideFinished) {
+      result = result.filter(m => !['FT', 'AET', 'PEN'].includes(m.status));
+    }
+
+    if (!search) return result;
     const q = search.toLowerCase();
-    return matches.filter((m) =>
+    return result.filter((m) =>
       m.homeTeam.name.toLowerCase().includes(q) ||
       m.awayTeam.name.toLowerCase().includes(q) ||
       m.league.name.toLowerCase().includes(q)
     );
-  }, [matches, search]);
+  }, [matches, search, hideFinished]);
 
   // Group by league name, preserving order
   const grouped = useMemo(() => {
@@ -68,23 +80,41 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           />
         </div>
         
-        <div className="flex p-1 bg-surface-container border border-outline-variant rounded-xl self-start sm:self-center">
-          <button
-            onClick={() => onSortChange('LEAGUE')}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-              sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
-            }`}
-          >
-            Liga
-          </button>
-          <button
-            onClick={() => onSortChange('TIME')}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-              sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
-            }`}
-          >
-            Horário
-          </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={hideFinished}
+                onChange={(e) => setHideFinished(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 bg-surface-container border border-outline-variant rounded-full peer peer-checked:bg-primary transition-colors" />
+              <div className="absolute left-1 top-1 w-2 h-2 bg-on-surface-variant/50 rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-transform" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant/50 peer-checked:text-on-surface transition-colors">
+              Ocultar Encerrados
+            </span>
+          </label>
+
+          <div className="flex p-1 bg-surface-container border border-outline-variant rounded-xl">
+            <button
+              onClick={() => onSortChange('LEAGUE')}
+              className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                sortBy === 'LEAGUE' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+              }`}
+            >
+              Liga
+            </button>
+            <button
+              onClick={() => onSortChange('TIME')}
+              className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                sortBy === 'TIME' ? 'bg-primary text-on-primary' : 'text-on-surface-variant/50 hover:text-on-surface'
+              }`}
+            >
+              Horário
+            </button>
+          </div>
         </div>
 
       </div>

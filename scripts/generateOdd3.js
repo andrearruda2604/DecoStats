@@ -49,6 +49,14 @@ const MARKETS = {
   82: { label: 'Cartões FT (Casa)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'HOME'  },
   83: { label: 'Cartões FT (Fora)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'AWAY'  },
   87: { label: 'Chutes ao Gol (Total)',  stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'TOTAL' },
+  211:{ label: 'Chutes Totais',         stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'TOTAL' },
+  164:{ label: 'Impedimentos (Total)',  stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'TOTAL' },
+  167:{ label: 'Impedimentos (Casa)',   stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'HOME'  },
+  168:{ label: 'Impedimentos (Fora)',   stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'AWAY'  },
+  267:{ label: 'Defesas de Goleiro',    stat: 'DEFESAS',      period: 'FT', teamTarget: 'TOTAL' },
+  169:{ label: 'Cartões 1T (Total)',    stat: 'CARTÕES',     period: 'HT', teamTarget: 'TOTAL' },
+  170:{ label: 'Cartões 1T (Casa)',     stat: 'CARTÕES',     period: 'HT', teamTarget: 'HOME'  },
+  171:{ label: 'Cartões 1T (Fora)',     stat: 'CARTÕES',     period: 'HT', teamTarget: 'AWAY'  },
 };
 
 async function fetchApi(url) {
@@ -72,97 +80,182 @@ async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
  * Comportamento clássico restaurado: usa apenas o histórico da equipe em questão para manter as altas %.
  */
 function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals) {
-  if (!homeHistory || homeHistory.length < MIN_GAMES_HISTORY) return null;
-  if (candidate.teamTarget === 'TOTAL' && (!awayHistory || awayHistory.length < MIN_GAMES_HISTORY)) return null;
-
+  if (!homeHistory) return null;
+  
   let homeHits = 0;
   let awayHits = 0;
+  let homeValid = 0;
+  let awayValid = 0;
 
   for (const match of homeHistory) {
     let actualValue = 0;
+    let isValid = false;
     
     if (candidate.stat === 'GOLS') {
+      isValid = true;
       if (candidate.period === 'FT') {
-        if (candidate.teamTarget === 'TOTAL') actualValue = match.goals_for + match.goals_against;
-        else if (candidate.teamTarget === 'HOME') actualValue = match.is_home ? match.goals_for : match.goals_against; 
-        else if (candidate.teamTarget === 'AWAY') actualValue = match.is_home ? match.goals_against : match.goals_for; 
+        if (candidate.teamTarget === 'TOTAL') actualValue = (match.goals_for || 0) + (match.goals_against || 0);
+        else if (candidate.teamTarget === 'HOME') actualValue = match.is_home ? (match.goals_for || 0) : (match.goals_against || 0); 
+        else if (candidate.teamTarget === 'AWAY') actualValue = match.is_home ? (match.goals_against || 0) : (match.goals_for || 0); 
       } else if (candidate.period === 'HT') {
         const htg = match.stats_1h?.find(s => s.type === 'goals');
-        actualValue = htg ? htg.value : 0;
+        actualValue = htg ? parseInt(htg.value) || 0 : 0;
       } else if (candidate.period === '2H') {
         const shtg = match.stats_2h?.find(s => s.type === 'goals');
-        actualValue = shtg ? shtg.value : 0;
+        actualValue = shtg ? parseInt(shtg.value) || 0 : 0;
       }
     } else if (candidate.stat === 'ESCANTEIOS') {
       if (candidate.period === 'HT') {
         if (candidate.teamTarget === 'TOTAL') {
-           actualValue = matchTotals[match.fixture_id]?.corners_ht || 0;
+           const tot = matchTotals[match.fixture_id];
+           if (tot && tot.corners_ht != null) { actualValue = tot.corners_ht; isValid = true; }
         } else {
            const ck = match.stats_1h?.find(s => s.type === 'Corner Kicks');
-           actualValue = ck ? ck.value : 0;
+           if (ck) { actualValue = parseInt(ck.value) || 0; isValid = true; }
         }
       } else {
-        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.corners || 0;
-        else actualValue = match.corners || 0; 
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.corners != null) { actualValue = tot.corners; isValid = true; }
+        } else {
+          if (match.corners != null) { actualValue = match.corners; isValid = true; }
+        }
       }
     } else if (candidate.stat === 'CARTÕES') {
       if (candidate.period === 'HT') {
-        const yc1h = match.stats_1h?.find(s => s.type === 'Yellow Cards');
-        const rc1h = match.stats_1h?.find(s => s.type === 'Red Cards');
-        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
-        else actualValue = (yc1h?.value || 0) + (rc1h?.value || 0);
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.cards_ht != null) { actualValue = tot.cards_ht; isValid = true; }
+        } else {
+          const yc1h = match.stats_1h?.find(s => s.type === 'Yellow Cards');
+          const rc1h = match.stats_1h?.find(s => s.type === 'Red Cards');
+          if (yc1h || rc1h) { actualValue = (parseInt(yc1h?.value) || 0) + (parseInt(rc1h?.value) || 0); isValid = true; }
+        }
       } else {
-        if (candidate.teamTarget === 'TOTAL') actualValue = matchTotals[match.fixture_id]?.cards || 0;
-        else {
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.cards != null) { actualValue = tot.cards; isValid = true; }
+        } else {
           const yellow = match.stats_ft?.find(s => s.type === 'Yellow Cards');
           const red    = match.stats_ft?.find(s => s.type === 'Red Cards');
-          actualValue = (yellow?.value || 0) + (red?.value || 0);
+          if (yellow || red) { actualValue = (parseInt(yellow?.value) || 0) + (parseInt(red?.value) || 0); isValid = true; }
         }
       }
     } else if (candidate.stat === 'CHUTES_GOL') {
-      if (candidate.teamTarget === 'TOTAL') {
-        const tot = matchTotals[match.fixture_id];
-        if (!tot || tot.shots_on_goal_count < 2) continue;
-        actualValue = tot.shots_on_goal;
+      if (candidate.period === 'HT') {
+        const s = match.stats_1h?.find(s => s.type === 'Shots on Goal');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+      } else if (candidate.period === '2H') {
+        const s = match.stats_2h?.find(s => s.type === 'Shots on Goal');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
       } else {
-        if (match.shots_on_goal == null) continue;
-        actualValue = match.shots_on_goal;
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.shots_on_goal_count >= 2) { actualValue = tot.shots_on_goal; isValid = true; }
+        } else {
+          if (match.shots_on_goal != null) { actualValue = match.shots_on_goal; isValid = true; }
+        }
+      }
+    } else if (candidate.stat === 'CHUTES_TOTAL') {
+      if (candidate.period === 'HT') {
+        const s = match.stats_1h?.find(s => s.type === 'Total Shots');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+      } else if (candidate.period === '2H') {
+        const s = match.stats_2h?.find(s => s.type === 'Total Shots');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+      } else {
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.shots_total != null) { actualValue = tot.shots_total; isValid = true; }
+        } else {
+          if (match.shots_total != null) { 
+            actualValue = match.shots_total; isValid = true; 
+          } else {
+            const s = match.stats_ft?.find(s => s.type === 'Total Shots');
+            if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+          }
+        }
+      }
+    } else if (candidate.stat === 'IMPEDIMENTOS') {
+      if (candidate.period === 'HT') {
+        const s = match.stats_1h?.find(s => s.type === 'Offsides');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+      } else {
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.offsides != null) { actualValue = tot.offsides; isValid = true; }
+        } else {
+          if (match.offsides != null) { 
+            actualValue = match.offsides; isValid = true; 
+          } else {
+            const s = match.stats_ft?.find(s => s.type === 'Offsides');
+            if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+          }
+        }
+      }
+    } else if (candidate.stat === 'DEFESAS') {
+      if (candidate.period === 'HT') {
+        const s = match.stats_1h?.find(s => s.type === 'Goalkeeper Saves');
+        if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+      } else {
+        if (candidate.teamTarget === 'TOTAL') {
+          const tot = matchTotals[match.fixture_id];
+          if (tot && tot.goalkeeper_saves != null) { actualValue = tot.goalkeeper_saves; isValid = true; }
+        } else {
+          if (match.goalkeeper_saves != null) { 
+            actualValue = match.goalkeeper_saves; isValid = true; 
+          } else {
+            const s = match.stats_ft?.find(s => s.type === 'Goalkeeper Saves');
+            if (s) { actualValue = parseInt(s.value) || 0; isValid = true; }
+          }
+        }
       }
     }
 
-    if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
-    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
+    if (isValid) {
+      homeValid++;
+      if (candidate.type === 'OVER' && actualValue > candidate.threshold) homeHits++;
+      if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
+    }
   }
 
   if (candidate.teamTarget !== 'TOTAL') {
-    return homeHistory.length ? (homeHits / homeHistory.length) * 100 : null;
+    return homeValid >= MIN_GAMES_HISTORY ? (homeHits / homeValid) * 100 : null;
   }
 
-  for (const match of awayHistory) {
+  for (const match of (awayHistory || [])) {
     let actualValue = 0;
+    let isValid = false;
 
     if (candidate.stat === 'GOLS') {
-      if (candidate.period === 'FT') actualValue = match.goals_for + match.goals_against;
+      isValid = true;
+      if (candidate.period === 'FT') actualValue = (match.goals_for || 0) + (match.goals_against || 0);
       else if (candidate.period === 'HT') {
-        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = htg?.value || 0;
+        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = parseInt(htg?.value) || 0;
       } else if (candidate.period === '2H') {
-        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = shtg?.value || 0;
+        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = parseInt(shtg?.value) || 0;
       }
     } else if (candidate.stat === 'ESCANTEIOS') {
-      if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.corners_ht || 0;
-      else actualValue = matchTotals[match.fixture_id]?.corners || 0;
+      const tot = matchTotals[match.fixture_id];
+      if (candidate.period === 'HT') { if (tot && tot.corners_ht != null) { actualValue = tot.corners_ht; isValid = true; } }
+      else { if (tot && tot.corners != null) { actualValue = tot.corners; isValid = true; } }
     } else if (candidate.stat === 'CARTÕES') {
-      if (candidate.period === 'HT') actualValue = matchTotals[match.fixture_id]?.cards_ht || 0;
-      else actualValue = matchTotals[match.fixture_id]?.cards || 0;
-    } else if (candidate.stat === 'CHUTES_GOL') {
-      continue; // TOTAL already evaluated in homeHistory loop via matchTotals
+      const tot = matchTotals[match.fixture_id];
+      if (candidate.period === 'HT') { if (tot && tot.cards_ht != null) { actualValue = tot.cards_ht; isValid = true; } }
+      else { if (tot && tot.cards != null) { actualValue = tot.cards; isValid = true; } }
+    } else if (candidate.stat === 'CHUTES_GOL' || candidate.stat === 'CHUTES_TOTAL' || candidate.stat === 'IMPEDIMENTOS' || candidate.stat === 'DEFESAS') {
+      continue; 
     }
 
-    if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
-    if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
+    if (isValid) {
+      awayValid++;
+      if (candidate.type === 'OVER' && actualValue > candidate.threshold) awayHits++;
+      if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
+    }
   }
 
-  return ((homeHits + awayHits) / (homeHistory.length + awayHistory.length)) * 100;
+  const totalValid = homeValid + awayValid;
+  return totalValid >= MIN_GAMES_HISTORY ? ((homeHits + awayHits) / totalValid) * 100 : null;
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks = new Set()) {
@@ -252,6 +345,16 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
   function canAdd(candidate) {
     const key = `${candidate.fixture_id}-${candidate.betId}-${candidate.threshold}-${candidate.type}`;
     if (usedKeys.has(key)) return false;
+
+    // Evita sobreposição (ex: Menos de 3.5 e Menos de 4.5 do mesmo time no mesmo jogo)
+    const hasOverlap = selected.some(s => 
+      s.fixture_id === candidate.fixture_id && 
+      s.stat === candidate.stat && 
+      s.teamTarget === candidate.teamTarget && 
+      s.period === candidate.period
+    );
+    if (hasOverlap) return false;
+
     const matchCount = picksPerMatch[candidate.fixture_id] || 0;
     if (matchCount >= maxPicksPerMatch) return false;
     return true;
@@ -272,7 +375,7 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
     if (available.length === 0) break;
 
-    available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
+    available.sort((a, b) => b.probability - a.probability || a.odd - b.odd);
     const pick = available[0];
 
     doAdd(pick);
@@ -358,7 +461,12 @@ async function generateOdd3() {
   for (const f of candidates) {
     const homeName = f.home_team?.name || 'Casa';
     const awayName = f.away_team?.name || 'Fora';
-    process.stdout.write(`  ${homeName} x ${awayName} ... `);
+
+    // Bloqueio manual do El Clássico e Fixtures do Bilhete 2.0
+    if (f.api_id === 1391161) {
+      console.log(`  ${homeName} x ${awayName} ... Ignorado (Manual: Sem El Clássico)`);
+      continue;
+    }
 
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
@@ -371,11 +479,11 @@ async function generateOdd3() {
       if (homeHistory?.length > 0 || awayHistory?.length > 0) {
          const historyFixtures = [...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id);
          const { data: opponentsData } = await supabase.from('teams_history')
-           .select('fixture_id, corners, shots_on_goal, stats_ft, stats_1h')
+           .select('fixture_id, corners, shots_total, shots_on_goal, offsides, goalkeeper_saves, stats_ft, stats_1h')
            .in('fixture_id', historyFixtures);
 
          for (const row of (opponentsData || [])) {
-           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0 };
+           if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0, shots_total: 0, offsides: 0, goalkeeper_saves: 0 };
            matchTotals[row.fixture_id].corners += (row.corners || 0);
            const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
            matchTotals[row.fixture_id].corners_ht += (ck_ht?.value || 0);
@@ -385,6 +493,10 @@ async function generateOdd3() {
            const r1h = row.stats_1h?.find(s => s.type === 'Red Cards')?.value   || 0;
            matchTotals[row.fixture_id].cards    += (y + r);
            matchTotals[row.fixture_id].cards_ht += (y1h + r1h);
+           matchTotals[row.fixture_id].shots_total = (matchTotals[row.fixture_id].shots_total || 0) + (row.shots_total || 0);
+           matchTotals[row.fixture_id].offsides = (matchTotals[row.fixture_id].offsides || 0) + (row.offsides || 0);
+           matchTotals[row.fixture_id].goalkeeper_saves = (matchTotals[row.fixture_id].goalkeeper_saves || 0) + (row.goalkeeper_saves || 0);
+           
            if (row.shots_on_goal != null) {
              matchTotals[row.fixture_id].shots_on_goal += row.shots_on_goal;
              matchTotals[row.fixture_id].shots_on_goal_count++;

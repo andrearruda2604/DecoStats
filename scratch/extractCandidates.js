@@ -201,7 +201,8 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
 }
 
 async function run() {
-  const today = '2026-05-05';
+  const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const today = process.argv[2] || brt.toISOString().split('T')[0];
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
@@ -268,7 +269,7 @@ async function run() {
     md += `| ${c.match} | ${c.amostragem} | **${c.team} ${c.line}** | ${c.market} | ${c.probability}% | ${c.odd} |\n`;
   }
 
-  fs.writeFileSync('C:\\Users\\camil\\.gemini\\antigravity\\brain\\d9b4fdf9-1c16-472d-9b98-9845789da49c\\extrato_apostas.md', md);
+  fs.writeFileSync('scratch/extrato_apostas.md', md);
   console.log('Extrato gerado');
 }
 

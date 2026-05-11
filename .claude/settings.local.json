@@ -17,7 +17,16 @@
       "Bash(node -e ' *)",
       "Bash(npx tsc *)",
       "WebFetch(domain:www.api-football.com)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(node scripts/syncMissingStats.js)",
+      "Bash(node scripts/generateOdd2.js 2026-05-08 --preview)",
+      "Bash(node scripts/generateOdd3.js 2026-05-08 --preview)",
+      "Bash(node scripts/generateOdd3.js 2026-05-08)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node scripts/generateOdd3.js 2026-05-08 --force)",
+      "Bash(git push *)",
+      "Bash(node scripts/generateOdd2.js 2026-05-09 --preview)"
     ]
   }
 }
