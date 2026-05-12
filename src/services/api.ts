@@ -269,13 +269,12 @@ export async function fetchPredictiveData(
       const { data } = await q.order('match_date', { ascending: false }).limit(count);
       if ((data?.length ?? 0) >= effectiveMin) return data!;
 
-      // When mandoOnly is active we must NOT fall back to cross-league data:
-      // mixing Série B + Copa do Brasil home games would corrupt the distribution.
-      // Return exactly what this league has, even if fewer than count.
-      if (options.mandoOnly) return data || [];
+      // Never mix competitions when a specific league or mando is selected —
+      // doing so contaminates the distribution with Copa, Estadual, etc.
+      if (options.mandoOnly || options.leagueId) return data || [];
 
-      // Without mando filter: expand to all leagues so teams with little
-      // league-specific history still get meaningful trend data.
+      // No league filter: expand across all leagues so teams with sparse
+      // league-specific history still get a meaningful trend.
       let fb = supabase.from('teams_history').select('*').eq('team_id', teamId);
       if (options.seasonOnly && options.season) fb = fb.eq('season', options.season);
       if (options.matchDate) fb = fb.lt('match_date', options.matchDate);
