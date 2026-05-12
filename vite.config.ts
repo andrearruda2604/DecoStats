@@ -11,17 +11,20 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo-192x192.png', 'logo-512x512.png'],
+      includeAssets: ['favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png', 'apple-touch-icon.png', 'logo-192x192.png', 'logo-512x512.png', 'maskable-512x512.png'],
       manifest: {
+        id: '/',
         name: 'DecoStats',
         short_name: 'DecoStats',
-        description: 'Sports Analytics & Data',
-        theme_color: '#000000',
-        background_color: '#000000',
+        description: 'Sports Analytics & Data — Estatísticas ao vivo, bilhetes automatizados e relatórios técnicos com IA.',
+        lang: 'pt-BR',
+        theme_color: '#00E5FF',
+        background_color: '#0A0A0F',
         display: 'standalone',
         scope: '/',
         start_url: '/',
         orientation: 'portrait',
+        categories: ['sports', 'entertainment', 'utilities'],
         icons: [
           {
             src: '/logo-192x192.png',
@@ -34,12 +37,46 @@ export default defineConfig({
             type: 'image/png'
           },
           {
-            src: '/logo-512x512.png',
+            src: '/maskable-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'maskable'
           }
-        ]
+        ],
+        screenshots: [
+          {
+            src: '/screenshot-wide.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'DecoStats Dashboard'
+          },
+          {
+            src: '/screenshot-narrow.png',
+            sizes: '390x844',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'DecoStats Mobile'
+          }
+        ],
+        shortcuts: [
+          {
+            name: 'Jogos Ao Vivo',
+            short_name: 'Ao Vivo',
+            url: '/lobby',
+            icons: [{ src: '/logo-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Bilhetes',
+            short_name: 'Bilhetes',
+            url: '/bilhetes',
+            icons: [{ src: '/logo-192x192.png', sizes: '192x192' }]
+          }
+        ],
+        launch_handler: {
+          client_mode: 'navigate-existing'
+        },
+        prefer_related_applications: false
       }
     })
   ],
