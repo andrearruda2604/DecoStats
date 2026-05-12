@@ -29,7 +29,12 @@
       "Bash(node scripts/generateOdd2.js 2026-05-09 --preview)",
       "Bash(node scripts/generateOdd3.js 2026-05-09 --preview)",
       "Bash(node scripts/generateOdd2.js 2026-05-13 --preview)",
-      "Bash(node scripts/generateOdd3.js 2026-05-13 --preview)"
+      "Bash(node scripts/generateOdd3.js 2026-05-13 --preview)",
+      "Bash(node /tmp/gen2_patched.mjs 2026-05-13 --preview)",
+      "Bash(node scripts/_gen2_temp.js 2026-05-13 --preview)",
+      "Bash(rm -f scripts/_gen2_temp.js)",
+      "Bash(node scripts/_gen3_temp.js 2026-05-13 --preview)",
+      "Bash(rm -f scripts/_gen3_temp.js)"
     ]
   }
 }
