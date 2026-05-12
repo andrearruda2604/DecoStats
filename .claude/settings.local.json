@@ -26,7 +26,10 @@
       "Bash(git commit -m ' *)",
       "Bash(node scripts/generateOdd3.js 2026-05-08 --force)",
       "Bash(git push *)",
-      "Bash(node scripts/generateOdd2.js 2026-05-09 --preview)"
+      "Bash(node scripts/generateOdd2.js 2026-05-09 --preview)",
+      "Bash(node scripts/generateOdd3.js 2026-05-09 --preview)",
+      "Bash(node scripts/generateOdd2.js 2026-05-13 --preview)",
+      "Bash(node scripts/generateOdd3.js 2026-05-13 --preview)"
     ]
   }
 }

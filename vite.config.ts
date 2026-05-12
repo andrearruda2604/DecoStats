@@ -18,7 +18,7 @@ export default defineConfig({
         short_name: 'DecoStats',
         description: 'Sports Analytics & Data — Estatísticas ao vivo, bilhetes automatizados e relatórios técnicos com IA.',
         lang: 'pt-BR',
-        theme_color: '#00E5FF',
+        theme_color: '#000000',
         background_color: '#0A0A0F',
         display: 'standalone',
         scope: '/',
