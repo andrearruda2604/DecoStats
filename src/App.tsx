@@ -146,7 +146,7 @@ function AuthenticatedApp() {
       fetchPredictiveData(matchDetail.homeTeam.api_id, matchDetail.awayTeam.api_id, statsCount, {
         seasonOnly: seasonOnly,
         mandoOnly: mandoGame,
-        leagueId: ligaFilter === 'game' ? matchDetail.league?.api_id : undefined,
+        leagueId: ligaFilter === 'game' ? matchDetail.fixture?.league_id : undefined,
         season: matchDetail.league?.season || matchDetail.fixture?.season,
         matchDate: matchDetail.fixture?.date,
       })
