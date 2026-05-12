@@ -49,7 +49,13 @@ const MARKETS = {
   82: { label: 'Cartões FT (Casa)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'HOME'  },
   83: { label: 'Cartões FT (Fora)',      stat: 'CARTÕES',    period: 'FT', teamTarget: 'AWAY'  },
   87: { label: 'Chutes ao Gol (Total)',  stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'TOTAL' },
+  88: { label: 'Chutes ao Gol (Casa)',   stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'HOME'  },
+  89: { label: 'Chutes ao Gol (Fora)',   stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'AWAY'  },
   211:{ label: 'Chutes Totais',         stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'TOTAL' },
+  220:{ label: 'Chutes Totais (Fora)',  stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'AWAY'  },
+  221:{ label: 'Chutes Totais (Casa)',  stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'HOME'  },
+  132:{ label: 'Escanteios 1T (Casa)',  stat: 'ESCANTEIOS', period: 'HT', teamTarget: 'HOME'  },
+  134:{ label: 'Escanteios 1T (Fora)',  stat: 'ESCANTEIOS', period: 'HT', teamTarget: 'AWAY'  },
   164:{ label: 'Impedimentos (Total)',  stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'TOTAL' },
   167:{ label: 'Impedimentos (Casa)',   stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'HOME'  },
   168:{ label: 'Impedimentos (Fora)',   stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'AWAY'  },
@@ -79,7 +85,7 @@ async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
  * Avalia a frequência histórica com base na equipe alvo. 
  * Comportamento clássico restaurado: usa apenas o histórico da equipe em questão para manter as altas %.
  */
-function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals) {
+function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals, htScores = {}) {
   if (!homeHistory) return null;
   
   let homeHits = 0;
@@ -92,17 +98,31 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
     let isValid = false;
     
     if (candidate.stat === 'GOLS') {
-      isValid = true;
       if (candidate.period === 'FT') {
+        isValid = true;
         if (candidate.teamTarget === 'TOTAL') actualValue = (match.goals_for || 0) + (match.goals_against || 0);
         else if (candidate.teamTarget === 'HOME') actualValue = match.is_home ? (match.goals_for || 0) : (match.goals_against || 0); 
         else if (candidate.teamTarget === 'AWAY') actualValue = match.is_home ? (match.goals_against || 0) : (match.goals_for || 0); 
-      } else if (candidate.period === 'HT') {
-        const htg = match.stats_1h?.find(s => s.type === 'goals');
-        actualValue = htg ? parseInt(htg.value) || 0 : 0;
-      } else if (candidate.period === '2H') {
-        const shtg = match.stats_2h?.find(s => s.type === 'goals');
-        actualValue = shtg ? parseInt(shtg.value) || 0 : 0;
+      } else if (candidate.period === 'HT' || candidate.period === '2H') {
+        const ht = htScores[match.fixture_id];
+        if (ht) {
+          isValid = true;
+          const htHome = ht.ht_home ?? 0, htAway = ht.ht_away ?? 0;
+          const ftHome = match.goals_for || 0, ftAway = match.goals_against || 0;
+          const teamHT = match.is_home ? htHome : htAway;
+          const oppHT  = match.is_home ? htAway : htHome;
+          if (candidate.period === 'HT') {
+            if (candidate.teamTarget === 'TOTAL') actualValue = htHome + htAway;
+            else if (candidate.teamTarget === 'HOME') actualValue = teamHT;
+            else actualValue = oppHT;
+          } else {
+            const team2H = ftHome - teamHT;
+            const opp2H  = ftAway - oppHT;
+            if (candidate.teamTarget === 'TOTAL') actualValue = team2H + opp2H;
+            else if (candidate.teamTarget === 'HOME') actualValue = team2H;
+            else actualValue = opp2H;
+          }
+        }
       }
     } else if (candidate.stat === 'ESCANTEIOS') {
       if (candidate.period === 'HT') {
@@ -228,12 +248,23 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
     let isValid = false;
 
     if (candidate.stat === 'GOLS') {
-      isValid = true;
-      if (candidate.period === 'FT') actualValue = (match.goals_for || 0) + (match.goals_against || 0);
-      else if (candidate.period === 'HT') {
-        const htg = match.stats_1h?.find(s => s.type === 'goals'); actualValue = parseInt(htg?.value) || 0;
-      } else if (candidate.period === '2H') {
-        const shtg = match.stats_2h?.find(s => s.type === 'goals'); actualValue = parseInt(shtg?.value) || 0;
+      if (candidate.period === 'FT') {
+        isValid = true;
+        actualValue = (match.goals_for || 0) + (match.goals_against || 0);
+      } else if (candidate.period === 'HT' || candidate.period === '2H') {
+        const ht = htScores[match.fixture_id];
+        if (ht) {
+          isValid = true;
+          const htHome = ht.ht_home ?? 0, htAway = ht.ht_away ?? 0;
+          const ftHome = match.goals_for || 0, ftAway = match.goals_against || 0;
+          const teamHT = match.is_home ? htHome : htAway;
+          const oppHT  = match.is_home ? htAway : htHome;
+          if (candidate.period === 'HT') {
+            actualValue = htHome + htAway;
+          } else {
+            actualValue = (ftHome - teamHT) + (ftAway - oppHT);
+          }
+        }
       }
     } else if (candidate.stat === 'ESCANTEIOS') {
       const tot = matchTotals[match.fixture_id];
@@ -258,7 +289,7 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   return totalValid >= MIN_GAMES_HISTORY ? ((homeHits + awayHits) / totalValid) * 100 : null;
 }
 
-function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks = new Set()) {
+function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks = new Set(), htScores = {}) {
   if (!oddsResp || oddsResp.length === 0) return [];
   const bet365 = (oddsResp || [])
     .flatMap(r => r.bookmakers || [])
@@ -304,11 +335,11 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHi
 
         let prob = null;
         if (market.teamTarget === 'TOTAL') {
-          prob = evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals);
+          prob = evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals, htScores);
         } else if (market.teamTarget === 'HOME') {
-          prob = evaluateHistoricalFrequency(candidate, homeHistory, null, matchTotals);
+          prob = evaluateHistoricalFrequency(candidate, homeHistory, null, matchTotals, htScores);
         } else if (market.teamTarget === 'AWAY') {
-          prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals);
+          prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals, htScores);
         }
 
         if (prob !== null && prob >= MIN_HISTORICAL_PROB) {
@@ -504,9 +535,24 @@ async function generateOdd3() {
          }
       }
 
+       // Fetch HT scores from fixtures table for reliable HT/2H goal evaluation
+       const htScores = {};
+       if (homeHistory?.length > 0 || awayHistory?.length > 0) {
+         const historyFixtureIds = [...new Set([...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id))];
+         const { data: fixtureRows } = await supabase
+           .from('fixtures')
+           .select('api_id, ht_home_score, ht_away_score')
+           .in('api_id', historyFixtureIds);
+         for (const fr of (fixtureRows || [])) {
+           if (fr.ht_home_score != null) {
+             htScores[fr.api_id] = { ht_home: fr.ht_home_score, ht_away: fr.ht_away_score };
+           }
+         }
+       }
+
       const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`);
       
-      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks);
+      const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks, htScores);
       
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
          console.log(`Ignorado (Amostragem: Casa ${homeHistory?.length || 0}, Fora ${awayHistory?.length || 0} jogos)`);

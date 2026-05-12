@@ -582,8 +582,8 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                       ticket.status === 'WON' ? 'text-emerald-400' :
                       ticket.status === 'LOST' ? 'text-rose-400' : 'text-on-surface-variant'
                     }`}>
-                      {ticket.status === 'WON' ? 'Matemática Superada' :
-                       ticket.status === 'LOST' ? 'Matemática Falhou' :
+                      {ticket.status === 'WON' ? 'Deu Green!!' :
+                       ticket.status === 'LOST' ? 'Redou' :
                        `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
                     </span>
                   </div>

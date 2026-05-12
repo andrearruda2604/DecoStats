@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { createClient } from '@supabase/supabase-js';
 
 let env = process.env;
 try {
@@ -14,29 +13,23 @@ try {
   });
 } catch (e) {}
 
-async function discover() {
-  const headers = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
-  // Find a fixture ID for tomorrow
-  const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-  const { data: fixtures } = await supabase.from('fixtures').select('api_id').gte('date', '2026-05-09').limit(5);
-  
-  if (!fixtures || fixtures.length === 0) {
-    console.log("No fixtures found for tomorrow");
-    return;
-  }
+const API_KEY = env.VITE_API_FOOTBALL_KEY;
+const headers = { 'x-apisports-key': API_KEY };
 
-  for (const f of fixtures) {
-    console.log(`\nChecking markets for fixture ${f.api_id}...`);
-    const r = await fetch(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=8`, { headers });
-    const d = await r.json();
-    const bets = d.response?.[0]?.bookmakers?.[0]?.bets;
-    if (bets) {
-      bets.forEach(b => {
-        console.log(`ID: ${b.id} | Name: ${b.name}`);
-      });
-      break;
-    }
-  }
+async function main() {
+  // The half parameter may duplicate the response entries instead of adding a property
+  // Let me check the FULL raw response with half=true
+  const fid = 1379327; // Tottenham x Leeds
+  
+  const r = await fetch(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${fid}&half=true`, { headers });
+  const d = await r.json();
+  
+  console.log('Full response:');
+  console.log(JSON.stringify(d.response, null, 2).substring(0, 3000));
+  
+  console.log('\n\n--- Pages/paging ---');
+  console.log('results:', d.results);
+  console.log('paging:', JSON.stringify(d.paging));
 }
 
-discover().catch(console.error);
+main().catch(console.error);
