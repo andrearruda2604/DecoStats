@@ -164,10 +164,9 @@ function BalanceChart({ data }: { data: { date: string; balance: number }[] }) {
 }
 
 function confidenceLabel(pct: number): { text: string; cls: string } {
-  if (pct >= 100) return { text: 'Altíssima', cls: 'text-emerald-400' };
-  if (pct >= 90)  return { text: 'Alta',      cls: 'text-emerald-400/80' };
-  if (pct >= 80)  return { text: 'Média',     cls: 'text-amber-400' };
-  return                  { text: 'Baixa',    cls: 'text-rose-400' };
+  if (pct >= 90) return { text: 'Alta',  cls: 'text-emerald-400' };
+  if (pct >= 80) return { text: 'Média', cls: 'text-amber-400' };
+  return                 { text: 'Baixa', cls: 'text-rose-400' };
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
