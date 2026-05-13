@@ -240,7 +240,8 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   if (candidate.teamTarget !== 'TOTAL') {
-    return homeValid >= MIN_GAMES_HISTORY ? (homeHits / homeValid) * 100 : null;
+    if (homeValid < MIN_GAMES_HISTORY) return null;
+    return { pct: (homeHits / homeValid) * 100, hits: homeHits, total: homeValid };
   }
 
   for (const match of (awayHistory || [])) {
@@ -286,7 +287,8 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   const totalValid = homeValid + awayValid;
-  return totalValid >= MIN_GAMES_HISTORY ? ((homeHits + awayHits) / totalValid) * 100 : null;
+  if (totalValid < MIN_GAMES_HISTORY) return null;
+  return { pct: ((homeHits + awayHits) / totalValid) * 100, hits: homeHits + awayHits, total: totalValid };
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks = new Set(), htScores = {}) {
@@ -342,9 +344,11 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHi
           prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals, htScores);
         }
 
-        if (prob !== null && prob >= MIN_HISTORICAL_PROB) {
-          candidate.probability = Math.round(prob); 
-          
+        if (prob !== null && prob.pct >= MIN_HISTORICAL_PROB) {
+          candidate.probability = Math.round(prob.pct);
+          candidate.histHits  = prob.hits;
+          candidate.histTotal = prob.total;
+
           // Verificar se esta entrada já está no bilhete 2.0
           const forbiddenKey = `${candidate.fixture_id}|${candidate.stat}|${candidate.period}|${candidate.line}`.toUpperCase();
           if (forbiddenPicks.has(forbiddenKey)) {
@@ -624,6 +628,8 @@ async function generateOdd3() {
       line: pick.line,
       odd: pick.odd,
       probability: pick.probability,
+      histHits:    pick.histHits,
+      histTotal:   pick.histTotal,
       market: pick.market,
     });
   }

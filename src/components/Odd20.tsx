@@ -169,6 +169,30 @@ function confidenceLabel(pct: number): { text: string; cls: string } {
   return                 { text: 'Baixa', cls: 'text-rose-400' };
 }
 
+// Signal-strength bars — 4 bars, taller each, filled based on probability
+function SignalBars({ pct, size = 'md' }: { pct: number; size?: 'sm' | 'md' }) {
+  const lit = pct >= 95 ? 4 : pct >= 87 ? 3 : pct >= 80 ? 2 : 1;
+  const color = pct >= 90 ? '#34d399' : pct >= 80 ? '#fbbf24' : '#f87171';
+  const dim   = 'rgba(255,255,255,0.12)';
+  const w = size === 'sm' ? 3 : 4;
+  const heights = size === 'sm' ? [4, 6, 8, 10] : [5, 8, 11, 14];
+  return (
+    <svg width={w * 4 + 3 * 2} height={heights[3] + 1} viewBox={`0 0 ${w * 4 + 3 * 2} ${heights[3] + 1}`} style={{ display: 'block' }}>
+      {[0, 1, 2, 3].map(i => (
+        <rect
+          key={i}
+          x={i * (w + 2)}
+          y={heights[3] - heights[i]}
+          width={w}
+          height={heights[i]}
+          rx={1}
+          fill={i < lit ? color : dim}
+        />
+      ))}
+    </svg>
+  );
+}
+
 // ─── component ───────────────────────────────────────────────────────────────
 
 interface TicketModeProps {
@@ -596,10 +620,12 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     }`}>
                       {ticket.status === 'WON' ? 'Deu Green!!' :
                        ticket.status === 'LOST' ? 'Redou' :
-                       (() => {
-                         const { text, cls } = confidenceLabel(ticket.ticket_data.confidence_score ?? 0);
-                         return <span className={cls}>Confiança {text}</span>;
-                       })()}
+                       (<span className="flex items-center gap-1.5">
+                         <SignalBars pct={ticket.ticket_data.confidence_score ?? 0} size="sm" />
+                         <span className={confidenceLabel(ticket.ticket_data.confidence_score ?? 0).cls}>
+                           Confiança {confidenceLabel(ticket.ticket_data.confidence_score ?? 0).text}
+                         </span>
+                       </span>)}
                     </span>
                   </div>
 
@@ -744,10 +770,16 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                         {result === 'WON' ? '✓ GREEN' : '✗ RED'}
                                       </span>
                                     )}
-                                    {pick.probability != null && (() => {
-                                      const { text, cls } = confidenceLabel(pick.probability);
-                                      return <span className={`text-[9px] font-black ${cls}`}>{text}</span>;
-                                    })()}
+                                    {pick.probability != null && (
+                                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <SignalBars pct={pick.probability} size="sm" />
+                                        <span className="text-[8px] text-on-surface-variant/50 tabular-nums">
+                                          {pick.histHits != null && pick.histTotal != null
+                                            ? `${pick.histHits}/${pick.histTotal} jogos`
+                                            : `${pick.probability}%`}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex justify-between items-end">

@@ -244,7 +244,8 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   if (candidate.teamTarget !== 'TOTAL') {
-    return homeValid >= MIN_GAMES_HISTORY ? (homeHits / homeValid) * 100 : null;
+    if (homeValid < MIN_GAMES_HISTORY) return null;
+    return { pct: (homeHits / homeValid) * 100, hits: homeHits, total: homeValid };
   }
 
   for (const match of (awayHistory || [])) {
@@ -290,7 +291,8 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   }
 
   const totalValid = homeValid + awayValid;
-  return totalValid >= MIN_GAMES_HISTORY ? ((homeHits + awayHits) / totalValid) * 100 : null;
+  if (totalValid < MIN_GAMES_HISTORY) return null;
+  return { pct: ((homeHits + awayHits) / totalValid) * 100, hits: homeHits + awayHits, total: totalValid };
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory, matchTotals, htScores = {}) {
@@ -345,8 +347,10 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
           prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals, htScores);
         }
 
-        if (prob !== null && prob >= MIN_HISTORICAL_PROB) {
-          candidate.probability = Math.round(prob); 
+        if (prob !== null && prob.pct >= MIN_HISTORICAL_PROB) {
+          candidate.probability = Math.round(prob.pct);
+          candidate.histHits  = prob.hits;
+          candidate.histTotal = prob.total;
           candidates.push(candidate);
         }
       }
@@ -595,6 +599,8 @@ async function generateOdd2() {
       line: pick.line,
       odd: pick.odd,
       probability: pick.probability,
+      histHits:    pick.histHits,
+      histTotal:   pick.histTotal,
       market: pick.market,
     });
   }
