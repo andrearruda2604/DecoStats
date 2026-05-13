@@ -14,6 +14,7 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import LoginPage from './components/LoginPage';
 import TestView from './components/TestView';
+import PrivacyPage from './components/PrivacyPage';
 import TeamFormTab from './components/TeamFormTab';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
@@ -25,6 +26,11 @@ import { fetchPredictiveData } from './services/api';
 const VERSION = '1.0.2-live-engine';
 
 export default function App() {
+  // Public route — no auth required
+  if (window.location.pathname === '/privacidade') {
+    return <PrivacyPage />;
+  }
+
   const { user, loading: authLoading } = useAuth();
 
   // Show loading spinner while checking auth
