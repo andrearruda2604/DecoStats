@@ -306,7 +306,7 @@ function AuthenticatedApp() {
                             onClick={() => setToggle(mode)}
                             className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${toggle === mode ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
                           >
-                            {mode === 'FT' ? 'TOTAL' : mode}
+                            {mode === 'HT' ? '1° Tempo' : mode === 'FT' ? 'JOGO' : mode === '2H' ? '2° Tempo' : mode}
                           </button>
                         ))}
                       </div>

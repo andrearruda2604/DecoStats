@@ -216,6 +216,7 @@ const PREDICTIVE_CONF = [
   { apiType: 'Goalkeeper Saves', label: 'DEFESAS DO GOLEIRO', subLabel: 'RESISTÊNCIA A CHUTES NO ALVO', flatKey: 'goalkeeper_saves' },
   { apiType: 'Yellow Cards', label: 'CARTÃO AMARELO', subLabel: 'ÍNDICE DE VOLATILIDADE DISCIPLINAR', flatKey: 'yellow_cards' },
   { apiType: 'Red Cards', label: 'CARTÃO VERMELHO', subLabel: 'OCORRÊNCIA DE FALTAS CRÍTICAS', flatKey: 'red_cards' },
+  { apiType: 'total_cards', label: 'CARTÕES TOTAIS', subLabel: 'SOMA DE AMARELOS E VERMELHOS', flatKey: 'total_cards', highlight: 'amber' as const },
   { apiType: 'goals', label: 'GOLS MARCADOS', subLabel: 'RENDIMENTO OFENSIVO PRIMÁRIO', flatKey: 'goals_for', highlight: 'green' as const },
   { apiType: 'goals_against', label: 'GOLS SOFRIDOS', subLabel: 'NÍVEL DE RESISTÊNCIA DEFENSIVA', flatKey: 'goals_against' },
 ];
@@ -308,8 +309,19 @@ export async function fetchPredictiveData(
             if (cfg.apiType === 'goals') return row.goals_for || 0;
             if (cfg.apiType === 'goals_against') return row.goals_against || 0;
 
-            const jsonbArr = row[jsonbCol];
-            if (jsonbArr && jsonbArr.length > 0) {
+            const jsonbArr = row[jsonbCol] || [];
+            
+            if (cfg.apiType === 'total_cards') {
+              const y = extractStatFromJsonb(jsonbArr, 'Yellow Cards');
+              const r = extractStatFromJsonb(jsonbArr, 'Red Cards');
+              if (y > 0 || r > 0) return y + r;
+              
+              // Fallback to flat columns
+              if (period === 'FT') return (row['yellow_cards'] || 0) + (row['red_cards'] || 0);
+              return 0;
+            }
+
+            if (jsonbArr.length > 0) {
               return extractStatFromJsonb(jsonbArr, cfg.apiType);
             }
             // Fallback to flat columns for FT if JSONB not populated yet

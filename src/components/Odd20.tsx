@@ -706,7 +706,9 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                     : 'bg-black/30 border-white/5 group-hover:border-primary/20'
                               }`}>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">{pick.period}</span>
+                                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">
+                                    {pick.period === 'HT' ? '1° Tempo' : pick.period === 'FT' ? 'JOGO' : pick.period}
+                                  </span>
                                   <div className="flex items-center gap-2">
                                     {result && (
                                       <span className={`text-[9px] font-black ${result === 'WON' ? 'text-emerald-400' : 'text-rose-400'}`}>
