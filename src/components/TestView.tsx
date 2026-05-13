@@ -175,7 +175,9 @@ function MatchRow({ m }: { m: MatchRow }) {
 
       {/* League */}
       {m.league?.logo_url
-        ? <img src={m.league.logo_url} className="w-4 h-4 object-contain shrink-0 opacity-70" title={m.league.name} />
+        ? <div className="w-4 h-4 bg-white/90 rounded-sm p-px shrink-0 flex items-center justify-center" title={m.league.name}>
+            <img src={m.league.logo_url} className="w-full h-full object-contain" />
+          </div>
         : <div className="w-4 shrink-0" />
       }
 

@@ -676,7 +676,11 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                               if (!lg) return null;
                               return (
                                 <span className="flex items-center gap-1 px-2 py-1 bg-black/40 rounded-md">
-                                  {lg.logo_url && <img src={lg.logo_url} className="w-3 h-3 object-contain opacity-70" />}
+                                  {lg.logo_url && (
+                                    <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px flex-shrink-0 flex items-center justify-center">
+                                      <img src={lg.logo_url} className="w-full h-full object-contain" />
+                                    </div>
+                                  )}
                                   <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase tracking-tight">{lg.name}</span>
                                 </span>
                               );

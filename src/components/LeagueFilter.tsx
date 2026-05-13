@@ -300,12 +300,14 @@ export default function LeagueFilter({
                         >
                           <div className={`w-0.5 h-4 rounded-full flex-shrink-0 ${isSelected ? 'bg-primary' : 'bg-transparent'}`} />
 
-                          <img
-                            src={league.logo_url}
-                            alt=""
-                            className="w-5 h-5 object-contain flex-shrink-0"
-                            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
-                          />
+                          <div className="w-5 h-5 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
+                            <img
+                              src={league.logo_url}
+                              alt=""
+                              className="w-full h-full object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.opacity = '0.3'; }}
+                            />
+                          </div>
 
                           <span className={`flex-1 text-[11px] truncate ${isSelected ? 'font-bold' : 'font-medium'}`}>
                             {league.name}

@@ -167,7 +167,9 @@ function HistoryRow({ m }: { m: MatchRow }) {
 
       {/* League logo */}
       {m.league?.logo_url
-        ? <img src={m.league.logo_url} className="w-3.5 h-3.5 object-contain shrink-0 opacity-60" title={m.league.name} />
+        ? <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px shrink-0 flex items-center justify-center" title={m.league.name}>
+            <img src={m.league.logo_url} className="w-full h-full object-contain" />
+          </div>
         : <div className="w-3.5 shrink-0" />
       }
 

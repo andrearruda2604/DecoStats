@@ -137,7 +137,9 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           {/* League header — only when viewing multiple leagues */}
           {multipleLeagues && (
             <div className="flex items-center gap-2 px-1">
-              <img src={logoUrl} alt="" className="w-4 h-4 object-contain opacity-80" />
+              <div className="w-4 h-4 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
+                <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+              </div>
               <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/75">
                 {leagueName}
               </span>
@@ -188,7 +190,9 @@ function MatchCard({ match, onSelectMatch, showLeagueLabel }: { match: MatchCard
       <div className="flex items-center justify-between mb-3 min-h-[16px]">
         {showLeagueLabel ? (
           <div className="flex items-center gap-1.5 overflow-hidden">
-            <img src={match.league.logoUrl} alt="" className="w-3 h-3 object-contain opacity-40 flex-shrink-0" />
+            <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px flex-shrink-0 flex items-center justify-center">
+              <img src={match.league.logoUrl} alt="" className="w-full h-full object-contain" />
+            </div>
             <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/30 truncate">
               {match.league.name}
             </span>
