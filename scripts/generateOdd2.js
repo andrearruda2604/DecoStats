@@ -447,7 +447,7 @@ async function generateOdd2() {
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   let query = supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
   
@@ -539,6 +539,8 @@ async function generateOdd2() {
         homeLogo: f.home_team?.logo_url || '',
         awayLogo: f.away_team?.logo_url || '',
         date_time: f.date,
+        leagueName: f.league?.name || '',
+        leagueLogo: f.league?.logo_url || '',
       })));
       await delay(800);
     } catch (e) {
@@ -576,6 +578,8 @@ async function generateOdd2() {
         homeLogo: pick.homeLogo,
         awayLogo: pick.awayLogo,
         date_time: pick.date_time,
+        league_name: pick.leagueName,
+        league_logo_url: pick.leagueLogo,
         picks: [],
       };
     }

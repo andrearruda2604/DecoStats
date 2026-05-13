@@ -163,6 +163,13 @@ function BalanceChart({ data }: { data: { date: string; balance: number }[] }) {
   );
 }
 
+function confidenceLabel(pct: number): { text: string; cls: string } {
+  if (pct >= 100) return { text: 'Altíssima', cls: 'text-emerald-400' };
+  if (pct >= 90)  return { text: 'Alta',      cls: 'text-emerald-400/80' };
+  if (pct >= 80)  return { text: 'Média',     cls: 'text-amber-400' };
+  return                  { text: 'Baixa',    cls: 'text-rose-400' };
+}
+
 // ─── component ───────────────────────────────────────────────────────────────
 
 interface TicketModeProps {
@@ -201,6 +208,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
   const [entryHomeHistory, setEntryHomeHistory] = useState<any[]>([]);
   const [entryAwayHistory, setEntryAwayHistory] = useState<any[]>([]);
   const [entryHistLoading, setEntryHistLoading] = useState(false);
+  const [leagueMap, setLeagueMap] = useState<Record<number, { name: string; logo_url: string }>>({});
 
   // Persist state
   useEffect(() => {
@@ -244,11 +252,16 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
       const { data: fixtures } = await supabase
         .from('fixtures')
-        .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
+        .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status, league:leagues!fixtures_league_id_fkey(name,logo_url)')
         .in('api_id', ids);
       const scoreMap: Record<number, any> = {};
-      fixtures?.forEach(f => { scoreMap[f.api_id] = f; });
+      const lgMap: Record<number, { name: string; logo_url: string }> = {};
+      fixtures?.forEach(f => {
+        scoreMap[f.api_id] = f;
+        if (f.league) lgMap[f.api_id] = f.league as any;
+      });
       setLiveScores(scoreMap);
+      setLeagueMap(lgMap);
 
       const { data: histData } = await supabase
         .from('teams_history')
@@ -584,7 +597,10 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     }`}>
                       {ticket.status === 'WON' ? 'Deu Green!!' :
                        ticket.status === 'LOST' ? 'Redou' :
-                       `Confiança IA: ${ticket.ticket_data.confidence_score}%`}
+                       (() => {
+                         const { text, cls } = confidenceLabel(ticket.ticket_data.confidence_score ?? 0);
+                         return <span className={cls}>Confiança {text}</span>;
+                       })()}
                     </span>
                   </div>
 
@@ -650,12 +666,22 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                         }`} />
 
                         <div className="flex justify-between items-center mb-6">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[9px] font-black text-on-surface-variant bg-black/40 px-2.5 py-1 rounded-md uppercase tracking-tighter">
                               {new Date(match.date_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                               {' - '}
                               {new Date(match.date_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
+                            {(() => {
+                              const lg = leagueMap[match.fixture_id] || (match.league_name ? { name: match.league_name, logo_url: match.league_logo_url } : null);
+                              if (!lg) return null;
+                              return (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-black/40 rounded-md">
+                                  {lg.logo_url && <img src={lg.logo_url} className="w-3 h-3 object-contain opacity-70" />}
+                                  <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase tracking-tight">{lg.name}</span>
+                                </span>
+                              );
+                            })()}
                             {isLive && (
                               <span className="flex items-center gap-1.5 px-2 py-1 bg-rose-500/10 rounded-md">
                                 <span className="w-1 h-1 bg-rose-500 rounded-full animate-pulse" />
@@ -715,7 +741,10 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                         {result === 'WON' ? '✓ GREEN' : '✗ RED'}
                                       </span>
                                     )}
-                                    <span className="text-[10px] font-black text-amber-500 tabular-nums">{pick.probability}%</span>
+                                    {pick.probability != null && (() => {
+                                      const { text, cls } = confidenceLabel(pick.probability);
+                                      return <span className={`text-[9px] font-black ${cls}`}>{text}</span>;
+                                    })()}
                                   </div>
                                 </div>
                                 <div className="flex justify-between items-end">
