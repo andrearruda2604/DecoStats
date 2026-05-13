@@ -69,9 +69,17 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[8px] uppercase tracking-[0.4em] text-on-surface-variant/15 font-bold mt-10">
-          DecoStats © 2026 • Football Intelligence
-        </p>
+        <div className="flex flex-col items-center gap-2 mt-10">
+          <p className="text-center text-[8px] uppercase tracking-[0.4em] text-on-surface-variant/15 font-bold">
+            DecoStats © 2026 • Football Intelligence
+          </p>
+          <a
+            href="/privacidade"
+            className="text-[9px] text-on-surface-variant/30 hover:text-on-surface-variant/60 transition-colors underline underline-offset-2"
+          >
+            Política de Privacidade
+          </a>
+        </div>
       </motion.div>
     </div>
   );

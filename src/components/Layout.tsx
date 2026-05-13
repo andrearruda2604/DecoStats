@@ -144,10 +144,16 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-outline-variant/10 py-6 px-4 text-center">
+      <footer className="border-t border-outline-variant/10 py-6 px-4 text-center space-y-2">
         <p className="text-[8px] uppercase font-bold tracking-[0.5em] text-on-surface-variant/15">
           DecoStats © 2026 • Football Intelligence
         </p>
+        <a
+          href="/privacidade"
+          className="inline-block text-[9px] text-on-surface-variant/25 hover:text-on-surface-variant/50 transition-colors underline underline-offset-2"
+        >
+          Política de Privacidade
+        </a>
       </footer>
     </div>
   );
