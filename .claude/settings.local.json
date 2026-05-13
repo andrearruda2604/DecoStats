@@ -34,7 +34,8 @@
       "Bash(node scripts/_gen2_temp.js 2026-05-13 --preview)",
       "Bash(rm -f scripts/_gen2_temp.js)",
       "Bash(node scripts/_gen3_temp.js 2026-05-13 --preview)",
-      "Bash(rm -f scripts/_gen3_temp.js)"
+      "Bash(rm -f scripts/_gen3_temp.js)",
+      "Bash(git commit *)"
     ]
   }
 }
