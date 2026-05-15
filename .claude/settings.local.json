@@ -35,7 +35,11 @@
       "Bash(rm -f scripts/_gen2_temp.js)",
       "Bash(node scripts/_gen3_temp.js 2026-05-13 --preview)",
       "Bash(rm -f scripts/_gen3_temp.js)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(node scripts/buildOdd4_real_oviedo.js)",
+      "Bash(node scripts/checkOviedoData.js)",
+      "Bash(node scripts/analyzeAstonVillaLiverpool.js)",
+      "Bash(node scripts/generateOpportunities.js 2026-05-16)"
     ]
   }
 }

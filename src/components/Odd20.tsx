@@ -196,7 +196,7 @@ function SignalBars({ pct, size = 'md' }: { pct: number; size?: 'sm' | 'md' }) {
 // ─── component ───────────────────────────────────────────────────────────────
 
 interface TicketModeProps {
-  mode: '2.0' | '3.0';
+  mode: '2.0' | '3.0' | '4.0a' | '4.0b';
 }
 
 export default function Odd20({ mode = '2.0' }: TicketModeProps) {

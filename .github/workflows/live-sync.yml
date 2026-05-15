@@ -3,6 +3,7 @@ name: Hourly Sync
 on:
   schedule:
     - cron: '0 * * * *' # Every hour
+    - cron: '0 2 * * *' # Daily at 02:00 UTC (~23h BRT) — generate opportunities for next day
   workflow_dispatch:
 
 jobs:
@@ -29,3 +30,10 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: node scripts/syncMissingStats.js
+
+      - name: Generate Opportunities for Tomorrow
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        run: node scripts/generateOpportunities.js

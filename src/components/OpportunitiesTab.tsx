@@ -1,0 +1,329 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { TrendingUp, Search, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface Opportunity {
+  fixture_id: number;
+  home: string;
+  away: string;
+  homeLogo: string;
+  awayLogo: string;
+  date_time: string;
+  leagueName: string;
+  leagueLogo: string;
+  stat: string;
+  period: string;
+  teamTarget: string;
+  team: string;
+  type: 'OVER' | 'UNDER';
+  threshold: number;
+  line: string;
+  market: string;
+  probability: number;
+  histHits: number;
+  histTotal: number;
+  odd: number;
+}
+
+const STAT_LABELS: Record<string, string> = {
+  GOLS: 'Gols',
+  ESCANTEIOS: 'Escanteios',
+  CARTÕES: 'Cartões',
+  CHUTES_GOL: 'Chutes a Gol',
+};
+
+const PERIOD_LABELS: Record<string, string> = {
+  FT: 'Jogo Completo',
+  HT: '1° Tempo',
+  '2H': '2° Tempo',
+};
+
+function SignalBars({ pct }: { pct: number }) {
+  const filled = pct >= 97 ? 4 : pct >= 93 ? 3 : pct >= 90 ? 2 : 1;
+  const heights = [5, 8, 11, 14];
+  return (
+    <span className="inline-flex items-end gap-[2px]">
+      {heights.map((h, i) => (
+        <span
+          key={i}
+          style={{ height: h, width: 3 }}
+          className={`rounded-sm inline-block ${i < filled ? 'bg-emerald-400' : 'bg-white/15'}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ProbBadge({ pct }: { pct: number }) {
+  const color = pct >= 97 ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+    : pct >= 93 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+    : 'text-lime-400 bg-lime-500/10 border-lime-500/20';
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-black ${color}`}>
+      <SignalBars pct={pct} />
+      {pct}%
+    </span>
+  );
+}
+
+export default function OpportunitiesTab() {
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [targetDate, setTargetDate] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterStat, setFilterStat] = useState<string>('all');
+  const [filterPeriod, setFilterPeriod] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [sortKey, setSortKey] = useState<'probability' | 'odd' | 'fixture'>('probability');
+  const [sortAsc, setSortAsc] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState('');
+
+  useEffect(() => {
+    const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const tomorrow = new Date(brt);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const date = tomorrow.toISOString().split('T')[0];
+    setTargetDate(date);
+
+    loadOpportunities(date);
+  }, []);
+
+  async function loadOpportunities(date: string) {
+    setLoading(true);
+    const { data } = await supabase.from('odd_tickets')
+      .select('ticket_data, date')
+      .eq('date', date)
+      .eq('mode', 'opp')
+      .maybeSingle();
+
+    if (data?.ticket_data?.opportunities) {
+      setOpportunities(data.ticket_data.opportunities);
+      setGeneratedAt(data.ticket_data.generated_at || '');
+    } else {
+      setOpportunities([]);
+    }
+    setLoading(false);
+  }
+
+  function handleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortAsc(v => !v);
+    else { setSortKey(key); setSortAsc(false); }
+  }
+
+  function SortIcon({ col }: { col: typeof sortKey }) {
+    if (sortKey !== col) return <ChevronDown className="w-3 h-3 opacity-30" />;
+    return sortAsc ? <ChevronUp className="w-3 h-3 text-primary" /> : <ChevronDown className="w-3 h-3 text-primary" />;
+  }
+
+  const statOptions = Array.from(new Set(opportunities.map(o => o.stat)));
+  const periodOptions = Array.from(new Set(opportunities.map(o => o.period)));
+
+  const filtered = opportunities
+    .filter(o => {
+      if (filterStat !== 'all' && o.stat !== filterStat) return false;
+      if (filterPeriod !== 'all' && o.period !== filterPeriod) return false;
+      if (filterType !== 'all' && o.type !== filterType) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!o.home.toLowerCase().includes(q) && !o.away.toLowerCase().includes(q) && !o.leagueName.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      let diff = 0;
+      if (sortKey === 'probability') diff = b.probability - a.probability || b.odd - a.odd;
+      else if (sortKey === 'odd') diff = b.odd - a.odd || b.probability - a.probability;
+      else diff = a.home.localeCompare(b.home);
+      return sortAsc ? -diff : diff;
+    });
+
+  // Group by fixture for header rows
+  const grouped: { fixture_id: number; home: string; away: string; homeLogo: string; awayLogo: string; date_time: string; leagueName: string; leagueLogo: string; rows: Opportunity[] }[] = [];
+  const seenFix = new Set<number>();
+  for (const o of filtered) {
+    if (!seenFix.has(o.fixture_id)) {
+      seenFix.add(o.fixture_id);
+      grouped.push({ fixture_id: o.fixture_id, home: o.home, away: o.away, homeLogo: o.homeLogo, awayLogo: o.awayLogo, date_time: o.date_time, leagueName: o.leagueName, leagueLogo: o.leagueLogo, rows: [] });
+    }
+    grouped[grouped.length - 1].rows.push(o);
+  }
+
+  const fmtTime = (dt: string) => {
+    try { return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); }
+    catch { return ''; }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-on-surface">Oportunidades do Dia</h2>
+          </div>
+          <p className="text-[11px] text-on-surface-variant/50">
+            {targetDate} — picks com probabilidade histórica ≥ 90% | Odds: Bet365
+          </p>
+          {generatedAt && (
+            <p className="text-[10px] text-on-surface-variant/30 mt-0.5">
+              Gerado: {new Date(generatedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-wider">
+            {filtered.length} oportunidade{filtered.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-on-surface-variant/40 pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar jogo ou liga..."
+            className="w-full bg-surface/40 border border-outline-variant/20 rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:border-primary/40"
+          />
+        </div>
+
+        {/* Stat filter */}
+        <select
+          value={filterStat}
+          onChange={e => setFilterStat(e.target.value)}
+          className="bg-surface/40 border border-outline-variant/20 rounded-lg px-3 py-1.5 text-[11px] font-bold text-on-surface focus:outline-none focus:border-primary/40"
+        >
+          <option value="all">Todos os mercados</option>
+          {statOptions.map(s => <option key={String(s)} value={String(s)}>{STAT_LABELS[String(s)] || s}</option>)}
+        </select>
+
+        {/* Period filter */}
+        <select
+          value={filterPeriod}
+          onChange={e => setFilterPeriod(e.target.value)}
+          className="bg-surface/40 border border-outline-variant/20 rounded-lg px-3 py-1.5 text-[11px] font-bold text-on-surface focus:outline-none focus:border-primary/40"
+        >
+          <option value="all">Todos os tempos</option>
+          {periodOptions.map(p => <option key={String(p)} value={String(p)}>{PERIOD_LABELS[String(p)] || p}</option>)}
+        </select>
+
+        {/* Over/Under filter */}
+        <div className="flex rounded-lg overflow-hidden border border-outline-variant/20">
+          {(['all', 'OVER', 'UNDER'] as const).map(t => (
+            <button key={t} onClick={() => setFilterType(t)}
+              className={`px-3 py-1.5 text-[11px] font-black transition-colors ${filterType === t ? 'bg-primary text-on-primary' : 'bg-surface/40 text-on-surface-variant/60 hover:bg-surface/60'}`}
+            >
+              {t === 'all' ? 'Todos' : t === 'OVER' ? 'Mais de' : 'Menos de'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : opportunities.length === 0 ? (
+        <div className="text-center py-20">
+          <TrendingUp className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-3" />
+          <p className="text-sm text-on-surface-variant/40 font-bold">Nenhuma oportunidade gerada para {targetDate}</p>
+          <p className="text-[11px] text-on-surface-variant/25 mt-1">Execute o script <code className="font-mono">generateOpportunities.js</code> para popular.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-sm text-on-surface-variant/40">Nenhum resultado para os filtros selecionados.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Sort bar */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/30">
+            <button onClick={() => handleSort('fixture')} className="text-left flex items-center gap-1 hover:text-on-surface-variant/60 transition-colors">
+              Jogo <SortIcon col="fixture" />
+            </button>
+            <span className="text-center w-28 hidden sm:block">Mercado</span>
+            <button onClick={() => handleSort('probability')} className="flex items-center gap-1 hover:text-on-surface-variant/60 transition-colors w-20 justify-center">
+              Prob <SortIcon col="probability" />
+            </button>
+            <button onClick={() => handleSort('odd')} className="flex items-center gap-1 hover:text-on-surface-variant/60 transition-colors w-14 justify-end">
+              Odd <SortIcon col="odd" />
+            </button>
+          </div>
+
+          {grouped.map(g => (
+            <div key={g.fixture_id} className="bg-surface/20 border border-outline-variant/10 rounded-2xl overflow-hidden">
+              {/* Fixture header */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 bg-surface/30">
+                {g.leagueLogo && (
+                  <div className="w-4 h-4 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
+                    <img src={g.leagueLogo} alt="" className="w-full h-full object-contain" />
+                  </div>
+                )}
+                <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{g.leagueName}</span>
+                <span className="text-[10px] text-on-surface-variant/30 ml-auto">{fmtTime(g.date_time)}</span>
+              </div>
+              <div className="flex items-center justify-center gap-3 px-4 py-2.5 border-b border-outline-variant/10">
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  {g.homeLogo && <img src={g.homeLogo} alt="" className="w-5 h-5 object-contain" />}
+                  <span className="text-[13px] font-black text-on-surface">{g.home}</span>
+                </div>
+                <span className="text-[10px] font-bold text-on-surface-variant/30 px-2">vs</span>
+                <div className="flex items-center gap-2 flex-1">
+                  {g.awayLogo && <img src={g.awayLogo} alt="" className="w-5 h-5 object-contain" />}
+                  <span className="text-[13px] font-black text-on-surface">{g.away}</span>
+                </div>
+              </div>
+
+              {/* Opportunities rows */}
+              <div className="divide-y divide-outline-variant/5">
+                {g.rows.map((o, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    {/* Market + line */}
+                    <div className="min-w-0">
+                      <div className="text-[12px] font-bold text-on-surface leading-tight truncate">
+                        {o.market}
+                        {o.teamTarget !== 'TOTAL' && (
+                          <span className="ml-1.5 text-[10px] text-on-surface-variant/40 font-normal">
+                            ({o.teamTarget === 'HOME' ? 'Casa' : 'Fora'})
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[11px] font-black ${o.type === 'OVER' ? 'text-emerald-400' : 'text-sky-400'}`}>
+                          {o.line}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant/30">
+                          {PERIOD_LABELS[o.period] || o.period}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Historico */}
+                    <div className="hidden sm:block text-center w-28">
+                      <div className="text-[11px] font-bold text-on-surface-variant/60">
+                        {o.histHits}/{o.histTotal} jogos
+                      </div>
+                    </div>
+
+                    {/* Probabilidade */}
+                    <div className="flex justify-center w-20">
+                      <ProbBadge pct={o.probability} />
+                    </div>
+
+                    {/* Odd */}
+                    <div className="text-right w-14">
+                      <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

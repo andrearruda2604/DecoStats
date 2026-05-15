@@ -9,6 +9,7 @@ import StatsTable from './components/StatsTable';
 import MatchEvents from './components/MatchEvents';
 import Lobby from './components/Lobby';
 import Odd20 from './components/Odd20';
+import OpportunitiesTab from './components/OpportunitiesTab';
 import LeagueFilter from './components/LeagueFilter';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
@@ -69,7 +70,7 @@ function AuthenticatedApp() {
   });
   const [lobbyScrollPos, setLobbyScrollPos] = useState(0);
   const [oddScrollPos, setOddScrollPos] = useState(0);
-  const [lastListView, setLastListView] = useState<'LOBBY' | 'ODD20' | 'ODD30'>('LOBBY');
+  const [lastListView, setLastListView] = useState<'LOBBY' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP'>('LOBBY');
 
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
@@ -99,6 +100,12 @@ function AuthenticatedApp() {
     } else if (activeView === 'ODD30') {
       setOddScrollPos(window.scrollY);
       setLastListView('ODD30');
+    } else if (activeView === 'ODD40') {
+      setOddScrollPos(window.scrollY);
+      setLastListView('ODD40');
+    } else if (activeView === 'OPP') {
+      setOddScrollPos(window.scrollY);
+      setLastListView('OPP');
     }
     setSelectedMatchId(matchId);
     setActiveView('DATA');
@@ -124,7 +131,7 @@ function AuthenticatedApp() {
       if (activeView === 'DATA') {
         setSelectedMatchId(null);
         setActiveView(lastListView);
-      } else if (activeView === 'ODD20' || activeView === 'ODD30') {
+      } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP') {
         setActiveView('LOBBY');
       }
     };
@@ -135,7 +142,7 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (activeView === 'LOBBY') {
       setTimeout(() => window.scrollTo(0, lobbyScrollPos), 10);
-    } else if (activeView === 'ODD20' || activeView === 'ODD30') {
+    } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP') {
       setTimeout(() => window.scrollTo(0, oddScrollPos), 10);
     }
   }, [activeView, lobbyScrollPos, oddScrollPos]);
@@ -388,6 +395,25 @@ function AuthenticatedApp() {
       {/* ═══ ODD 3.0 ═══ */}
       {activeView === 'ODD30' && (
         <Odd20 mode="3.0" />
+      )}
+
+      {/* ═══ OPORTUNIDADES DO DIA ═══ */}
+      {activeView === 'OPP' && (
+        <OpportunitiesTab />
+      )}
+
+      {/* ═══ ODD 4.0 ═══ */}
+      {activeView === 'ODD40' && (
+        <div className="space-y-10">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-violet-400/60 mb-4">Bilhete A</p>
+            <Odd20 mode="4.0a" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-violet-400/60 mb-4">Bilhete B</p>
+            <Odd20 mode="4.0b" />
+          </div>
+        </div>
       )}
     </Layout>
   );

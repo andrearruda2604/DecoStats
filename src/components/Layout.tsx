@@ -8,7 +8,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
 
-export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30';
+export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP';
 
 
 interface LayoutProps {
@@ -95,17 +95,41 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
              </button>
              {user?.email?.toLowerCase() === 'deco260483@gmail.com' && (
-               <button 
-                 onClick={() => onNavigate('ODD30')}
-                 className={`relative group px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
-                   activeView === 'ODD30' 
-                     ? 'bg-primary text-on-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)] scale-105' 
-                     : 'bg-primary/90 text-on-primary hover:bg-primary hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] hover:scale-105'
-                 }`}
-               >
-                 ODD 3.0 (Test)
-                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
-               </button>
+               <>
+                 <button
+                   onClick={() => onNavigate('ODD30')}
+                   className={`relative group px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                     activeView === 'ODD30'
+                       ? 'bg-primary text-on-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)] scale-105'
+                       : 'bg-primary/90 text-on-primary hover:bg-primary hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] hover:scale-105'
+                   }`}
+                 >
+                   ODD 3.0 (Test)
+                   <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+                 </button>
+                 <button
+                   onClick={() => onNavigate('ODD40')}
+                   className={`relative group px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                     activeView === 'ODD40'
+                       ? 'bg-violet-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.6)] scale-105'
+                       : 'bg-violet-500/80 text-white hover:bg-violet-500 hover:shadow-[0_0_15px_rgba(139,92,246,0.5)] hover:scale-105'
+                   }`}
+                 >
+                   ODD 4.0
+                   <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+                 </button>
+                 <button
+                   onClick={() => onNavigate('OPP')}
+                   className={`relative group px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                     activeView === 'OPP'
+                       ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.6)] scale-105'
+                       : 'bg-sky-500/80 text-white hover:bg-sky-500 hover:shadow-[0_0_15px_rgba(14,165,233,0.5)] hover:scale-105'
+                   }`}
+                 >
+                   Oportunidades
+                   <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+                 </button>
+               </>
              )}
            </div>
         )}
