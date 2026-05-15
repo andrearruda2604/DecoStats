@@ -448,8 +448,19 @@ async function generateOpportunities() {
     return;
   }
 
+  // Dedup: mesma chave fixture+stat+period+teamTarget+type+threshold
+  const dedupSeen = new Set();
+  const deduped = allOpportunities.filter(o => {
+    const key = `${o.fixture_id}|${o.stat}|${o.period}|${o.teamTarget}|${o.type}|${o.threshold}`;
+    if (dedupSeen.has(key)) return false;
+    dedupSeen.add(key);
+    return true;
+  });
+  if (deduped.length < allOpportunities.length)
+    console.log(`  (${allOpportunities.length - deduped.length} duplicidade(s) removida(s))`);
+
   // Ordena por probabilidade desc, depois odd desc
-  allOpportunities.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
+  deduped.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
 
   // Salva no banco
   const { error } = await supabase.from('odd_tickets').upsert({
@@ -459,17 +470,17 @@ async function generateOpportunities() {
     matches_count: [...new Set(allOpportunities.map(o => o.fixture_id))].length,
     status: 'PENDING',
     ticket_data: {
-      opportunities: allOpportunities,
+      opportunities: deduped,
       generated_at: new Date().toISOString(),
     },
   }, { onConflict: 'date,mode' });
 
   if (error) console.error('Erro ao salvar:', error.message);
-  else console.log(`\nOportunidades salvas para ${targetDate} (${allOpportunities.length} picks, ${[...new Set(allOpportunities.map(o => o.fixture_id))].length} jogos)`);
+  else console.log(`\nOportunidades salvas para ${targetDate} (${deduped.length} picks, ${[...new Set(deduped.map(o => o.fixture_id))].length} jogos)`);
 
   // Preview top 10
   console.log('\n=== TOP OPORTUNIDADES ===');
-  for (const o of allOpportunities.slice(0, 15)) {
+  for (const o of deduped.slice(0, 15)) {
     console.log(`  [${o.probability}%] ${o.home} x ${o.away} — ${o.market} ${o.line} @ ${o.odd}  (${o.histHits}/${o.histTotal})`);
   }
 }
