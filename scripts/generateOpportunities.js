@@ -48,9 +48,12 @@ const MARKETS = {
   169:{ label: 'Cartões 1° Tempo (T)',     stat: 'CARTÕES',    period: 'HT', teamTarget: 'TOTAL' },
   170:{ label: 'Cartões 1° Tempo (C)',     stat: 'CARTÕES',    period: 'HT', teamTarget: 'HOME'  },
   171:{ label: 'Cartões 1° Tempo (F)',     stat: 'CARTÕES',    period: 'HT', teamTarget: 'AWAY'  },
-  87: { label: 'Chutes ao Gol (Total)',    stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'TOTAL' },
-  88: { label: 'Chutes ao Gol (Casa)',     stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'HOME'  },
-  89: { label: 'Chutes ao Gol (Fora)',     stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'AWAY'  },
+  87: { label: 'Chutes ao Gol (Total)',    stat: 'CHUTES_GOL',   period: 'FT', teamTarget: 'TOTAL' },
+  88: { label: 'Chutes ao Gol (Casa)',     stat: 'CHUTES_GOL',   period: 'FT', teamTarget: 'HOME'  },
+  89: { label: 'Chutes ao Gol (Fora)',     stat: 'CHUTES_GOL',   period: 'FT', teamTarget: 'AWAY'  },
+  211:{ label: 'Chutes Totais',            stat: 'CHUTES_TOTAL',  period: 'FT', teamTarget: 'TOTAL' },
+  221:{ label: 'Chutes Totais (Casa)',     stat: 'CHUTES_TOTAL',  period: 'FT', teamTarget: 'HOME'  },
+  220:{ label: 'Chutes Totais (Fora)',     stat: 'CHUTES_TOTAL',  period: 'FT', teamTarget: 'AWAY'  },
 };
 
 async function fetchApi(url) {
@@ -147,12 +150,31 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
       } else {
         if (match.shots_on_goal != null) { actualValue = match.shots_on_goal; isValid = true; }
       }
+    } else if (candidate.stat === 'CHUTES_TOTAL') {
+      if (candidate.teamTarget === 'TOTAL') {
+        const tot = matchTotals[match.fixture_id];
+        if (tot?.shots_total_count >= 2) { actualValue = tot.shots_total; isValid = true; }
+      } else {
+        if (match.shots_total != null) { actualValue = match.shots_total; isValid = true; }
+      }
+    } else if (candidate.stat === 'RESULTADO') {
+      // type: 'H' = vitória casa, 'D' = empate, 'A' = vitória fora
+      if (match.goals_for != null && match.goals_against != null) {
+        isValid = true;
+        const outcome = match.goals_for > match.goals_against ? 'H'
+          : match.goals_for < match.goals_against ? 'A' : 'D';
+        actualValue = (outcome === candidate.type) ? 1 : 0;
+      }
     }
 
     if (isValid) {
       homeValid++;
-      if (candidate.type === 'OVER'  && actualValue > candidate.threshold) homeHits++;
-      if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
+      if (candidate.stat === 'RESULTADO') {
+        if (actualValue === 1) homeHits++;
+      } else {
+        if (candidate.type === 'OVER'  && actualValue > candidate.threshold) homeHits++;
+        if (candidate.type === 'UNDER' && actualValue < candidate.threshold) homeHits++;
+      }
     }
   }
 
@@ -188,13 +210,26 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
       if (candidate.period === 'HT') { if (tot?.cards_ht != null) { actualValue = tot.cards_ht; isValid = true; } }
       else { if (tot?.cards != null) { actualValue = tot.cards; isValid = true; } }
     } else if (candidate.stat === 'CHUTES_GOL') {
-      continue; // Chutes total requer dados pareados, pula no loop away
+      continue; // Chutes a gol TOTAL requer dados pareados — pula no loop away
+    } else if (candidate.stat === 'CHUTES_TOTAL') {
+      continue; // Chutes TOTAL requer dados pareados — pula no loop away
+    } else if (candidate.stat === 'RESULTADO') {
+      if (match.goals_for != null && match.goals_against != null) {
+        isValid = true;
+        const outcome = match.goals_for > match.goals_against ? 'H'
+          : match.goals_for < match.goals_against ? 'A' : 'D';
+        actualValue = (outcome === candidate.type) ? 1 : 0;
+      }
     }
 
     if (isValid) {
       awayValid++;
-      if (candidate.type === 'OVER'  && actualValue > candidate.threshold) awayHits++;
-      if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
+      if (candidate.stat === 'RESULTADO') {
+        if (actualValue === 1) awayHits++;
+      } else {
+        if (candidate.type === 'OVER'  && actualValue > candidate.threshold) awayHits++;
+        if (candidate.type === 'UNDER' && actualValue < candidate.threshold) awayHits++;
+      }
     }
   }
 
@@ -208,6 +243,38 @@ function parseOpportunitiesFromOdds(fixtureId, homeName, awayName, oddsResp, hom
   if (!bet365) return [];
 
   const opportunities = [];
+
+  // ── Mercado 1x2 (Resultado Final) ──
+  const bet1 = (bet365.bets || []).find(b => b.id === 1);
+  if (bet1) {
+    const outcomes = [
+      { value: 'Home', teamTarget: 'HOME', type: 'H', line: `Vitória ${homeName}`, team: homeName },
+      { value: 'Draw', teamTarget: 'TOTAL', type: 'D', line: 'Empate', team: 'Empate' },
+      { value: 'Away', teamTarget: 'AWAY',  type: 'A', line: `Vitória ${awayName}`,  team: awayName },
+    ];
+    for (const o of outcomes) {
+      const v = (bet1.values || []).find(bv => String(bv.value) === o.value);
+      if (!v) continue;
+      const odd = parseFloat(v.odd);
+      if (odd < MIN_ODD) continue;
+
+      const candidate = {
+        fixture_id: fixtureId, betId: 1,
+        market: '1x2 Resultado Final', stat: 'RESULTADO', period: 'FT',
+        teamTarget: o.teamTarget, team: o.team,
+        type: o.type, threshold: 0, line: o.line, odd,
+      };
+
+      // HOME WIN: usa homeHistory; AWAY WIN: usa awayHistory; DRAW: usa ambos
+      const h = o.teamTarget === 'HOME' ? homeHistory : o.teamTarget === 'AWAY' ? awayHistory : homeHistory;
+      const a = o.teamTarget === 'TOTAL' ? awayHistory : null;
+      const prob = evaluateHistoricalFrequency(candidate, h, a, matchTotals, htScores);
+
+      if (prob && prob.pct >= MIN_PROB) {
+        opportunities.push({ ...candidate, probability: Math.round(prob.pct), histHits: prob.hits, histTotal: prob.total });
+      }
+    }
+  }
 
   for (const bet of (bet365.bets || [])) {
     const market = MARKETS[bet.id];
@@ -322,10 +389,10 @@ async function generateOpportunities() {
       const matchTotals = {};
       const histFixIds = [...new Set([...(homeHistory||[]), ...(awayHistory||[])].map(h => h.fixture_id))];
       const { data: opData } = await supabase.from('teams_history')
-        .select('fixture_id, corners, shots_on_goal, stats_ft, stats_1h')
+        .select('fixture_id, corners, shots_on_goal, shots_total, stats_ft, stats_1h')
         .in('fixture_id', histFixIds);
       for (const row of (opData || [])) {
-        if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0 };
+        if (!matchTotals[row.fixture_id]) matchTotals[row.fixture_id] = { corners: 0, corners_ht: 0, cards: 0, cards_ht: 0, shots_on_goal: 0, shots_on_goal_count: 0, shots_total: 0, shots_total_count: 0 };
         const t = matchTotals[row.fixture_id];
         t.corners += (row.corners || 0);
         const ck_ht = row.stats_1h?.find(s => s.type === 'Corner Kicks');
@@ -337,6 +404,7 @@ async function generateOpportunities() {
         t.cards    += (y + r);
         t.cards_ht += (y1h + r1h);
         if (row.shots_on_goal != null) { t.shots_on_goal += row.shots_on_goal; t.shots_on_goal_count++; }
+        if (row.shots_total   != null) { t.shots_total   += row.shots_total;   t.shots_total_count++;   }
       }
 
       // HT scores

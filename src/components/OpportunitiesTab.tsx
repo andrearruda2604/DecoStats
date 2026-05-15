@@ -15,7 +15,7 @@ interface Opportunity {
   period: string;
   teamTarget: string;
   team: string;
-  type: 'OVER' | 'UNDER';
+  type: 'OVER' | 'UNDER' | 'H' | 'D' | 'A';
   threshold: number;
   line: string;
   market: string;
@@ -30,6 +30,8 @@ const STAT_LABELS: Record<string, string> = {
   ESCANTEIOS: 'Escanteios',
   CARTÕES: 'Cartões',
   CHUTES_GOL: 'Chutes a Gol',
+  CHUTES_TOTAL: 'Chutes Totais',
+  RESULTADO: '1x2 Resultado',
 };
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -122,7 +124,8 @@ export default function OpportunitiesTab() {
     .filter(o => {
       if (filterStat !== 'all' && o.stat !== filterStat) return false;
       if (filterPeriod !== 'all' && o.period !== filterPeriod) return false;
-      if (filterType !== 'all' && o.type !== filterType) return false;
+      if (filterType === '1x2' && !['H','D','A'].includes(o.type)) return false;
+      if (filterType !== 'all' && filterType !== '1x2' && o.type !== filterType) return false;
       if (search) {
         const q = search.toLowerCase();
         if (!o.home.toLowerCase().includes(q) && !o.away.toLowerCase().includes(q) && !o.leagueName.toLowerCase().includes(q)) return false;
@@ -210,13 +213,18 @@ export default function OpportunitiesTab() {
           {periodOptions.map(p => <option key={String(p)} value={String(p)}>{PERIOD_LABELS[String(p)] || p}</option>)}
         </select>
 
-        {/* Over/Under filter */}
+        {/* Tipo filter */}
         <div className="flex rounded-lg overflow-hidden border border-outline-variant/20">
-          {(['all', 'OVER', 'UNDER'] as const).map(t => (
-            <button key={t} onClick={() => setFilterType(t)}
-              className={`px-3 py-1.5 text-[11px] font-black transition-colors ${filterType === t ? 'bg-primary text-on-primary' : 'bg-surface/40 text-on-surface-variant/60 hover:bg-surface/60'}`}
+          {[
+            { v: 'all', label: 'Todos' },
+            { v: 'OVER', label: 'Mais de' },
+            { v: 'UNDER', label: 'Menos de' },
+            { v: '1x2', label: '1x2' },
+          ].map(t => (
+            <button key={t.v} onClick={() => setFilterType(t.v)}
+              className={`px-3 py-1.5 text-[11px] font-black transition-colors ${filterType === t.v ? 'bg-primary text-on-primary' : 'bg-surface/40 text-on-surface-variant/60 hover:bg-surface/60'}`}
             >
-              {t === 'all' ? 'Todos' : t === 'OVER' ? 'Mais de' : 'Menos de'}
+              {t.label}
             </button>
           ))}
         </div>
@@ -292,7 +300,11 @@ export default function OpportunitiesTab() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[11px] font-black ${o.type === 'OVER' ? 'text-emerald-400' : 'text-sky-400'}`}>
+                        <span className={`text-[11px] font-black ${
+                          o.type === 'OVER' || o.type === 'H' ? 'text-emerald-400'
+                          : o.type === 'D' ? 'text-amber-400'
+                          : 'text-sky-400'
+                        }`}>
                           {o.line}
                         </span>
                         <span className="text-[10px] text-on-surface-variant/30">

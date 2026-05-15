@@ -39,7 +39,8 @@
       "Bash(node scripts/buildOdd4_real_oviedo.js)",
       "Bash(node scripts/checkOviedoData.js)",
       "Bash(node scripts/analyzeAstonVillaLiverpool.js)",
-      "Bash(node scripts/generateOpportunities.js 2026-05-16)"
+      "Bash(node scripts/generateOpportunities.js 2026-05-16)",
+      "Bash(node scripts/generateOpportunities.js 2026-05-16 --force)"
     ]
   }
 }
