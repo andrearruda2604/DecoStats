@@ -79,6 +79,8 @@ function ProbBadge({ pct }: { pct: number }) {
   );
 }
 
+const FT_STATUSES = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
+
 export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +92,9 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [sortKey, setSortKey] = useState<'probability' | 'odd' | 'fixture'>('probability');
   const [sortAsc, setSortAsc] = useState(false);
   const [generatedAt, setGeneratedAt] = useState('');
+  const [hideFinished, setHideFinished] = useState(false);
+  const [finishedIds, setFinishedIds] = useState<Set<number>>(new Set());
+  const [loadingFinished, setLoadingFinished] = useState(false);
 
   useEffect(() => {
     const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -116,6 +121,28 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
     setLoading(false);
   }
 
+  async function toggleHideFinished() {
+    if (hideFinished) {
+      setHideFinished(false);
+      return;
+    }
+    // Primeira ativação: busca status atual dos fixtures
+    setLoadingFinished(true);
+    const fixIds = [...new Set(opportunities.map(o => o.fixture_id))];
+    if (fixIds.length > 0) {
+      const { data: fixes } = await supabase
+        .from('fixtures')
+        .select('api_id, status')
+        .in('api_id', fixIds);
+      const finished = new Set<number>(
+        (fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number)
+      );
+      setFinishedIds(finished);
+    }
+    setLoadingFinished(false);
+    setHideFinished(true);
+  }
+
   function handleSort(key: typeof sortKey) {
     if (sortKey === key) setSortAsc(v => !v);
     else { setSortKey(key); setSortAsc(false); }
@@ -128,8 +155,11 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
   const periodOptions = Array.from(new Set(opportunities.map(o => o.period)));
 
+  const finishedCount = finishedIds.size;
+
   const filtered = opportunities
     .filter(o => {
+      if (hideFinished && finishedIds.has(o.fixture_id)) return false;
       if (filterStat !== 'all' && o.stat !== filterStat) return false;
       if (filterPeriod !== 'all' && o.period !== filterPeriod) return false;
       if (filterType === '1x2' && !['H','D','A'].includes(o.type)) return false;
@@ -186,6 +216,27 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           <span className="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-wider">
             {filtered.length} oportunidade{filtered.length !== 1 ? 's' : ''}
           </span>
+          <button
+            onClick={toggleHideFinished}
+            disabled={loadingFinished}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-black transition-all border ${
+              hideFinished
+                ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                : 'bg-surface/40 border-outline-variant/20 text-on-surface-variant/50 hover:border-rose-500/30 hover:text-rose-400/80'
+            } ${loadingFinished ? 'opacity-50 cursor-wait' : ''}`}
+          >
+            {loadingFinished ? (
+              <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin inline-block" />
+            ) : (
+              <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="6" cy="6" r="5" />
+                <path d="M4 4l4 4M8 4l-4 4" strokeLinecap="round" />
+              </svg>
+            )}
+            {hideFinished
+              ? `Finalizados ocultos${finishedCount > 0 ? ` (${finishedCount})` : ''}`
+              : 'Ocultar finalizados'}
+          </button>
         </div>
       </div>
 

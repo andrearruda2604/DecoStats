@@ -103,7 +103,8 @@ async function settleTickets() {
   const { data: pending } = await supabase
     .from('odd_tickets')
     .select('*')
-    .eq('status', 'PENDING');
+    .eq('status', 'PENDING')
+    .neq('mode', 'opp'); // opp tickets têm estrutura diferente (opportunities, não entries)
 
   if (!pending?.length) return;
 
