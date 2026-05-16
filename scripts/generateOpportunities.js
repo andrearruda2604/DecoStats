@@ -350,11 +350,17 @@ async function generateOpportunities() {
   const { data: leagues } = await supabase.from('leagues').select('id, api_id').eq('is_active', true);
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
+  // Janela BRT (UTC-3): dia D começa às 03:00 UTC e termina às 02:59 UTC do dia D+1.
+  // Isso garante que jogos das 21h–23h59 BRT (00h–02h59 UTC do dia seguinte) sejam incluídos.
+  const nextDate = new Date(`${targetDate}T03:00:00Z`);
+  nextDate.setDate(nextDate.getDate() + 1);
+  const endDateStr = nextDate.toISOString().replace('T', ' ').substring(0, 19); // D+1 03:00 UTC = D+1 00:00 BRT
+
   const { data: fixtures } = await supabase
     .from('fixtures')
     .select('api_id, date, status, season, league_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
-    .gte('date', `${targetDate} 00:00:00`)
-    .lte('date', `${targetDate} 23:59:59`)
+    .gte('date', `${targetDate} 03:00:00`)
+    .lte('date', endDateStr)
     .in('status', ['NS', 'TBD']);
 
   const activeFix = (fixtures || []).filter(f => activeLeagueApiIds.has(f.league?.api_id));
