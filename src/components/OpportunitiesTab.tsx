@@ -4,6 +4,7 @@ import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide
 
 interface Opportunity {
   fixture_id: number;
+  fixture_db_id?: number;
   home: string;
   away: string;
   homeLogo: string;
@@ -150,12 +151,12 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
     });
 
   // Group by fixture for header rows
-  const grouped: { fixture_id: number; home: string; away: string; homeLogo: string; awayLogo: string; date_time: string; leagueName: string; leagueLogo: string; rows: Opportunity[] }[] = [];
+  const grouped: { fixture_id: number; fixture_db_id?: number; home: string; away: string; homeLogo: string; awayLogo: string; date_time: string; leagueName: string; leagueLogo: string; rows: Opportunity[] }[] = [];
   const seenFix = new Set<number>();
   for (const o of filtered) {
     if (!seenFix.has(o.fixture_id)) {
       seenFix.add(o.fixture_id);
-      grouped.push({ fixture_id: o.fixture_id, home: o.home, away: o.away, homeLogo: o.homeLogo, awayLogo: o.awayLogo, date_time: o.date_time, leagueName: o.leagueName, leagueLogo: o.leagueLogo, rows: [] });
+      grouped.push({ fixture_id: o.fixture_id, fixture_db_id: o.fixture_db_id, home: o.home, away: o.away, homeLogo: o.homeLogo, awayLogo: o.awayLogo, date_time: o.date_time, leagueName: o.leagueName, leagueLogo: o.leagueLogo, rows: [] });
     }
     grouped[grouped.length - 1].rows.push(o);
   }
@@ -285,7 +286,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
               {/* Fixture — clicável para ir às estatísticas */}
               <button
-                onClick={() => onSelectMatch?.(g.fixture_id)}
+                onClick={() => { const navId = g.fixture_db_id ?? g.fixture_id; onSelectMatch?.(navId); }}
                 className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 border-b border-outline-variant/10 transition-colors ${onSelectMatch ? 'hover:bg-white/[0.04] cursor-pointer group' : ''}`}
               >
                 <div className="flex items-center gap-2 flex-1 justify-end">

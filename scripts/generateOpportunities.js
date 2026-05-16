@@ -358,7 +358,7 @@ async function generateOpportunities() {
 
   const { data: fixtures } = await supabase
     .from('fixtures')
-    .select('api_id, date, status, season, league_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
+    .select('id, api_id, date, status, season, league_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
     .gte('date', `${targetDate} 03:00:00`)
     .lte('date', endDateStr)
     .in('status', ['NS', 'TBD']);
@@ -431,6 +431,7 @@ async function generateOpportunities() {
 
       allOpportunities.push(...opps.map(o => ({
         ...o,
+        fixture_db_id: f.id,        // DB primary key — usado para navegação no app
         home: homeName,
         away: awayName,
         homeLogo: f.home_team?.logo_url || '',
