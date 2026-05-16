@@ -108,17 +108,6 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
                  </button>
                  <button
-                   onClick={() => onNavigate('ODD40')}
-                   className={`relative group px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
-                     activeView === 'ODD40'
-                       ? 'bg-violet-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.6)] scale-105'
-                       : 'bg-violet-500/80 text-white hover:bg-violet-500 hover:shadow-[0_0_15px_rgba(139,92,246,0.5)] hover:scale-105'
-                   }`}
-                 >
-                   ODD 4.0
-                   <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
-                 </button>
-                 <button
                    onClick={() => onNavigate('OPP')}
                    className={`relative group px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
                      activeView === 'OPP'

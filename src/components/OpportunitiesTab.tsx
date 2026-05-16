@@ -93,9 +93,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
   useEffect(() => {
     const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-    const tomorrow = new Date(brt);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const date = tomorrow.toISOString().split('T')[0];
+    const date = brt.toISOString().split('T')[0]; // hoje em BRT
     setTargetDate(date);
 
     loadOpportunities(date);
