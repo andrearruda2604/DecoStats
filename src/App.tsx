@@ -399,7 +399,7 @@ function AuthenticatedApp() {
 
       {/* ═══ OPORTUNIDADES DO DIA ═══ */}
       {activeView === 'OPP' && (
-        <OpportunitiesTab />
+        <OpportunitiesTab onSelectMatch={handleSelectMatch} />
       )}
 
       {/* ═══ ODD 4.0 ═══ */}

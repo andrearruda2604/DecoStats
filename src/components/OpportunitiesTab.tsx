@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { TrendingUp, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
 interface Opportunity {
   fixture_id: number;
@@ -40,6 +40,16 @@ const PERIOD_LABELS: Record<string, string> = {
   '2H': '2° Tempo',
 };
 
+// Opções estáticas de filtro — sempre visíveis independente dos dados do dia
+const STAT_OPTIONS = [
+  { value: 'RESULTADO',    label: '1x2 Resultado' },
+  { value: 'GOLS',         label: 'Gols' },
+  { value: 'ESCANTEIOS',   label: 'Escanteios' },
+  { value: 'CARTÕES',      label: 'Cartões' },
+  { value: 'CHUTES_GOL',   label: 'Chutes a Gol' },
+  { value: 'CHUTES_TOTAL', label: 'Chutes Totais' },
+];
+
 function SignalBars({ pct }: { pct: number }) {
   const filled = pct >= 97 ? 4 : pct >= 93 ? 3 : pct >= 90 ? 2 : 1;
   const heights = [5, 8, 11, 14];
@@ -68,7 +78,7 @@ function ProbBadge({ pct }: { pct: number }) {
   );
 }
 
-export default function OpportunitiesTab() {
+export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [targetDate, setTargetDate] = useState('');
@@ -117,7 +127,6 @@ export default function OpportunitiesTab() {
     return sortAsc ? <ChevronUp className="w-3 h-3 text-primary" /> : <ChevronDown className="w-3 h-3 text-primary" />;
   }
 
-  const statOptions = Array.from(new Set(opportunities.map(o => o.stat)));
   const periodOptions = Array.from(new Set(opportunities.map(o => o.period)));
 
   const filtered = opportunities
@@ -200,7 +209,7 @@ export default function OpportunitiesTab() {
           className="bg-surface/40 border border-outline-variant/20 rounded-lg px-3 py-1.5 text-[11px] font-bold text-on-surface focus:outline-none focus:border-primary/40"
         >
           <option value="all">Todos os mercados</option>
-          {statOptions.map(s => <option key={String(s)} value={String(s)}>{STAT_LABELS[String(s)] || s}</option>)}
+          {STAT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
 
         {/* Period filter */}
@@ -263,7 +272,7 @@ export default function OpportunitiesTab() {
 
           {grouped.map(g => (
             <div key={g.fixture_id} className="bg-surface/20 border border-outline-variant/10 rounded-2xl overflow-hidden">
-              {/* Fixture header */}
+              {/* Liga */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 bg-surface/30">
                 {g.leagueLogo && (
                   <div className="w-4 h-4 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
@@ -273,7 +282,12 @@ export default function OpportunitiesTab() {
                 <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{g.leagueName}</span>
                 <span className="text-[10px] text-on-surface-variant/30 ml-auto">{fmtTime(g.date_time)}</span>
               </div>
-              <div className="flex items-center justify-center gap-3 px-4 py-2.5 border-b border-outline-variant/10">
+
+              {/* Fixture — clicável para ir às estatísticas */}
+              <button
+                onClick={() => onSelectMatch?.(g.fixture_id)}
+                className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 border-b border-outline-variant/10 transition-colors ${onSelectMatch ? 'hover:bg-white/[0.04] cursor-pointer group' : ''}`}
+              >
                 <div className="flex items-center gap-2 flex-1 justify-end">
                   {g.homeLogo && <img src={g.homeLogo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-[13px] font-black text-on-surface">{g.home}</span>
@@ -283,7 +297,10 @@ export default function OpportunitiesTab() {
                   {g.awayLogo && <img src={g.awayLogo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-[13px] font-black text-on-surface">{g.away}</span>
                 </div>
-              </div>
+                {onSelectMatch && (
+                  <ExternalLink className="w-3.5 h-3.5 text-on-surface-variant/20 group-hover:text-primary/60 transition-colors flex-shrink-0" />
+                )}
+              </button>
 
               {/* Opportunities rows */}
               <div className="divide-y divide-outline-variant/5">
