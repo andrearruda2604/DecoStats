@@ -81,6 +81,9 @@ function ProbBadge({ pct }: { pct: number }) {
 
 const FT_STATUSES = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
 
+type ScoreEntry = { home: number; away: number; htHome: number | null; htAway: number | null; status: string };
+type HistEntry = { corners: number | null; yellow_cards: number | null; shots_on_goal: number | null; shots_total: number | null; stats_ft: any[] | null };
+
 export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,16 +98,73 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [hideFinished, setHideFinished] = useState(false);
   const [finishedIds, setFinishedIds] = useState<Set<number>>(new Set());
   const [loadingFinished, setLoadingFinished] = useState(false);
-  // scores: api_id → {home, away, htHome, htAway, status}
-  const [scores, setScores] = useState<Record<number, { home: number; away: number; htHome: number | null; htAway: number | null; status: string }>>({});
+  const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
+  const [histStats, setHistStats] = useState<Record<string, HistEntry>>({});  // key: `${api_id}-HOME|AWAY`
+  const [refreshing, setRefreshing] = useState(false);
+  const fixIdsRef = { current: [] as number[] };
 
   useEffect(() => {
     const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-    const date = brt.toISOString().split('T')[0]; // hoje em BRT
+    const date = brt.toISOString().split('T')[0];
     setTargetDate(date);
-
     loadOpportunities(date);
   }, []);
+
+  // Realtime: atualiza placar quando fixtures mudam no banco
+  useEffect(() => {
+    const channel = supabase.channel('opp-fixtures')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fixtures' }, payload => {
+        const f = payload.new as any;
+        setScores(prev => {
+          if (!(f.api_id in prev) && !fixIdsRef.current.includes(f.api_id)) return prev;
+          const entry: ScoreEntry = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
+          const updated = { ...prev, [f.api_id]: entry };
+          // Quando jogo finaliza, busca teams_history
+          if (FT_STATUSES.includes(f.status)) {
+            setFinishedIds(prev2 => new Set([...prev2, f.api_id]));
+            loadTeamsHistory([f.api_id]);
+          }
+          return updated;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  async function loadScores(fixIds: number[]) {
+    if (!fixIds.length) return;
+    const { data: fixes } = await supabase
+      .from('fixtures')
+      .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
+      .in('api_id', fixIds);
+    const map: Record<number, ScoreEntry> = {};
+    (fixes || []).forEach(f => {
+      map[f.api_id] = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
+    });
+    setScores(map);
+    const fin = new Set<number>((fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number));
+    setFinishedIds(fin);
+    // Busca teams_history para jogos já finalizados
+    const ftIds = [...fin];
+    if (ftIds.length) await loadTeamsHistory(ftIds);
+  }
+
+  async function loadTeamsHistory(fixIds: number[]) {
+    if (!fixIds.length) return;
+    const { data: rows } = await supabase
+      .from('teams_history')
+      .select('fixture_id, is_home, corners, yellow_cards, shots_on_goal, shots_total, stats_ft, stats_1h')
+      .in('fixture_id', fixIds);
+    if (!rows?.length) return;
+    setHistStats(prev => {
+      const next = { ...prev };
+      for (const r of rows) {
+        const key = `${r.fixture_id}-${r.is_home ? 'HOME' : 'AWAY'}`;
+        next[key] = { corners: r.corners, yellow_cards: r.yellow_cards, shots_on_goal: r.shots_on_goal, shots_total: r.shots_total, stats_ft: r.stats_ft };
+      }
+      return next;
+    });
+  }
 
   async function loadOpportunities(date: string) {
     setLoading(true);
@@ -118,32 +178,27 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       const opps: Opportunity[] = data.ticket_data.opportunities;
       setOpportunities(opps);
       setGeneratedAt(data.ticket_data.generated_at || '');
-
-      // Busca placares atuais para avaliar picks finalizados
       const fixIds = [...new Set(opps.map(o => o.fixture_id))];
-      if (fixIds.length) {
-        const { data: fixes } = await supabase
-          .from('fixtures')
-          .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
-          .in('api_id', fixIds);
-        const map: typeof scores = {};
-        (fixes || []).forEach(f => {
-          map[f.api_id] = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
-        });
-        setScores(map);
-        const fin = new Set<number>((fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number));
-        setFinishedIds(fin);
-      }
+      fixIdsRef.current = fixIds;
+      await loadScores(fixIds);
     } else {
       setOpportunities([]);
     }
     setLoading(false);
   }
 
+  async function refresh() {
+    setRefreshing(true);
+    const fixIds = fixIdsRef.current;
+    if (fixIds.length) await loadScores(fixIds);
+    setRefreshing(false);
+  }
+
   function evalPick(o: Opportunity): 'WON' | 'LOST' | null {
     const s = scores[o.fixture_id];
     if (!s || !FT_STATUSES.includes(s.status)) return null;
     let val: number | undefined;
+
     if (o.stat === 'GOLS') {
       if (o.period === 'FT') {
         if (o.teamTarget === 'TOTAL') val = s.home + s.away;
@@ -159,10 +214,46 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
         else if (o.teamTarget === 'HOME') val = h2H;
         else val = h2A;
       }
+    } else if (o.stat === 'ESCANTEIOS') {
+      const hH = histStats[`${o.fixture_id}-HOME`];
+      const hA = histStats[`${o.fixture_id}-AWAY`];
+      if (o.teamTarget === 'TOTAL') {
+        if (hH?.corners != null && hA?.corners != null) val = hH.corners + hA.corners;
+      } else if (o.teamTarget === 'HOME' && hH?.corners != null) val = hH.corners;
+      else if (o.teamTarget === 'AWAY' && hA?.corners != null) val = hA.corners;
+    } else if (o.stat === 'CARTÕES') {
+      const hH = histStats[`${o.fixture_id}-HOME`];
+      const hA = histStats[`${o.fixture_id}-AWAY`];
+      const cards = (h: HistEntry | undefined) => {
+        if (!h) return null;
+        if (h.stats_ft) {
+          const y = parseInt(h.stats_ft.find((x: any) => x.type === 'Yellow Cards')?.value || '0');
+          const r = parseInt(h.stats_ft.find((x: any) => x.type === 'Red Cards')?.value || '0');
+          return y + r;
+        }
+        return h.yellow_cards;
+      };
+      const cH = cards(hH), cA = cards(hA);
+      if (o.teamTarget === 'TOTAL') { if (cH != null && cA != null) val = cH + cA; }
+      else if (o.teamTarget === 'HOME' && cH != null) val = cH;
+      else if (o.teamTarget === 'AWAY' && cA != null) val = cA;
+    } else if (o.stat === 'CHUTES_GOL') {
+      const h = histStats[`${o.fixture_id}-${o.teamTarget === 'AWAY' ? 'AWAY' : 'HOME'}`];
+      const hA = histStats[`${o.fixture_id}-AWAY`];
+      const hH = histStats[`${o.fixture_id}-HOME`];
+      if (o.teamTarget === 'TOTAL') { if (hH?.shots_on_goal != null && hA?.shots_on_goal != null) val = hH.shots_on_goal + hA.shots_on_goal; }
+      else if (h?.shots_on_goal != null) val = h.shots_on_goal;
+    } else if (o.stat === 'CHUTES_TOTAL') {
+      const hH = histStats[`${o.fixture_id}-HOME`];
+      const hA = histStats[`${o.fixture_id}-AWAY`];
+      const h = o.teamTarget === 'AWAY' ? hA : hH;
+      if (o.teamTarget === 'TOTAL') { if (hH?.shots_total != null && hA?.shots_total != null) val = hH.shots_total + hA.shots_total; }
+      else if (h?.shots_total != null) val = h.shots_total;
     }
+
     if (val === undefined) return null;
-    if (o.type === 'OVER')  return val > o.threshold  ? 'WON' : 'LOST';
-    if (o.type === 'UNDER') return val < o.threshold  ? 'WON' : 'LOST';
+    if (o.type === 'OVER')  return val > o.threshold ? 'WON' : 'LOST';
+    if (o.type === 'UNDER') return val < o.threshold ? 'WON' : 'LOST';
     return null;
   }
 
@@ -243,6 +334,19 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           <span className="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-wider">
             {filtered.length} oportunidade{filtered.length !== 1 ? 's' : ''}
           </span>
+          {/* Botão atualizar resultados */}
+          <button
+            onClick={refresh}
+            disabled={refreshing}
+            title="Atualizar placares e resultados"
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black border border-outline-variant/20 bg-surface/40 text-on-surface-variant/50 hover:border-primary/40 hover:text-primary/80 transition-all ${refreshing ? 'opacity-50 cursor-wait' : ''}`}
+          >
+            <svg className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M10 6A4 4 0 1 1 6 2" strokeLinecap="round"/>
+              <path d="M6 2l2-2 0 4-4 0 2-2" fill="currentColor" stroke="none"/>
+            </svg>
+            {refreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
           <button
             onClick={toggleHideFinished}
             disabled={loadingFinished}
