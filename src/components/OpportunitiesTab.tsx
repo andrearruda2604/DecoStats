@@ -95,6 +95,8 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [hideFinished, setHideFinished] = useState(false);
   const [finishedIds, setFinishedIds] = useState<Set<number>>(new Set());
   const [loadingFinished, setLoadingFinished] = useState(false);
+  // scores: api_id → {home, away, htHome, htAway, status}
+  const [scores, setScores] = useState<Record<number, { home: number; away: number; htHome: number | null; htAway: number | null; status: string }>>({});
 
   useEffect(() => {
     const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -113,34 +115,59 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       .maybeSingle();
 
     if (data?.ticket_data?.opportunities) {
-      setOpportunities(data.ticket_data.opportunities);
+      const opps: Opportunity[] = data.ticket_data.opportunities;
+      setOpportunities(opps);
       setGeneratedAt(data.ticket_data.generated_at || '');
+
+      // Busca placares atuais para avaliar picks finalizados
+      const fixIds = [...new Set(opps.map(o => o.fixture_id))];
+      if (fixIds.length) {
+        const { data: fixes } = await supabase
+          .from('fixtures')
+          .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
+          .in('api_id', fixIds);
+        const map: typeof scores = {};
+        (fixes || []).forEach(f => {
+          map[f.api_id] = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
+        });
+        setScores(map);
+        const fin = new Set<number>((fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number));
+        setFinishedIds(fin);
+      }
     } else {
       setOpportunities([]);
     }
     setLoading(false);
   }
 
+  function evalPick(o: Opportunity): 'WON' | 'LOST' | null {
+    const s = scores[o.fixture_id];
+    if (!s || !FT_STATUSES.includes(s.status)) return null;
+    let val: number | undefined;
+    if (o.stat === 'GOLS') {
+      if (o.period === 'FT') {
+        if (o.teamTarget === 'TOTAL') val = s.home + s.away;
+        else if (o.teamTarget === 'HOME') val = s.home;
+        else val = s.away;
+      } else if (o.period === 'HT' && s.htHome != null && s.htAway != null) {
+        if (o.teamTarget === 'TOTAL') val = s.htHome + s.htAway;
+        else if (o.teamTarget === 'HOME') val = s.htHome;
+        else val = s.htAway;
+      } else if (o.period === '2H' && s.htHome != null) {
+        const h2H = s.home - s.htHome, h2A = s.away - (s.htAway ?? 0);
+        if (o.teamTarget === 'TOTAL') val = h2H + h2A;
+        else if (o.teamTarget === 'HOME') val = h2H;
+        else val = h2A;
+      }
+    }
+    if (val === undefined) return null;
+    if (o.type === 'OVER')  return val > o.threshold  ? 'WON' : 'LOST';
+    if (o.type === 'UNDER') return val < o.threshold  ? 'WON' : 'LOST';
+    return null;
+  }
+
   async function toggleHideFinished() {
-    if (hideFinished) {
-      setHideFinished(false);
-      return;
-    }
-    // Primeira ativação: busca status atual dos fixtures
-    setLoadingFinished(true);
-    const fixIds = [...new Set(opportunities.map(o => o.fixture_id))];
-    if (fixIds.length > 0) {
-      const { data: fixes } = await supabase
-        .from('fixtures')
-        .select('api_id, status')
-        .in('api_id', fixIds);
-      const finished = new Set<number>(
-        (fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number)
-      );
-      setFinishedIds(finished);
-    }
-    setLoadingFinished(false);
-    setHideFinished(true);
+    setHideFinished(v => !v);
   }
 
   function handleSort(key: typeof sortKey) {
@@ -330,7 +357,14 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                   </div>
                 )}
                 <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{g.leagueName}</span>
-                <span className="text-[10px] text-on-surface-variant/30 ml-auto">{fmtTime(g.date_time)}</span>
+                <div className="ml-auto flex items-center gap-2">
+                  {scores[g.fixture_id] && FT_STATUSES.includes(scores[g.fixture_id].status) && (
+                    <span className="text-[11px] font-black text-on-surface/70">
+                      {scores[g.fixture_id].home} – {scores[g.fixture_id].away}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-on-surface-variant/30">{fmtTime(g.date_time)}</span>
+                </div>
               </div>
 
               {/* Fixture — clicável para ir às estatísticas */}
@@ -354,9 +388,14 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
               {/* Opportunities rows */}
               <div className="divide-y divide-outline-variant/5">
-                {g.rows.map((o, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                    {/* Market + line */}
+                {g.rows.map((o, i) => {
+                  const result = evalPick(o);
+                  const isFinishedGame = FT_STATUSES.includes(scores[o.fixture_id]?.status ?? '');
+                  return (
+                  <div key={i} className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-2.5 transition-colors ${
+                    result === 'WON' ? 'bg-emerald-500/[0.04]' : result === 'LOST' ? 'bg-rose-500/[0.04]' : 'hover:bg-white/[0.02]'
+                  }`}>
+                    {/* Market + line + resultado */}
                     <div className="min-w-0">
                       <div className="text-[12px] font-bold text-on-surface leading-tight truncate">
                         {o.market}
@@ -366,7 +405,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className={`text-[11px] font-black ${
                           o.type === 'OVER' || o.type === 'H' ? 'text-emerald-400'
                           : o.type === 'D' ? 'text-amber-400'
@@ -377,6 +416,15 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                         <span className="text-[10px] text-on-surface-variant/30">
                           {PERIOD_LABELS[o.period] || o.period}
                         </span>
+                        {result === 'WON' && (
+                          <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">✓ GREEN</span>
+                        )}
+                        {result === 'LOST' && (
+                          <span className="text-[10px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded">✗ RED</span>
+                        )}
+                        {result === null && isFinishedGame && (
+                          <span className="text-[10px] font-bold text-on-surface-variant/30 italic">sem dados</span>
+                        )}
                       </div>
                     </div>
 
@@ -397,7 +445,8 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                       <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

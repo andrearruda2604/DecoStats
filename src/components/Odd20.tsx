@@ -62,6 +62,78 @@ function getActualVal(
     }
   }
 
+  // ── Novo formato: stat + teamTarget (sem statKey) ──────────────────────────
+  // Gols — usa placar direto (mais confiável que teams_history)
+  if (stat === 'GOLS') {
+    const ftH = liveScore?.home_score ?? null;
+    const ftA = liveScore?.away_score ?? null;
+    const htH = liveScore?.ht_home_score ?? null;
+    const htA = liveScore?.ht_away_score ?? null;
+    if (period === 'FT') {
+      if (_teamTarget === 'TOTAL') return (ftH != null && ftA != null) ? ftH + ftA : undefined;
+      if (_teamTarget === 'HOME')  return ftH ?? undefined;
+      if (_teamTarget === 'AWAY')  return ftA ?? undefined;
+    }
+    if (period === 'HT') {
+      if (_teamTarget === 'TOTAL') return (htH != null && htA != null) ? htH + htA : undefined;
+      if (_teamTarget === 'HOME')  return htH ?? undefined;
+      if (_teamTarget === 'AWAY')  return htA ?? undefined;
+    }
+    if (period === '2H') {
+      const h2H = (ftH != null && htH != null) ? ftH - htH : null;
+      const h2A = (ftA != null && htA != null) ? ftA - htA : null;
+      if (_teamTarget === 'TOTAL') return (h2H != null && h2A != null) ? h2H + h2A : undefined;
+      if (_teamTarget === 'HOME')  return h2H ?? undefined;
+      if (_teamTarget === 'AWAY')  return h2A ?? undefined;
+    }
+  }
+  // Escanteios — usa teams_history.corners
+  if (stat === 'ESCANTEIOS') {
+    if (period === 'FT') {
+      if (_teamTarget === 'TOTAL') {
+        if (hist?.corners == null || histOther?.corners == null) return undefined;
+        return hist.corners + histOther.corners;
+      }
+      return hist?.corners ?? undefined;
+    }
+    const ckArr: any[] = hist?.[period === 'HT' ? 'stats_1h' : 'stats_2h'] || [];
+    const ck = ckArr.find((s: any) => s.type === 'Corner Kicks');
+    if (_teamTarget !== 'TOTAL') return ck ? (parseInt(ck.value) || 0) : undefined;
+    const ckOArr: any[] = histOther?.[period === 'HT' ? 'stats_1h' : 'stats_2h'] || [];
+    const ckO = ckOArr.find((s: any) => s.type === 'Corner Kicks');
+    if (!ck || !ckO) return undefined;
+    return (parseInt(ck.value) || 0) + (parseInt(ckO.value) || 0);
+  }
+  // Cartões — usa teams_history.yellow_cards (+ red_cards via stats_ft quando disponível)
+  if (stat === 'CARTÕES') {
+    const ftArr: any[] = hist?.stats_ft || [];
+    const yEl = ftArr.find((s: any) => s.type === 'Yellow Cards');
+    const rEl = ftArr.find((s: any) => s.type === 'Red Cards');
+    const cards = yEl != null ? (parseInt(yEl?.value) || 0) + (parseInt(rEl?.value) || 0)
+      : (hist?.yellow_cards ?? null);
+    if (_teamTarget !== 'TOTAL') return cards ?? undefined;
+    const ftArrO: any[] = histOther?.stats_ft || [];
+    const yElO = ftArrO.find((s: any) => s.type === 'Yellow Cards');
+    const rElO = ftArrO.find((s: any) => s.type === 'Red Cards');
+    const cardsO = yElO != null ? (parseInt(yElO?.value) || 0) + (parseInt(rElO?.value) || 0)
+      : (histOther?.yellow_cards ?? null);
+    if (cards == null || cardsO == null) return undefined;
+    return cards + cardsO;
+  }
+  // Chutes a gol
+  if (stat === 'CHUTES_GOL') {
+    if (_teamTarget !== 'TOTAL') return hist?.shots_on_goal ?? undefined;
+    if (hist?.shots_on_goal == null || histOther?.shots_on_goal == null) return undefined;
+    return hist.shots_on_goal + histOther.shots_on_goal;
+  }
+  // Chutes totais
+  if (stat === 'CHUTES_TOTAL') {
+    if (_teamTarget !== 'TOTAL') return hist?.shots_total ?? undefined;
+    if (hist?.shots_total == null || histOther?.shots_total == null) return undefined;
+    return hist.shots_total + histOther.shots_total;
+  }
+
+  // ── Formato legado: STAT_COL_FT / STAT_COL_JSONB ──────────────────────────
   if (!hist) return undefined;
   if (period === 'FT') {
     const col = STAT_COL_FT[stat];
@@ -288,7 +360,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
       const { data: histData } = await supabase
         .from('teams_history')
-        .select('fixture_id, is_home, goals_for, corners, yellow_cards, shots_total, stats_1h, stats_2h')
+        .select('fixture_id, is_home, goals_for, corners, yellow_cards, shots_total, shots_on_goal, stats_ft, stats_1h, stats_2h')
         .in('fixture_id', ids);
       const hMap: Record<string, any> = {};
       histData?.forEach(h => { hMap[`${h.fixture_id}-${h.is_home ? 'HOME' : 'AWAY'}`] = h; });
