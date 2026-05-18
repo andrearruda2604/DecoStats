@@ -1201,9 +1201,12 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                       const met = values.map((v: number | null) =>
                         v !== null ? (pick.type === 'OVER' ? v > pick.threshold : v < pick.threshold) : null
                       );
-                      const totalValid = met.filter((m: boolean | null) => m !== null).length;
-                      const hitCount = met.filter((m: boolean | null) => m === true).length;
-                      const pct = totalValid > 0 ? Math.round((hitCount / totalValid) * 100) : pick.probability;
+                      const displayValid = met.filter((m: boolean | null) => m !== null).length;
+                      const displayHits  = met.filter((m: boolean | null) => m === true).length;
+                      // Prioriza histHits/histTotal salvos no bilhete (amostra real usada no cálculo)
+                      const totalValid = pick.histTotal ?? displayValid;
+                      const hitCount   = pick.histHits  ?? displayHits;
+                      const pct = pick.probability ?? (displayValid > 0 ? Math.round((displayHits / displayValid) * 100) : 0);
 
                       const pickResult = pick.result;
 
