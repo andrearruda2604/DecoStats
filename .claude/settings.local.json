@@ -40,7 +40,16 @@
       "Bash(node scripts/checkOviedoData.js)",
       "Bash(node scripts/analyzeAstonVillaLiverpool.js)",
       "Bash(node scripts/generateOpportunities.js 2026-05-16)",
-      "Bash(node scripts/generateOpportunities.js 2026-05-16 --force)"
+      "Bash(node scripts/generateOpportunities.js 2026-05-16 --force)",
+      "Bash(node scripts/syncLive.js)",
+      "Bash(node scripts/generateOdd2.js 2026-05-18)",
+      "Bash(node scripts/generateOdd3.js 2026-05-18)",
+      "Bash(node scripts/generateOpportunities.js 2026-05-18)",
+      "Bash(node scripts/generateOpportunities.js 2026-05-18 --force)",
+      "Bash(node scripts/backfillArsenal.js)",
+      "Bash(node scripts/generateOdd2.js 2026-05-18 --force)",
+      "Bash(node scripts/generateOdd3.js 2026-05-18 --force)",
+      "Bash(npx vite *)"
     ]
   }
 }

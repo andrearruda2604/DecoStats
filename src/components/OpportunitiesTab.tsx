@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 
 interface Opportunity {
   fixture_id: number;
@@ -24,6 +24,7 @@ interface Opportunity {
   histHits: number;
   histTotal: number;
   odd: number;
+  result?: 'WON' | 'LOST';
 }
 
 const STAT_LABELS: Record<string, string> = {
@@ -84,6 +85,16 @@ const FT_STATUSES = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
 type ScoreEntry = { home: number; away: number; htHome: number | null; htAway: number | null; status: string };
 type HistEntry = { corners: number | null; yellow_cards: number | null; shots_on_goal: number | null; shots_total: number | null; stats_ft: any[] | null };
 
+function todayBrt() {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+}
+
+function fmtDisplayDate(d: string) {
+  if (!d) return '';
+  const date = new Date(d + 'T12:00:00');
+  return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,16 +110,21 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [finishedIds, setFinishedIds] = useState<Set<number>>(new Set());
   const [loadingFinished, setLoadingFinished] = useState(false);
   const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
-  const [histStats, setHistStats] = useState<Record<string, HistEntry>>({});  // key: `${api_id}-HOME|AWAY`
+  const [histStats, setHistStats] = useState<Record<string, HistEntry>>({});
   const [refreshing, setRefreshing] = useState(false);
-  const fixIdsRef = { current: [] as number[] };
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState('');
+  const fixIdsRef = useRef<number[]>([]);
 
+  // Initialize to today (BRT)
   useEffect(() => {
-    const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-    const date = brt.toISOString().split('T')[0];
-    setTargetDate(date);
-    loadOpportunities(date);
+    setTargetDate(todayBrt());
   }, []);
+
+  // Reload when date changes
+  useEffect(() => {
+    if (targetDate) loadOpportunities(targetDate);
+  }, [targetDate]);
 
   // Realtime: atualiza placar quando fixtures mudam no banco
   useEffect(() => {
@@ -119,7 +135,6 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           if (!(f.api_id in prev) && !fixIdsRef.current.includes(f.api_id)) return prev;
           const entry: ScoreEntry = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
           const updated = { ...prev, [f.api_id]: entry };
-          // Quando jogo finaliza, busca teams_history
           if (FT_STATUSES.includes(f.status)) {
             setFinishedIds(prev2 => new Set([...prev2, f.api_id]));
             loadTeamsHistory([f.api_id]);
@@ -144,7 +159,6 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
     setScores(map);
     const fin = new Set<number>((fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number));
     setFinishedIds(fin);
-    // Busca teams_history para jogos já finalizados
     const ftIds = [...fin];
     if (ftIds.length) await loadTeamsHistory(ftIds);
   }
@@ -168,6 +182,12 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
   async function loadOpportunities(date: string) {
     setLoading(true);
+    setOpportunities([]);
+    setScores({});
+    setHistStats({});
+    setFinishedIds(new Set());
+    setSavedAt('');
+
     const { data } = await supabase.from('odd_tickets')
       .select('ticket_data, date')
       .eq('date', date)
@@ -178,7 +198,8 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       const opps: Opportunity[] = data.ticket_data.opportunities;
       setOpportunities(opps);
       setGeneratedAt(data.ticket_data.generated_at || '');
-      const fixIds = [...new Set(opps.map(o => o.fixture_id))];
+      if (data.ticket_data.results_saved_at) setSavedAt(data.ticket_data.results_saved_at);
+      const fixIds = Array.from(new Set(opps.map(o => o.fixture_id)));
       fixIdsRef.current = fixIds;
       await loadScores(fixIds);
     } else {
@@ -197,6 +218,13 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   function evalPick(o: Opportunity): 'WON' | 'LOST' | null {
     const s = scores[o.fixture_id];
     if (!s || !FT_STATUSES.includes(s.status)) return null;
+
+    // RESULTADO (1x2): type encodes expected outcome H/D/A
+    if (o.type === 'H' || o.type === 'D' || o.type === 'A') {
+      const outcome = s.home > s.away ? 'H' : s.home < s.away ? 'A' : 'D';
+      return outcome === o.type ? 'WON' : 'LOST';
+    }
+
     let val: number | undefined;
 
     if (o.stat === 'GOLS') {
@@ -238,9 +266,9 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       else if (o.teamTarget === 'HOME' && cH != null) val = cH;
       else if (o.teamTarget === 'AWAY' && cA != null) val = cA;
     } else if (o.stat === 'CHUTES_GOL') {
-      const h = histStats[`${o.fixture_id}-${o.teamTarget === 'AWAY' ? 'AWAY' : 'HOME'}`];
-      const hA = histStats[`${o.fixture_id}-AWAY`];
       const hH = histStats[`${o.fixture_id}-HOME`];
+      const hA = histStats[`${o.fixture_id}-AWAY`];
+      const h = o.teamTarget === 'AWAY' ? hA : hH;
       if (o.teamTarget === 'TOTAL') { if (hH?.shots_on_goal != null && hA?.shots_on_goal != null) val = hH.shots_on_goal + hA.shots_on_goal; }
       else if (h?.shots_on_goal != null) val = h.shots_on_goal;
     } else if (o.stat === 'CHUTES_TOTAL') {
@@ -257,7 +285,40 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
     return null;
   }
 
-  async function toggleHideFinished() {
+  async function saveResults() {
+    if (!opportunities.length || saving) return;
+    setSaving(true);
+    try {
+      const updated = opportunities.map(o => {
+        const r = evalPick(o);
+        return r !== null ? { ...o, result: r } : o;
+      });
+      const { data: existing } = await supabase
+        .from('odd_tickets').select('ticket_data')
+        .eq('date', targetDate).eq('mode', 'opp').maybeSingle();
+      if (existing) {
+        const now = new Date().toISOString();
+        const { error } = await supabase.from('odd_tickets')
+          .update({ ticket_data: { ...existing.ticket_data, opportunities: updated, results_saved_at: now } })
+          .eq('date', targetDate).eq('mode', 'opp');
+        if (!error) {
+          setOpportunities(updated);
+          setSavedAt(now);
+        }
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function changeDate(delta: number) {
+    if (!targetDate) return;
+    const d = new Date(targetDate + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    setTargetDate(d.toISOString().split('T')[0]);
+  }
+
+  function toggleHideFinished() {
     setHideFinished(v => !v);
   }
 
@@ -274,6 +335,11 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const periodOptions = Array.from(new Set(opportunities.map(o => o.period)));
 
   const finishedCount = finishedIds.size;
+  const isToday = targetDate >= todayBrt();
+
+  // Count how many opportunities already have results
+  const savedResultsCount = opportunities.filter(o => o.result).length;
+  const evaluatedCount = opportunities.filter(o => evalPick(o) !== null).length;
 
   const filtered = opportunities
     .filter(o => {
@@ -317,16 +383,47 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-black uppercase tracking-widest text-on-surface">Oportunidades do Dia</h2>
           </div>
+
+          {/* Date navigator */}
+          <div className="flex items-center gap-1 mb-1">
+            <button
+              onClick={() => changeDate(-1)}
+              className="p-1 rounded-lg text-on-surface-variant/50 hover:text-primary hover:bg-primary/10 transition-all"
+              title="Dia anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-[13px] font-black text-on-surface min-w-[160px] text-center">
+              {targetDate === todayBrt() ? (
+                <span className="text-primary">{fmtDisplayDate(targetDate)} <span className="text-[10px] font-bold opacity-60">hoje</span></span>
+              ) : (
+                fmtDisplayDate(targetDate)
+              )}
+            </span>
+            <button
+              onClick={() => changeDate(1)}
+              className="p-1 rounded-lg text-on-surface-variant/50 hover:text-primary hover:bg-primary/10 transition-all"
+              title="Próximo dia"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
           <p className="text-[11px] text-on-surface-variant/50">
-            {targetDate} — picks com probabilidade histórica ≥ 90% | Odds: Bet365
+            Picks com probabilidade histórica ≥ 90% | Odds: Bet365
           </p>
           {generatedAt && (
             <p className="text-[10px] text-on-surface-variant/30 mt-0.5">
               Gerado: {new Date(generatedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+            </p>
+          )}
+          {savedAt && (
+            <p className="text-[10px] text-emerald-500/50 mt-0.5">
+              ✓ Resultados salvos: {new Date(savedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
             </p>
           )}
         </div>
@@ -334,6 +431,28 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           <span className="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-wider">
             {filtered.length} oportunidade{filtered.length !== 1 ? 's' : ''}
           </span>
+
+          {/* Botão salvar resultados */}
+          {evaluatedCount > 0 && (
+            <button
+              onClick={saveResults}
+              disabled={saving}
+              title={`Salvar ${evaluatedCount} resultado(s) no banco`}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all ${
+                saving
+                  ? 'opacity-50 cursor-wait border-outline-variant/20 text-on-surface-variant/40'
+                  : 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+              }`}
+            >
+              {saving ? (
+                <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin inline-block" />
+              ) : (
+                <Save className="w-3 h-3" />
+              )}
+              {saving ? 'Salvando...' : `Salvar resultados (${evaluatedCount})`}
+            </button>
+          )}
+
           {/* Botão atualizar resultados */}
           <button
             onClick={refresh}
@@ -493,7 +612,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
               {/* Opportunities rows */}
               <div className="divide-y divide-outline-variant/5">
                 {g.rows.map((o, i) => {
-                  const result = evalPick(o);
+                  const result = evalPick(o) ?? o.result ?? null;
                   const isFinishedGame = FT_STATUSES.includes(scores[o.fixture_id]?.status ?? '');
                   return (
                   <div key={i} className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-2.5 transition-colors ${
