@@ -417,16 +417,17 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       return sortAsc ? -diff : diff;
     });
 
-  // Group by fixture for header rows
-  const grouped: { fixture_id: number; fixture_db_id?: number; home: string; away: string; homeLogo: string; awayLogo: string; date_time: string; leagueName: string; leagueLogo: string; rows: Opportunity[] }[] = [];
-  const seenFix = new Set<number>();
+  // Group by fixture — garante que picks do mesmo jogo fiquem juntos mesmo após o sort global
+  const groupMap = new Map<number, { fixture_id: number; fixture_db_id?: number; home: string; away: string; homeLogo: string; awayLogo: string; date_time: string; leagueName: string; leagueLogo: string; rows: Opportunity[] }>();
+  const groupOrder: number[] = [];
   for (const o of filtered) {
-    if (!seenFix.has(o.fixture_id)) {
-      seenFix.add(o.fixture_id);
-      grouped.push({ fixture_id: o.fixture_id, fixture_db_id: o.fixture_db_id, home: o.home, away: o.away, homeLogo: o.homeLogo, awayLogo: o.awayLogo, date_time: o.date_time, leagueName: o.leagueName, leagueLogo: o.leagueLogo, rows: [] });
+    if (!groupMap.has(o.fixture_id)) {
+      groupMap.set(o.fixture_id, { fixture_id: o.fixture_id, fixture_db_id: o.fixture_db_id, home: o.home, away: o.away, homeLogo: o.homeLogo, awayLogo: o.awayLogo, date_time: o.date_time, leagueName: o.leagueName, leagueLogo: o.leagueLogo, rows: [] });
+      groupOrder.push(o.fixture_id);
     }
-    grouped[grouped.length - 1].rows.push(o);
+    groupMap.get(o.fixture_id)!.rows.push(o);
   }
+  const grouped = groupOrder.map(id => groupMap.get(id)!);
 
   const fmtTime = (dt: string) => {
     try { return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); }
