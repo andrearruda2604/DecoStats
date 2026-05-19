@@ -323,8 +323,12 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
     } else if (candidate.stat === 'IMPEDIMENTOS') {
       const tot = matchTotals[match.fixture_id];
       if (tot && tot.offsides != null) { actualValue = tot.offsides; isValid = true; }
-    } else if (candidate.stat === 'CHUTES_GOL' || candidate.stat === 'CHUTES_TOTAL') {
-      continue;
+    } else if (candidate.stat === 'CHUTES_GOL') {
+      const tot = matchTotals[match.fixture_id];
+      if (tot?.shots_on_goal_count >= 2) { actualValue = tot.shots_on_goal; isValid = true; }
+    } else if (candidate.stat === 'CHUTES_TOTAL') {
+      const tot = matchTotals[match.fixture_id];
+      if (tot?.shots_total_count >= 2) { actualValue = tot.shots_total; isValid = true; }
     } else if (candidate.stat === 'AMBOS_MARCAM') {
       if (candidate.period === 'FT') {
         if (match.goals_for != null && match.goals_against != null) {
@@ -556,7 +560,7 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
   return candidates;
 }
 
-const ANCHOR_MIN_ODD = 1.40; // Odd mínima do pick âncora para garantir bilhete acima de 1.6
+const ANCHOR_MIN_ODD = 1.70; // Âncora precisa ter odd ≥ 1.70 para priorizar chutes sobre cartões
 
 function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_DEFAULT) {
   const deduped = [];
@@ -713,14 +717,10 @@ async function generateOdd2() {
            const r1h  = row.stats_1h?.find(s => s.type === 'Red Cards')?.value   || 0;
            matchTotals[row.fixture_id].cards    += (y + r);
            matchTotals[row.fixture_id].cards_ht += (y1h + r1h);
-           matchTotals[row.fixture_id].shots_total = (matchTotals[row.fixture_id].shots_total || 0) + (row.shots_total || 0);
-           matchTotals[row.fixture_id].offsides = (matchTotals[row.fixture_id].offsides || 0) + (row.offsides || 0);
-           matchTotals[row.fixture_id].goalkeeper_saves = (matchTotals[row.fixture_id].goalkeeper_saves || 0) + (row.goalkeeper_saves || 0);
-           
-           if (row.shots_on_goal != null) {
-             matchTotals[row.fixture_id].shots_on_goal += row.shots_on_goal;
-             matchTotals[row.fixture_id].shots_on_goal_count++;
-           }
+           if (row.shots_total      != null) { matchTotals[row.fixture_id].shots_total      += row.shots_total;      matchTotals[row.fixture_id].shots_total_count      = (matchTotals[row.fixture_id].shots_total_count      || 0) + 1; }
+           if (row.shots_on_goal   != null) { matchTotals[row.fixture_id].shots_on_goal   += row.shots_on_goal;   matchTotals[row.fixture_id].shots_on_goal_count   = (matchTotals[row.fixture_id].shots_on_goal_count   || 0) + 1; }
+           if (row.offsides        != null) { matchTotals[row.fixture_id].offsides        += row.offsides; }
+           if (row.goalkeeper_saves!= null) { matchTotals[row.fixture_id].goalkeeper_saves += row.goalkeeper_saves; }
          }
       }
 

@@ -281,9 +281,11 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
       const tot = matchTotals[match.fixture_id];
       if (tot?.offsides != null) { actualValue = tot.offsides; isValid = true; }
     } else if (candidate.stat === 'CHUTES_GOL') {
-      continue; // requer dados pareados — pula no loop away
+      const tot = matchTotals[match.fixture_id];
+      if (tot?.shots_on_goal_count >= 2) { actualValue = tot.shots_on_goal; isValid = true; }
     } else if (candidate.stat === 'CHUTES_TOTAL') {
-      continue; // requer dados pareados — pula no loop away
+      const tot = matchTotals[match.fixture_id];
+      if (tot?.shots_total_count >= 2) { actualValue = tot.shots_total; isValid = true; }
     } else if (candidate.stat === 'RESULTADO') {
       if (match.goals_for != null && match.goals_against != null) {
         isValid = true;

@@ -163,33 +163,40 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
         </a>
       </footer>
 
-      {/* Mobile bottom nav (hidden on sm+) */}
-      {!showBack && (
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 flex safe-area-inset-bottom"
-          style={{ background: 'linear-gradient(to top, #0a0a0a 85%, rgba(10,10,10,0.92))', borderTop: '1px solid rgba(255,255,255,0.08)' }}
-        >
+      {/* Mobile bottom nav — sempre visível no mobile */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 flex safe-area-inset-bottom"
+        style={{ background: 'linear-gradient(to top, #0a0a0a 85%, rgba(10,10,10,0.92))', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <MobileNavItem
+          label="Jogos"
+          active={activeView === 'LOBBY'}
+          onClick={() => onNavigate('LOBBY')}
+          icon={<LayoutGrid className="w-6 h-6" />}
+        />
+        <MobileNavItem
+          label={dailyOdd ? `Odd ${dailyOdd}` : 'Bilhete'}
+          active={activeView === 'ODD20'}
+          onClick={() => onNavigate('ODD20')}
+          icon={<Ticket className="w-6 h-6" />}
+          accent="amber"
+        />
+        <MobileNavItem
+          label="Oportunidades"
+          active={activeView === 'OPP'}
+          onClick={() => onNavigate('OPP')}
+          icon={<TrendingUp className="w-6 h-6" />}
+          accent="sky"
+        />
+        {isAdmin && (
           <MobileNavItem
-            label="Jogos"
-            active={activeView === 'LOBBY'}
-            onClick={() => onNavigate('LOBBY')}
-            icon={<LayoutGrid className="w-6 h-6" />}
+            label="ODD 3.0"
+            active={activeView === 'ODD30'}
+            onClick={() => onNavigate('ODD30')}
+            icon={<span className="text-[15px] font-black leading-none">3.0</span>}
+            accent="primary"
           />
-          <MobileNavItem
-            label={dailyOdd ? `Odd ${dailyOdd}` : 'Bilhete'}
-            active={activeView === 'ODD20'}
-            onClick={() => onNavigate('ODD20')}
-            icon={<Ticket className="w-6 h-6" />}
-            accent="amber"
-          />
-          <MobileNavItem
-            label="Oportunidades"
-            active={activeView === 'OPP'}
-            onClick={() => onNavigate('OPP')}
-            icon={<TrendingUp className="w-6 h-6" />}
-            accent="sky"
-          />
-        </nav>
-      )}
+        )}
+      </nav>
     </div>
   );
 }
@@ -205,7 +212,7 @@ function MobileNavItem({
   active: boolean;
   onClick: () => void;
   icon: ReactNode;
-  accent?: 'amber' | 'sky';
+  accent?: 'amber' | 'sky' | 'primary';
 }) {
   const accentColor =
     accent === 'amber' ? 'text-amber-400'
