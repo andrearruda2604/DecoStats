@@ -49,7 +49,10 @@
       "Bash(node scripts/backfillArsenal.js)",
       "Bash(node scripts/generateOdd2.js 2026-05-18 --force)",
       "Bash(node scripts/generateOdd3.js 2026-05-18 --force)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(node --experimental-vm-modules scripts/generateOdd2.js 2026-05-19)",
+      "Bash(node --experimental-vm-modules scripts/generateOdd3.js 2026-05-19)",
+      "Bash(node --experimental-vm-modules scripts/generateOdd2.js 2026-05-19 --force)"
     ]
   }
 }

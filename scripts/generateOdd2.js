@@ -406,7 +406,13 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
     if (available.length === 0) break;
 
-    available.sort((a, b) => b.probability - a.probability || b.odd - a.odd);
+    // Score balanceia probabilidade histórica e contribuição da odd
+    // Peso 15 = diferença de 0.1 na odd equivale a ~1.5 pontos de probabilidade
+    available.sort((a, b) => {
+      const scoreA = a.probability + (a.odd - 1.0) * 15;
+      const scoreB = b.probability + (b.odd - 1.0) * 15;
+      return scoreB - scoreA;
+    });
     const pick = available[0];
 
     doAdd(pick);
