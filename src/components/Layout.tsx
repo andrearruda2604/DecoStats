@@ -43,7 +43,7 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
   const isAdmin = user?.email?.toLowerCase() === 'deco260483@gmail.com';
 
   return (
-    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary pb-16 sm:pb-0">
+    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary pb-20 sm:pb-0">
       <InstallPrompt />
 
       {/* TopAppBar */}
@@ -165,25 +165,27 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
 
       {/* Mobile bottom nav (hidden on sm+) */}
       {!showBack && (
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-outline-variant/20 flex safe-area-inset-bottom">
+        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 flex safe-area-inset-bottom"
+          style={{ background: 'linear-gradient(to top, #0a0a0a 85%, rgba(10,10,10,0.92))', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+        >
           <MobileNavItem
             label="Jogos"
             active={activeView === 'LOBBY'}
             onClick={() => onNavigate('LOBBY')}
-            icon={<LayoutGrid className="w-5 h-5" />}
+            icon={<LayoutGrid className="w-6 h-6" />}
           />
           <MobileNavItem
             label={dailyOdd ? `Odd ${dailyOdd}` : 'Bilhete'}
             active={activeView === 'ODD20'}
             onClick={() => onNavigate('ODD20')}
-            icon={<Ticket className="w-5 h-5" />}
+            icon={<Ticket className="w-6 h-6" />}
             accent="amber"
           />
           <MobileNavItem
             label="Oportunidades"
             active={activeView === 'OPP'}
             onClick={() => onNavigate('OPP')}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-6 h-6" />}
             accent="sky"
           />
         </nav>
@@ -205,20 +207,29 @@ function MobileNavItem({
   icon: ReactNode;
   accent?: 'amber' | 'sky';
 }) {
-  const activeColor =
+  const accentColor =
     accent === 'amber' ? 'text-amber-400'
     : accent === 'sky' ? 'text-sky-400'
     : 'text-primary';
 
+  const activeBg =
+    accent === 'amber' ? 'bg-amber-400/12 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+    : accent === 'sky'  ? 'bg-sky-500/12 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+    : 'bg-primary/12 shadow-[0_0_12px_rgba(var(--primary-rgb),0.2)]';
+
   return (
     <button
       onClick={onClick}
-      className={`flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors ${
-        active ? activeColor : 'text-on-surface-variant/35 hover:text-on-surface-variant/70'
+      className={`flex-1 py-3 flex flex-col items-center gap-1.5 transition-all duration-200 ${
+        active
+          ? `${accentColor} ${activeBg} rounded-xl mx-1 my-1`
+          : 'text-white/50 hover:text-white/80'
       }`}
     >
       {icon}
-      <span className="text-[9px] font-black uppercase tracking-wide leading-none">{label}</span>
+      <span className={`text-[10px] font-black uppercase tracking-wide leading-none ${active ? '' : 'opacity-70'}`}>
+        {label}
+      </span>
     </button>
   );
 }

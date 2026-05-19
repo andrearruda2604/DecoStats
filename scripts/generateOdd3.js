@@ -22,7 +22,7 @@ const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)
 const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 
 const TARGET_LOW  = 2.80;
-const TARGET_HIGH = 3.20;
+const TARGET_HIGH = 3.00;
 const MIN_PICKS   = 4;
 const MAX_PICKS   = 12; 
 const MAX_PICKS_PER_MATCH_DEFAULT = 2;
