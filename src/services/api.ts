@@ -299,6 +299,17 @@ export async function fetchPredictiveData(
       '2H': 'stats_2h'
     };
 
+    // Fetch HT scores from fixtures to support HT/2H goals breakdown
+    const allFixIds = [...new Set([...homeData, ...awayData].map((r: any) => r.fixture_id))];
+    const { data: htFixtures } = await supabase
+      .from('fixtures')
+      .select('api_id, ht_home_score, ht_away_score')
+      .in('api_id', allFixIds);
+    const htMap: Record<number, { h: number | null; a: number | null }> = {};
+    for (const f of htFixtures || []) {
+      htMap[f.api_id] = { h: f.ht_home_score, a: f.ht_away_score };
+    }
+
     const result: any = {};
 
     for (const period of ['FT', 'HT', '2H'] as const) {
@@ -306,8 +317,20 @@ export async function fetchPredictiveData(
 
       result[period] = PREDICTIVE_CONF.map(cfg => {
           const extractVal = (row: any): number => {
-            if (cfg.apiType === 'goals') return row.goals_for || 0;
-            if (cfg.apiType === 'goals_against') return row.goals_against || 0;
+            if (cfg.apiType === 'goals' || cfg.apiType === 'goals_against') {
+              const ht = htMap[row.fixture_id];
+              const isGoalsFor = cfg.apiType === 'goals';
+              if (period === 'FT') return isGoalsFor ? (row.goals_for || 0) : (row.goals_against || 0);
+              if (!ht || ht.h == null) return 0;
+              // HT goals from perspective of this team
+              const htFor     = row.is_home ? (ht.h ?? 0) : (ht.a ?? 0);
+              const htAgainst = row.is_home ? (ht.a ?? 0) : (ht.h ?? 0);
+              if (period === 'HT') return isGoalsFor ? htFor : htAgainst;
+              // 2H = FT - HT
+              return isGoalsFor
+                ? (row.goals_for     || 0) - htFor
+                : (row.goals_against || 0) - htAgainst;
+            }
 
             const jsonbArr = row[jsonbCol] || [];
             

@@ -77,7 +77,7 @@ async function loadHistory(
   const { data: rows } = await q;
   if (!rows?.length) return [];
 
-  const oppIds = [...new Set(rows.map(r => r.opponent_id))];
+  const oppIds = [...new Set(rows.map(r => r.opponent_id).filter(id => id != null))];
   const lgIds  = [...new Set(rows.map(r => r.league_id))];
   const fixIds = rows.map(r => r.fixture_id);
 
