@@ -16,7 +16,7 @@ interface Opportunity {
   period: string;
   teamTarget: string;
   team: string;
-  type: 'OVER' | 'UNDER' | 'H' | 'D' | 'A';
+  type: 'OVER' | 'UNDER' | 'H' | 'D' | 'A' | 'YES' | 'NO' | 'HD' | 'HA' | 'DA';
   threshold: number;
   line: string;
   market: string;
@@ -34,6 +34,11 @@ const STAT_LABELS: Record<string, string> = {
   CHUTES_GOL: 'Chutes a Gol',
   CHUTES_TOTAL: 'Chutes Totais',
   RESULTADO: '1x2 Resultado',
+  AMBOS_MARCAM: 'Ambos Marcam',
+  CLEAN_SHEET: 'Clean Sheet',
+  DUPLA_CHANCE: 'Dupla Chance',
+  RESULTADO_HT: 'Resultado 1T',
+  RESULTADO_2H: 'Resultado 2T',
 };
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -45,11 +50,18 @@ const PERIOD_LABELS: Record<string, string> = {
 // Opções estáticas de filtro — sempre visíveis independente dos dados do dia
 const STAT_OPTIONS = [
   { value: 'RESULTADO',    label: '1x2 Resultado' },
+  { value: 'AMBOS_MARCAM', label: 'Ambos Marcam' },
+  { value: 'CLEAN_SHEET',  label: 'Clean Sheet' },
+  { value: 'DUPLA_CHANCE', label: 'Dupla Chance' },
+  { value: 'RESULTADO_HT', label: 'Resultado 1T' },
+  { value: 'RESULTADO_2H', label: 'Resultado 2T' },
   { value: 'GOLS',         label: 'Gols' },
+  { value: 'GOLS_SOFRIDOS',label: 'Gols Sofridos' },
   { value: 'ESCANTEIOS',   label: 'Escanteios' },
   { value: 'CARTÕES',      label: 'Cartões' },
   { value: 'CHUTES_GOL',   label: 'Chutes a Gol' },
   { value: 'CHUTES_TOTAL', label: 'Chutes Totais' },
+  { value: 'IMPEDIMENTOS', label: 'Impedimentos' },
 ];
 
 function SignalBars({ pct }: { pct: number }) {
@@ -242,6 +254,20 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
         else if (o.teamTarget === 'HOME') val = h2H;
         else val = h2A;
       }
+    } else if (o.stat === 'GOLS_SOFRIDOS') {
+      // HOME = gols sofridos pelo mandante = gols do visitante
+      // AWAY = gols sofridos pelo visitante = gols do mandante
+      if (o.period === 'FT') {
+        if (o.teamTarget === 'HOME') val = s.away;
+        else val = s.home;
+      } else if (o.period === 'HT' && s.htHome != null && s.htAway != null) {
+        if (o.teamTarget === 'HOME') val = s.htAway;
+        else val = s.htHome;
+      } else if (o.period === '2H' && s.htHome != null) {
+        const h2A = s.away - (s.htAway ?? 0), h2H = s.home - s.htHome;
+        if (o.teamTarget === 'HOME') val = h2A;
+        else val = h2H;
+      }
     } else if (o.stat === 'ESCANTEIOS') {
       const hH = histStats[`${o.fixture_id}-HOME`];
       const hA = histStats[`${o.fixture_id}-AWAY`];
@@ -277,6 +303,35 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
       const h = o.teamTarget === 'AWAY' ? hA : hH;
       if (o.teamTarget === 'TOTAL') { if (hH?.shots_total != null && hA?.shots_total != null) val = hH.shots_total + hA.shots_total; }
       else if (h?.shots_total != null) val = h.shots_total;
+    } else if (o.stat === 'AMBOS_MARCAM') {
+      if (o.period === 'FT') {
+        const hit = s.home > 0 && s.away > 0;
+        return (o.type === 'YES' ? hit : !hit) ? 'WON' : 'LOST';
+      } else if (o.period === 'HT' && s.htHome != null && s.htAway != null) {
+        const hit = s.htHome > 0 && s.htAway > 0;
+        return (o.type === 'YES' ? hit : !hit) ? 'WON' : 'LOST';
+      } else if (o.period === '2H' && s.htHome != null) {
+        const hit = (s.home - s.htHome) > 0 && (s.away - (s.htAway ?? 0)) > 0;
+        return (o.type === 'YES' ? hit : !hit) ? 'WON' : 'LOST';
+      }
+      return null;
+    } else if (o.stat === 'CLEAN_SHEET') {
+      const conceded = o.teamTarget === 'HOME' ? s.away : s.home;
+      const hit = conceded === 0;
+      return (o.type === 'YES' ? hit : !hit) ? 'WON' : 'LOST';
+    } else if (o.stat === 'DUPLA_CHANCE') {
+      const outcome = s.home > s.away ? 'H' : s.home < s.away ? 'A' : 'D';
+      const hit = o.type === 'HD' ? (outcome !== 'A') : o.type === 'HA' ? (outcome !== 'D') : (outcome !== 'H');
+      return hit ? 'WON' : 'LOST';
+    } else if (o.stat === 'RESULTADO_HT') {
+      if (s.htHome == null) return null;
+      const outcome = s.htHome > (s.htAway ?? 0) ? 'H' : s.htHome < (s.htAway ?? 0) ? 'A' : 'D';
+      return (outcome as string) === o.type ? 'WON' : 'LOST';
+    } else if (o.stat === 'RESULTADO_2H') {
+      if (s.htHome == null) return null;
+      const h2H = s.home - s.htHome, a2H = s.away - (s.htAway ?? 0);
+      const outcome = h2H > a2H ? 'H' : h2H < a2H ? 'A' : 'D';
+      return (outcome as string) === o.type ? 'WON' : 'LOST';
     }
 
     if (val === undefined) return null;
@@ -630,8 +685,8 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className={`text-[11px] font-black ${
-                          o.type === 'OVER' || o.type === 'H' ? 'text-emerald-400'
-                          : o.type === 'D' ? 'text-amber-400'
+                          ['OVER','H','YES','HD','HA'].includes(o.type) ? 'text-emerald-400'
+                          : ['D','DA'].includes(o.type) ? 'text-amber-400'
                           : 'text-sky-400'
                         }`}>
                           {o.line}
