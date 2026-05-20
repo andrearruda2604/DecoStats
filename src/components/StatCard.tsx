@@ -146,7 +146,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
       {/* Expanded Content */}
       {expanded && (
         <div className="card-expand border-t border-outline-variant px-4 pb-4 space-y-4">
-          <p className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 pt-3">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/70 pt-3 font-bold">
             {stat.subLabel}
           </p>
 
@@ -184,7 +184,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
 
           {/* Moda */}
           <div className="border-t border-outline-variant/50 pt-3">
-            <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
+            <span className="text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/70 font-bold">
               Mais Frequente
             </span>
             <div className="grid grid-cols-2 gap-4 mt-2">
@@ -207,7 +207,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                 <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black">
                   Probabilidades
                 </span>
-                <div className="flex items-center gap-3 text-[8px] font-bold text-on-surface-variant/40">
+                <div className="flex items-center gap-3 text-[8px] font-bold text-on-surface-variant/60">
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> Mais</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-rose-500 inline-block" /> Menos</span>
                 </div>
@@ -215,12 +215,12 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
 
               {/* Column headers */}
               <div className="flex items-center gap-2 mb-2 px-1">
-                <div className="flex-1 flex justify-between text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40">
+                <div className="flex-1 flex justify-between text-[8px] font-black uppercase tracking-widest text-on-surface-variant/60">
                   <span>Menos</span>
                   <span>Mais</span>
                 </div>
                 <div className="w-12 shrink-0" />
-                <div className="flex-1 flex justify-between text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40">
+                <div className="flex-1 flex justify-between text-[8px] font-black uppercase tracking-widest text-on-surface-variant/60">
                   <span>Mais</span>
                   <span>Menos</span>
                 </div>
@@ -313,7 +313,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
 
           {/* Distribution */}
           <div className="border-t border-outline-variant/50 pt-3">
-            <span className="text-[8px] uppercase tracking-[0.2em] text-on-surface-variant/40 font-bold">
+            <span className="text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/70 font-bold">
               Distribuição
             </span>
             <div className="mt-2 space-y-1.5">
