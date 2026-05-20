@@ -111,7 +111,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
         className="w-full"
       >
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-surface rounded-xl border border-white/5 hover:bg-white/5 transition-colors relative">
-          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${homeAvg > awayAvg ? 'bg-primary text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
+          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${stat.homeMax > stat.awayMax ? 'bg-primary text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
             {stat.homeMin}-{stat.homeMax}
           </div>
           
@@ -131,7 +131,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
             )}
           </div>
           
-          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${awayAvg > homeAvg ? 'bg-blue-600 text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
+          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${stat.awayMax > stat.homeMax ? 'bg-blue-600 text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
             {stat.awayMin}-{stat.awayMax}
           </div>
           
