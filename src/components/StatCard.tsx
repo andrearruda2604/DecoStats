@@ -11,6 +11,8 @@ interface StatCardProps {
   stat: PredictiveStatRow;
   index: number;
   show100Only?: boolean;
+  homeTeamName?: string;
+  awayTeamName?: string;
 }
 
 function computeMode(dist: number[]): { value: number; count: number } {
@@ -65,7 +67,9 @@ function computeUnderPct(dist: number[], threshold: number): number {
   return Math.round((count / dist.length) * 100);
 }
 
-export default function StatCard({ stat, index, show100Only = false }: StatCardProps) {
+export default function StatCard({ stat, index, show100Only = false, homeTeamName = 'Mandante', awayTeamName = 'Visitante' }: StatCardProps) {
+  const homeShort = homeTeamName.length > 12 ? homeTeamName.slice(0, 3).toUpperCase() : homeTeamName;
+  const awayShort = awayTeamName.length > 12 ? awayTeamName.slice(0, 3).toUpperCase() : awayTeamName;
   const [expanded, setExpanded] = useState(false);
 
   const homeMode = computeMode(stat.homeDist);
@@ -182,47 +186,54 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
           {/* Probabilidades (Over + Under Compacto) */}
           {displayRows.length > 0 && (
             <div className="border-t border-outline-variant/50 pt-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black block mb-4">
-                Probabilidades
-              </span>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black">
+                  Probabilidades
+                </span>
+                <div className="flex items-center gap-3 text-[8px] font-bold text-on-surface-variant/40">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> {homeTeamName}</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> {awayTeamName}</span>
+                </div>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                 {[
                   displayRows.slice(0, Math.ceil(displayRows.length / 2)),
                   displayRows.slice(Math.ceil(displayRows.length / 2))
                 ].map((column, colIdx) => (
-                  <div key={colIdx} className="space-y-4">
+                  <div key={colIdx} className="space-y-3">
                     {column.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => {
                       const totalH = stat.homeDist.length;
                       const totalA = stat.awayDist.length;
                       const hOverC = Math.round(homeOver * totalH / 100);
-                      const hUnderC = Math.round(homeUnder * totalH / 100);
                       const aOverC = Math.round(awayOver * totalA / 100);
-                      const aUnderC = Math.round(awayUnder * totalA / 100);
+                      const anyIs100 = homeOver === 100 || awayOver === 100 || homeUnder === 100 || awayUnder === 100;
 
                       return (
-                        <div key={line} className="bg-surface/20 rounded-xl p-3 border border-outline-variant/5">
+                        <div key={line} className={`rounded-xl p-3 border ${anyIs100 ? 'bg-amber-400/5 border-amber-400/20' : 'bg-surface/20 border-outline-variant/5'}`}>
                           {/* Header Linha */}
-                          <div className="flex items-center justify-center mb-3 relative">
-                            <div className="absolute left-0 right-0 h-px bg-outline-variant/10" />
-                            <span className="relative bg-surface-container-low px-2 text-[10px] font-black uppercase tracking-widest text-on-surface shadow-sm rounded-md border border-outline-variant/10">
-                              Linha {line}
+                          <div className="flex items-center justify-center mb-2.5">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${anyIs100 ? 'text-amber-400' : 'text-on-surface-variant/80'}`}>
+                              {anyIs100 && '⭐ '}Linha {line}{anyIs100 && ' ⭐'}
                             </span>
                           </div>
 
                           {/* Home Row */}
-                          <div className="mb-3">
-                            <div className="flex justify-between items-end mb-1">
-                              <span className={`text-[9px] font-black ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                MAIS: {homeOver}% <span className="opacity-50 font-medium">({hOverC}/{totalH})</span>
-                              </span>
-                              <span className="text-[9px] font-black text-on-surface-variant/70">
-                                <span className="opacity-50 font-medium">({hUnderC}/{totalH})</span> {homeUnder}% :MENOS
-                              </span>
+                          <div className="mb-2.5">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[8px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded shrink-0 uppercase tracking-wide">{homeShort}</span>
+                              <div className="flex justify-between items-center flex-1">
+                                <span className="text-[9px] font-black text-emerald-400">
+                                  ▲ {homeOver}% <span className="opacity-50 font-medium text-[8px]">({hOverC}/{totalH})</span>
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-400/40">
+                                  ▼ {homeUnder}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="w-full h-2 flex rounded-sm overflow-hidden bg-surface-container-highest">
+                            <div className="w-full h-2.5 flex rounded-full overflow-hidden bg-emerald-950/40">
                               <div 
-                                className={`h-full transition-all duration-500 shadow-[0_0_8px] ${homeOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-emerald-400 shadow-emerald-400/30'}`} 
+                                className="h-full rounded-full bg-emerald-400 transition-all duration-500"
                                 style={{ width: `${homeOver}%` }} 
                               />
                             </div>
@@ -230,17 +241,20 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
 
                           {/* Away Row */}
                           <div>
-                            <div className="flex justify-between items-end mb-1">
-                              <span className={`text-[9px] font-black ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
-                                MAIS: {awayOver}% <span className="opacity-50 font-medium">({aOverC}/{totalA})</span>
-                              </span>
-                              <span className="text-[9px] font-black text-on-surface-variant/70">
-                                <span className="opacity-50 font-medium">({aUnderC}/{totalA})</span> {awayUnder}% :MENOS
-                              </span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[8px] font-black text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded shrink-0 uppercase tracking-wide">{awayShort}</span>
+                              <div className="flex justify-between items-center flex-1">
+                                <span className="text-[9px] font-black text-blue-400">
+                                  ▲ {awayOver}% <span className="opacity-50 font-medium text-[8px]">({aOverC}/{totalA})</span>
+                                </span>
+                                <span className="text-[9px] font-bold text-blue-400/40">
+                                  ▼ {awayUnder}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="w-full h-2 flex rounded-sm overflow-hidden bg-surface-container-highest">
+                            <div className="w-full h-2.5 flex rounded-full overflow-hidden bg-blue-950/40">
                               <div 
-                                className={`h-full transition-all duration-500 shadow-[0_0_8px] ${awayOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-blue-400 shadow-blue-400/50'}`} 
+                                className="h-full rounded-full bg-blue-400 transition-all duration-500"
                                 style={{ width: `${awayOver}%` }} 
                               />
                             </div>

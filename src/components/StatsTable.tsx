@@ -50,7 +50,7 @@ export default function StatsTable({ predictiveStats, homeTeamName, awayTeamName
         </div>
       ) : (
         predictiveStats.map((stat, i) => (
-          <StatCard key={i} stat={stat} index={i} show100Only={show100Only} />
+          <StatCard key={i} stat={stat} index={i} show100Only={show100Only} homeTeamName={homeTeamName} awayTeamName={awayTeamName} />
         ))
       )}
 
