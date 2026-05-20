@@ -179,77 +179,75 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
             </div>
           </div>
 
-          {/* Probabilidades (Over + Under) */}
+          {/* Probabilidades (Over + Under Compacto) */}
           {displayRows.length > 0 && (
             <div className="border-t border-outline-variant/50 pt-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-black block mb-4">
                 Probabilidades
               </span>
               
-              {/* Divisão Manual: Esquerda (1-7) | Direita (8-14) */}
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                 {[
                   displayRows.slice(0, Math.ceil(displayRows.length / 2)),
                   displayRows.slice(Math.ceil(displayRows.length / 2))
                 ].map((column, colIdx) => (
-                  <div key={colIdx} className="space-y-6">
-                    {column.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => (
-                      <div key={line} className="mb-4 space-y-3 p-2 rounded-lg bg-surface/30 border border-white/5">
-                        {/* Over line */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[12px] text-white font-black uppercase">
-                              Mais de {line}
-                            </span>
-                          </div>
-                          <div className="space-y-1.5 bg-black/40 p-2 rounded-md">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
-                                <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${homeOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-emerald-400 shadow-emerald-400/30'}`} style={{ width: `${homeOver}%` }} />
-                              </div>
-                              <span className={`text-[12px] font-black w-16 text-right tabular-nums ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                {homeOver}% <span className="text-[9px] opacity-60 font-normal">({Math.round(homeOver * stat.homeDist.length / 100)}/{stat.homeDist.length})</span>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 h-3 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/10">
-                                <div className={`h-full transition-all duration-500 shadow-[0_0_8px] ${awayOver === 100 ? 'bg-amber-400' : 'bg-blue-400 shadow-blue-400/50'}`} style={{ width: `${awayOver}%` }} />
-                              </div>
-                              <span className={`text-[12px] font-black w-16 text-right tabular-nums ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
-                                {awayOver}% <span className="text-[9px] opacity-60 font-normal">({Math.round(awayOver * stat.awayDist.length / 100)}/{stat.awayDist.length})</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                  <div key={colIdx} className="space-y-4">
+                    {column.map(({ line, homeOver, awayOver, homeUnder, awayUnder }) => {
+                      const totalH = stat.homeDist.length;
+                      const totalA = stat.awayDist.length;
+                      const hOverC = Math.round(homeOver * totalH / 100);
+                      const hUnderC = Math.round(homeUnder * totalH / 100);
+                      const aOverC = Math.round(awayOver * totalA / 100);
+                      const aUnderC = Math.round(awayUnder * totalA / 100);
 
-                        {/* Under line */}
-                        <div className="space-y-1.5 opacity-90 ">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[11px] text-on-surface-variant font-black uppercase">
-                              Menos de {line}
+                      return (
+                        <div key={line} className="bg-surface/20 rounded-xl p-3 border border-outline-variant/5">
+                          {/* Header Linha */}
+                          <div className="flex items-center justify-center mb-3 relative">
+                            <div className="absolute left-0 right-0 h-px bg-outline-variant/10" />
+                            <span className="relative bg-surface-container-low px-2 text-[10px] font-black uppercase tracking-widest text-on-surface shadow-sm rounded-md border border-outline-variant/10">
+                              Linha {line}
                             </span>
                           </div>
-                          <div className="space-y-1.5 bg-black/20 p-2 rounded-md">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
-                                <div className={`h-full transition-all duration-500 ${homeUnder === 100 ? 'bg-amber-400' : 'bg-emerald-600'}`} style={{ width: `${homeUnder}%` }} />
-                              </div>
-                              <span className={`text-[11px] font-black w-16 text-right tabular-nums ${homeUnder === 100 ? 'text-amber-400' : 'text-emerald-600'}`}>
-                                {homeUnder}% <span className="text-[8px] opacity-60 font-normal">({Math.round(homeUnder * stat.homeDist.length / 100)}/{stat.homeDist.length})</span>
+
+                          {/* Home Row */}
+                          <div className="mb-3">
+                            <div className="flex justify-between items-end mb-1">
+                              <span className={`text-[9px] font-black ${homeOver === 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                MAIS: {homeOver}% <span className="opacity-50 font-medium">({hOverC}/{totalH})</span>
+                              </span>
+                              <span className="text-[9px] font-black text-on-surface-variant/70">
+                                <span className="opacity-50 font-medium">({hUnderC}/{totalH})</span> {homeUnder}% :MENOS
                               </span>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 h-2 bg-gray-900 rounded-sm overflow-hidden ring-1 ring-white/5">
-                                <div className={`h-full transition-all duration-500 ${awayUnder === 100 ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ width: `${awayUnder}%` }} />
-                              </div>
-                              <span className={`text-[11px] font-black w-16 text-right tabular-nums ${awayUnder === 100 ? 'text-amber-400' : 'text-blue-600'}`}>
-                                {awayUnder}% <span className="text-[8px] opacity-60 font-normal">({Math.round(awayUnder * stat.awayDist.length / 100)}/{stat.awayDist.length})</span>
+                            <div className="w-full h-2 flex rounded-sm overflow-hidden bg-surface-container-highest">
+                              <div 
+                                className={`h-full transition-all duration-500 shadow-[0_0_8px] ${homeOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-emerald-400 shadow-emerald-400/30'}`} 
+                                style={{ width: `${homeOver}%` }} 
+                              />
+                            </div>
+                          </div>
+
+                          {/* Away Row */}
+                          <div>
+                            <div className="flex justify-between items-end mb-1">
+                              <span className={`text-[9px] font-black ${awayOver === 100 ? 'text-amber-400' : 'text-blue-400'}`}>
+                                MAIS: {awayOver}% <span className="opacity-50 font-medium">({aOverC}/{totalA})</span>
                               </span>
+                              <span className="text-[9px] font-black text-on-surface-variant/70">
+                                <span className="opacity-50 font-medium">({aUnderC}/{totalA})</span> {awayUnder}% :MENOS
+                              </span>
+                            </div>
+                            <div className="w-full h-2 flex rounded-sm overflow-hidden bg-surface-container-highest">
+                              <div 
+                                className={`h-full transition-all duration-500 shadow-[0_0_8px] ${awayOver === 100 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-blue-400 shadow-blue-400/50'}`} 
+                                style={{ width: `${awayOver}%` }} 
+                              />
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ))}
               </div>

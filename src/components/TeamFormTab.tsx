@@ -299,43 +299,94 @@ export default function TeamFormTab({ homeTeam, awayTeam, leagueDbId, leagueName
   return (
     <div className="space-y-4">
       {/* Filter bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1 py-1 pb-3">
-        {/* Partidas */}
-        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Partidas</span>
-          <div className="flex items-center gap-1">
-            {([5, 10, 15, 20] as const).map(n => (
-              <button key={n} onClick={() => setCount(n)} className={btn(count === n)}>{n}</button>
-            ))}
-          </div>
-        </div>
+      <div className="bg-surface-container/30 rounded-2xl p-4 mb-4 border border-outline-variant/10">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+          
+          {/* Left Column */}
+          <div className="space-y-5">
+            {/* Partidas */}
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Partidas</span>
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1">
+                {([5, 10, 15, 20] as const).map(n => {
+                  const isActive = count === n;
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setCount(n)}
+                      className={`relative text-[11px] font-bold transition-colors whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                    >
+                      {n}
+                      {isActive && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* Ligas */}
-        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Ligas</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setLiga('all')}  className={btn(liga === 'all')}>Todas</button>
-            <button onClick={() => setLiga('game')} className={btn(liga === 'game')}>
-              {leagueName ? leagueName.split(' ').slice(0,2).join(' ') : 'Do Jogo'}
-            </button>
+            {/* Local */}
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Local</span>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setMandoGame(false)}
+                  className={`relative text-[11px] font-bold transition-colors ${!mandoGame ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                >
+                  Todos
+                  {!mandoGame && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                </button>
+                <button
+                  onClick={() => setMandoGame(true)}
+                  className={`relative text-[11px] font-bold transition-colors ${mandoGame ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                >
+                  Casa/Fora
+                  {mandoGame && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Temporada */}
-        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Temporada</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setSeasonOnly(false)} className={btn(!seasonOnly)}>Sempre</button>
-            <button onClick={() => setSeasonOnly(true)}  className={btn(seasonOnly)}>Temporada</button>
-          </div>
-        </div>
+          {/* Right Column */}
+          <div className="space-y-5">
+            {/* Ligas */}
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Ligas</span>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setLiga('all')}
+                  className={`relative text-[11px] font-bold transition-colors ${liga === 'all' ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                >
+                  Todas
+                  {liga === 'all' && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                </button>
+                <button
+                  onClick={() => setLiga('game')}
+                  className={`relative text-[11px] font-bold transition-colors ${liga === 'game' ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                >
+                  {leagueName ? leagueName.split(' ').slice(0,2).join(' ') : 'Do Jogo'}
+                  {liga === 'game' && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                </button>
+              </div>
+            </div>
 
-        {/* Mando */}
-        <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-          <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Mando</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setMandoGame(false)} className={btn(!mandoGame)}>Todos</button>
-            <button onClick={() => setMandoGame(true)}  className={btn(mandoGame)}>Casa/Fora</button>
+            {/* Temporada Switch */}
+            <div className="pt-1">
+              <label className="flex items-center gap-3 cursor-pointer select-none group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={seasonOnly}
+                    onChange={(e) => setSeasonOnly(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-surface-container border border-outline-variant/30 rounded-full peer peer-checked:bg-primary transition-colors" />
+                  <div className="absolute left-1 top-1 w-3 h-3 bg-on-surface-variant/50 rounded-full peer-checked:translate-x-5 peer-checked:bg-on-primary transition-transform" />
+                </div>
+                <span className="text-[10px] leading-tight w-24 text-on-surface-variant group-hover:text-on-surface transition-colors">
+                  Ignorar partidas da temporada anterior
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       </div>

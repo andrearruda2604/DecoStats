@@ -252,88 +252,126 @@ function AuthenticatedApp() {
               {activeDataTab === 'stats' && (
                 <>
                   {/* Filter Bar */}
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1 py-1 pb-3">
-                    {/* Partidas */}
-                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Partidas</span>
-                      <div className="flex items-center gap-1">
-                        {([5, 10, 15, 20, 999] as const).map(n => (
+                  <div className="bg-surface-container/30 rounded-2xl p-4 mb-4 border border-outline-variant/10">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                      
+                      {/* Left Column */}
+                      <div className="space-y-5">
+                        {/* Partidas */}
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Partidas</span>
+                          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+                            {([5, 10, 15, 20, 999] as const).map(n => {
+                              const isActive = statsCount === n;
+                              return (
+                                <button
+                                  key={n}
+                                  onClick={() => setStatsCount(n)}
+                                  className={`relative text-[11px] font-bold transition-colors whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                                >
+                                  {n === 999 ? 'Todas' : n}
+                                  {isActive && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Local */}
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Local</span>
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => setMandoGame(false)}
+                              className={`relative text-[11px] font-bold transition-colors ${!mandoGame ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                            >
+                              Todos
+                              {!mandoGame && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                            </button>
+                            <button
+                              onClick={() => setMandoGame(true)}
+                              className={`relative text-[11px] font-bold transition-colors ${mandoGame ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                            >
+                              Casa/Fora
+                              {mandoGame && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Tempo */}
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Tempo</span>
+                          <div className="flex items-center gap-4">
+                            {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => {
+                              const isActive = toggle === mode;
+                              return (
+                                <button
+                                  key={mode}
+                                  onClick={() => setToggle(mode)}
+                                  className={`relative text-[11px] font-bold transition-colors ${isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                                >
+                                  {mode === 'HT' ? '1° Tempo' : mode === 'FT' ? 'Jogo' : '2° Tempo'}
+                                  {isActive && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="space-y-5">
+                        {/* Ligas */}
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-2.5 block">Ligas</span>
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => setLigaFilter('all')}
+                              className={`relative text-[11px] font-bold transition-colors ${ligaFilter === 'all' ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                            >
+                              Todas
+                              {ligaFilter === 'all' && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                            </button>
+                            <button
+                              onClick={() => setLigaFilter('game')}
+                              className={`relative text-[11px] font-bold transition-colors ${ligaFilter === 'game' ? 'text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
+                            >
+                              {matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}
+                              {ligaFilter === 'game' && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Temporada Switch */}
+                        <div className="pt-1">
+                          <label className="flex items-center gap-3 cursor-pointer select-none group">
+                            <div className="relative">
+                              <input
+                                type="checkbox"
+                                checked={seasonOnly}
+                                onChange={(e) => setSeasonOnly(e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-10 h-5 bg-surface-container border border-outline-variant/30 rounded-full peer peer-checked:bg-primary transition-colors" />
+                              <div className="absolute left-1 top-1 w-3 h-3 bg-on-surface-variant/50 rounded-full peer-checked:translate-x-5 peer-checked:bg-on-primary transition-transform" />
+                            </div>
+                            <span className="text-[10px] leading-tight w-24 text-on-surface-variant group-hover:text-on-surface transition-colors">
+                              Ignorar partidas da temporada anterior
+                            </span>
+                          </label>
+                        </div>
+
+                        {/* 100% Button */}
+                        <div className="pt-2">
                           <button
-                            key={n}
-                            onClick={() => setStatsCount(n)}
-                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${statsCount === n ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                          >{n === 999 ? 'Todas' : n}</button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Ligas */}
-                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Ligas</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setLigaFilter('all')}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'all' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >Todas</button>
-                        <button
-                          onClick={() => setLigaFilter('game')}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${ligaFilter === 'game' ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >{matchDetail.league?.name ? matchDetail.league.name.split(' ').slice(0, 2).join(' ') : 'Do Jogo'}</button>
-                      </div>
-                    </div>
-
-                    {/* Temporada */}
-                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Temporada</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setSeasonOnly(false)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!seasonOnly ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >Todas</button>
-                        <button
-                          onClick={() => setSeasonOnly(true)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${seasonOnly ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >Atual</button>
-                      </div>
-                    </div>
-
-                    {/* Mando */}
-                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Mando</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setMandoGame(false)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${!mandoGame ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >Todos</button>
-                        <button
-                          onClick={() => setMandoGame(true)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${mandoGame ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
-                        >Casa/Fora</button>
-                      </div>
-                    </div>
-
-                    {/* Tempo */}
-                    <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-outline-variant/10 bg-surface/30">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-primary/70 px-1.5">Tempo</span>
-                      <div className="flex items-center gap-1">
-                        {(['HT', '2H', 'FT'] as ToggleMode[]).map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => setToggle(mode)}
-                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex-shrink-0 ${toggle === mode ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container-highest/30 text-on-surface-variant/55 hover:bg-surface-container-highest/50 hover:text-on-surface'}`}
+                            onClick={() => setShow100Only(!show100Only)}
+                            className={`flex items-center justify-center w-full max-w-[140px] py-2.5 rounded-lg border transition-all text-[10px] font-black uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant/20 bg-surface/30 text-on-surface-variant hover:text-on-surface'}`}
                           >
-                            {mode === 'HT' ? '1° Tempo' : mode === 'FT' ? 'JOGO' : mode === '2H' ? '2° Tempo' : mode}
+                            🎯 Mostrar só 100%
                           </button>
-                        ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* 100% */}
-                    <div className="flex items-center self-stretch">
-                      <button
-                        onClick={() => setShow100Only(!show100Only)}
-                        className={`h-full flex items-center gap-1.5 px-4 rounded-xl border transition-all flex-shrink-0 text-[10px] font-black uppercase tracking-wider ${show100Only ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-outline-variant/10 bg-surface/30 text-on-surface-variant/55 hover:text-on-surface hover:bg-surface-container-highest/30'}`}
-                      >🎯 100%</button>
                     </div>
                   </div>
 
