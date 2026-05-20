@@ -132,33 +132,53 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
       )}
 
       {/* Match groups (LEAGUE MODE) */}
-      {sortBy === 'LEAGUE' && grouped && Array.from(grouped.entries()).map(([leagueName, { logoUrl, matches: group }]) => (
-        <div key={leagueName} className="space-y-2">
-          {/* League header — only when viewing multiple leagues */}
-          {multipleLeagues && (
-            <div className="flex items-center gap-2 px-1">
-              <div className="w-4 h-4 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
-                <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+      {sortBy === 'LEAGUE' && grouped && Array.from(grouped.entries()).map(([leagueName, { logoUrl, matches: group }]) => {
+        const firstMatch = group[0];
+        return (
+          <div key={leagueName} className="bg-surface rounded-2xl overflow-hidden shadow-lg border border-outline-variant/10">
+            {/* League Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-surface-container/30 border-b border-outline-variant/10">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
+                  <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <p className="text-[9px] text-on-surface-variant/70 uppercase tracking-widest font-semibold leading-none mb-1">
+                    {firstMatch.league.country}
+                  </p>
+                  <p className="text-xs font-bold uppercase text-on-surface">
+                    {leagueName}
+                  </p>
+                </div>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/75">
-                {leagueName}
-              </span>
-              <div className="flex-1 h-px bg-outline-variant/25" />
             </div>
-          )}
 
-          {/* Cards grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${!multipleLeagues ? 'pb-8' : ''}`}>
-            {group.map((match) => <MatchCard key={match.id} match={match} onSelectMatch={onSelectMatch} />)}
+            {/* Matches List */}
+            <div className="flex flex-col">
+              {group.map((match, idx) => (
+                <MatchRow 
+                  key={match.id} 
+                  match={match} 
+                  onSelectMatch={onSelectMatch} 
+                  isLast={idx === group.length - 1} 
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Flat list (TIME MODE) */}
       {sortBy === 'TIME' && sortedByTime && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
-          {sortedByTime.map((match) => (
-            <MatchCard key={match.id} match={match} onSelectMatch={onSelectMatch} showLeagueLabel />
+        <div className="flex flex-col bg-surface rounded-2xl overflow-hidden shadow-lg border border-outline-variant/10 pb-2">
+          {sortedByTime.map((match, idx) => (
+            <MatchRow 
+              key={match.id} 
+              match={match} 
+              onSelectMatch={onSelectMatch} 
+              showLeagueLabel 
+              isLast={idx === sortedByTime.length - 1} 
+            />
           ))}
         </div>
       )}
@@ -176,7 +196,7 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
   );
 }
 
-function MatchCard({ match, onSelectMatch, showLeagueLabel }: { match: MatchCardData; onSelectMatch: (id: number) => void; showLeagueLabel?: boolean }) {
+function MatchRow({ match, onSelectMatch, showLeagueLabel, isLast }: { match: MatchCardData; onSelectMatch: (id: number) => void; showLeagueLabel?: boolean; isLast?: boolean }) {
   const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
   const isLive = statusConfig.pulse;
   const hasScore = match.homeTeam.score !== null;
@@ -184,81 +204,75 @@ function MatchCard({ match, onSelectMatch, showLeagueLabel }: { match: MatchCard
   return (
     <div
       onClick={() => onSelectMatch(match.id)}
-      className="card p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-[0.99] group flex flex-col justify-between"
+      className={`flex items-center justify-between p-4 hover:bg-white/5 transition-colors cursor-pointer ${!isLast ? 'border-b border-outline-variant/5' : ''}`}
     >
-      {/* Time / status */}
-      <div className="flex items-center justify-between mb-3 min-h-[16px]">
-        {showLeagueLabel ? (
-          <div className="flex items-center gap-1.5 overflow-hidden">
-            <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px flex-shrink-0 flex items-center justify-center">
-              <img src={match.league.logoUrl} alt="" className="w-full h-full object-contain" />
-            </div>
-            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/30 truncate">
-              {match.league.name}
+      <div className="flex items-center gap-3">
+        {/* Team Logos */}
+        <div className="flex flex-col gap-1.5 items-center justify-center w-8">
+          <img
+            src={match.homeTeam.logoUrl}
+            alt=""
+            className="w-5 h-5 object-contain flex-shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <img
+            src={match.awayTeam.logoUrl}
+            alt=""
+            className="w-5 h-5 object-contain flex-shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+        
+        {/* Team Names */}
+        <div className="flex flex-col gap-2 min-w-0 pr-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold leading-none text-on-surface truncate">
+              {match.homeTeam.name}
             </span>
+            {hasScore && (
+              <span className="text-sm font-bold text-on-surface tabular-nums">
+                {match.homeTeam.score}
+              </span>
+            )}
           </div>
-        ) : <div />}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-on-surface-variant font-medium leading-none truncate">
+              {match.awayTeam.name}
+            </span>
+            {hasScore && (
+              <span className="text-sm font-bold text-on-surface-variant tabular-nums">
+                {match.awayTeam.score}
+              </span>
+            )}
+          </div>
+          {showLeagueLabel && (
+            <p className="text-[9px] uppercase tracking-widest text-on-surface-variant/40 font-bold mt-1">
+              {match.league.name}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Match Status / Time */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 pl-2">
+        <div className="flex items-center gap-1.5">
           {isLive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
           <span
-            className="text-[9px] font-bold uppercase tracking-wider"
-            style={{ color: isLive ? statusConfig.color : undefined }}
+            className="text-[11px] font-black uppercase tracking-wider tabular-nums"
+            style={{ color: isLive ? statusConfig.color : 'var(--on-surface-variant)' }}
           >
             {isLive ? statusConfig.label : match.time}
           </span>
         </div>
-      </div>
-
-      {/* Teams */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between py-1">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <img
-              src={match.homeTeam.logoUrl}
-              alt=""
-              className="w-6 h-6 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-              {match.homeTeam.name}
-            </span>
-          </div>
-          <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-            {hasScore ? match.homeTeam.score : ''}
-          </span>
-        </div>
-
-        <div className="border-t border-outline-variant/10 my-0.5" />
-
-        <div className="flex items-center justify-between py-1">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <img
-              src={match.awayTeam.logoUrl}
-              alt=""
-              className="w-6 h-6 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            <span className="text-[13px] font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-              {match.awayTeam.name}
-            </span>
-          </div>
-          <span className="text-sm font-black text-on-surface tabular-nums w-6 text-right">
-            {hasScore ? match.awayTeam.score : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* Finished status */}
-      {!isLive && match.status !== 'NS' && (
-        <div className="mt-3 pt-2 border-t border-outline-variant/10 text-center">
+        {!isLive && match.status !== 'NS' && (
           <span
-            className="text-[8px] font-bold uppercase tracking-widest"
-            style={{ color: statusConfig.color + 'aa' }}
+            className="text-[9px] font-bold uppercase tracking-widest mt-1"
+            style={{ color: statusConfig.color + 'cc' }}
           >
             {statusConfig.label}
           </span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

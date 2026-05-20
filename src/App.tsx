@@ -229,18 +229,21 @@ function AuthenticatedApp() {
               <Scoreboard data={matchDetail} />
 
               {/* ── Tab switcher ── */}
-              <div className="flex gap-1 bg-surface/40 border border-outline-variant/20 rounded-xl p-1 max-w-[240px]">
+              <div className="flex overflow-x-auto no-scrollbar border-b border-outline-variant/20 text-sm font-semibold text-on-surface-variant/60">
                 {(['stats', 'form'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveDataTab(tab)}
-                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                    className={`relative px-4 py-3 whitespace-nowrap transition-colors ${
                       activeDataTab === tab
-                        ? 'bg-primary text-on-primary shadow-[0_0_12px_rgba(var(--primary-rgb),0.4)]'
-                        : 'text-on-surface-variant/55 hover:text-on-surface'
+                        ? 'text-on-surface'
+                        : 'hover:text-on-surface-variant'
                     }`}
                   >
                     {tab === 'stats' ? 'Estatísticas' : 'Forma'}
+                    {activeDataTab === tab && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-md" />
+                    )}
                   </button>
                 ))}
               </div>

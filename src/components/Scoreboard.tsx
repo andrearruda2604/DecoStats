@@ -16,82 +16,55 @@ export default function Scoreboard({ data }: ScoreboardProps) {
   const isLive = statusConfig.pulse;
 
   return (
-    <section className="card overflow-hidden">
-      {/* League bar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-outline-variant/50">
-        <img src={league.flag_url} alt="" className="w-4 h-3 object-cover rounded-sm" />
-        <span className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant/50">
-          {league.country}
-        </span>
-        <span className="text-on-surface-variant/20">·</span>
-        <span className="text-[8px] font-bold uppercase tracking-wider text-on-surface-variant/60">
-          {league.name}
+    <section className="relative overflow-hidden pt-4 pb-6 bg-gradient-to-b from-primary/10 to-transparent rounded-[32px] border border-outline-variant/10">
+      {/* League Header */}
+      <div className="flex flex-col items-center w-full mb-6 px-4">
+        <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 flex items-center gap-2">
+          <img src={league.flag_url} alt="" className="w-4 h-3 object-cover rounded-sm" />
+          {league.country} <span className="text-on-surface-variant/30">&gt;</span> {league.name}
         </span>
       </div>
 
-      {/* Match info — single horizontal row */}
-      <div className="flex items-center justify-between px-4 py-5">
-        {/* Home Team */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      {/* Teams & Score Large */}
+      <div className="flex justify-center items-center px-2 gap-2 sm:gap-6">
+        {/* Home */}
+        <div className="flex flex-col items-center gap-3 w-1/3">
           <img
             src={homeTeam.logo_url}
             alt={homeTeam.name}
-            className="w-10 h-10 object-contain flex-shrink-0"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border border-outline-variant/20 shadow-xl object-contain p-1.5"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold text-on-surface uppercase truncate">
-              {homeTeam.name}
-            </h2>
-            <span className="text-[8px] uppercase font-bold text-emerald-400/50 tracking-widest">
-              Mandante
-            </span>
-          </div>
+          <span className="text-xs sm:text-sm font-bold text-center leading-tight truncate w-full px-1">{homeTeam.name}</span>
         </div>
-
-        {/* Score */}
-        <div className="flex flex-col items-center flex-shrink-0 px-4">
-          <div className="flex items-baseline gap-3 text-3xl font-black">
-            <span className="text-on-surface tabular-nums">{fixture.home_score ?? '–'}</span>
-            <span className="text-on-surface-variant/20 font-light text-xl">:</span>
-            <span className="text-on-surface tabular-nums">{fixture.away_score ?? '–'}</span>
+        
+        {/* Score/Time */}
+        <div className="flex flex-col items-center w-1/3 flex-shrink-0">
+          <div className="flex items-center justify-center text-3xl sm:text-4xl font-black tabular-nums tracking-tight">
+            <span>{fixture.home_score ?? '–'}</span>
+            <span className="text-on-surface-variant/30 font-light mx-1.5 mb-1">:</span>
+            <span>{fixture.away_score ?? '–'}</span>
           </div>
-
+          
           {fixture.ht_home_score !== null && fixture.ht_away_score !== null && (
-            <div className="text-[9px] text-on-surface-variant/30 font-medium mt-0.5 tabular-nums">
-              HT {fixture.ht_home_score} – {fixture.ht_away_score}
-            </div>
+            <span className="text-[10px] text-on-surface-variant/50 font-bold mt-1">HT {fixture.ht_home_score}-{fixture.ht_away_score}</span>
           )}
-
-          <div className="mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full border border-outline-variant bg-surface-container-highest/30">
-            {isLive && (
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: statusConfig.color }} />
-            )}
-            <span
-              className="text-[8px] font-black uppercase tracking-[0.2em]"
-              style={{ color: statusConfig.color }}
-            >
-              {statusConfig.label}
-            </span>
-          </div>
+          
+          <span className="text-[9px] bg-surface-container-highest px-3 py-1.5 rounded-full text-on-surface-variant mt-2.5 uppercase font-black tracking-widest flex items-center gap-1.5 shadow-sm border border-outline-variant/10">
+            {isLive && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: statusConfig.color }} />}
+            <span style={{ color: statusConfig.color }}>{statusConfig.label}</span>
+          </span>
         </div>
-
-        {/* Away Team */}
-        <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
-          <div className="min-w-0 text-right">
-            <h2 className="text-sm font-bold text-on-surface uppercase truncate">
-              {awayTeam.name}
-            </h2>
-            <span className="text-[8px] uppercase font-bold text-blue-400/50 tracking-widest">
-              Visitante
-            </span>
-          </div>
+        
+        {/* Away */}
+        <div className="flex flex-col items-center gap-3 w-1/3">
           <img
             src={awayTeam.logo_url}
             alt={awayTeam.name}
-            className="w-10 h-10 object-contain flex-shrink-0"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border border-outline-variant/20 shadow-xl object-contain p-1.5"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
+          <span className="text-xs sm:text-sm font-bold text-center leading-tight truncate w-full px-1">{awayTeam.name}</span>
         </div>
       </div>
     </section>

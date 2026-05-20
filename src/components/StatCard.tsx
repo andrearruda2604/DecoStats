@@ -96,35 +96,46 @@ export default function StatCard({ stat, index, show100Only = false }: StatCardP
     ? probRows.filter(r => r.homeOver === 100 || r.awayOver === 100 || r.homeUnder === 100 || r.awayUnder === 100)
     : probRows;
 
+  const homeAvg = stat.homeDist.length ? stat.homeDist.reduce((a, b) => a + b, 0) / stat.homeDist.length : 0;
+  const awayAvg = stat.awayDist.length ? stat.awayDist.reduce((a, b) => a + b, 0) / stat.awayDist.length : 0;
+
   return (
     <div className={`card transition-all duration-300 ${expanded ? 'card-active' : ''}`}>
       {/* Collapsed Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left"
+        className="w-full"
       >
-        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-          <span className="text-[11px] font-black uppercase tracking-wider text-on-surface truncate">
-            {stat.label}
-          </span>
-          {has100 && (
-            <span className="text-[8px] font-black bg-amber-400/20 text-amber-400 px-1.5 py-0.5 rounded tracking-wider flex-shrink-0">
-              100%
-            </span>
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-surface rounded-xl border border-white/5 hover:bg-white/5 transition-colors relative">
+          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${homeAvg > awayAvg ? 'bg-primary text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
+            {stat.homeMin}-{stat.homeMax}
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center min-w-0 z-10">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-on-surface truncate">
+                {stat.label}
+              </span>
+              {has100 && (
+                <span className="text-[8px] font-black text-amber-400 tracking-wider">
+                  100%
+                </span>
+              )}
+            </div>
+            {expanded && (
+               <ChevronUp className="w-3 h-3 text-primary mt-0.5" />
+            )}
+          </div>
+          
+          <div className={`w-14 text-center py-1 rounded font-bold text-[10px] tabular-nums ${awayAvg > homeAvg ? 'bg-blue-600 text-white' : 'bg-surface-elevated text-on-surface-variant'}`}>
+            {stat.awayMin}-{stat.awayMax}
+          </div>
+          
+          {!expanded && (
+            <div className="absolute inset-x-0 bottom-1 flex justify-center pointer-events-none">
+              <ChevronDown className="w-3 h-3 text-on-surface-variant/30" />
+            </div>
           )}
-        </div>
-
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <span className="text-[11px] font-bold text-emerald-400 tabular-nums">
-            {stat.homeMin}—{stat.homeMax}
-          </span>
-          <span className="text-[11px] font-bold text-blue-400 tabular-nums">
-            {stat.awayMin}—{stat.awayMax}
-          </span>
-          {expanded
-            ? <ChevronUp className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-            : <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant/40 flex-shrink-0" />
-          }
         </div>
       </button>
 

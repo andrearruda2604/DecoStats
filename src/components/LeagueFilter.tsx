@@ -134,36 +134,35 @@ export default function LeagueFilter({
   return (
     <div className="space-y-2 mb-4 lg:mb-0">
       {/* ── Date Navigation ─────────────────────────── */}
-      <div className="flex items-center justify-between card px-1 sm:px-2 py-1.5 overflow-hidden">
-        <button
-          onClick={() => onSelectDate(shiftDate(selectedDate, -1))}
-          className="flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface shrink-0"
-        >
-          <ChevronLeft className="w-4 h-4 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline truncate max-w-[50px]">
-            {prevLabel}
-          </span>
-        </button>
-
-        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 justify-center">
-          <span className="text-[11px] sm:text-sm font-black uppercase tracking-widest text-on-surface truncate">{displayDate}</span>
+      <div className="flex gap-4 overflow-x-auto no-scrollbar text-sm font-semibold text-on-surface-variant/60 pb-2 mb-4 items-center">
+        {[-2, -1, 0, 1, 2].map(offset => {
+          const d = shiftDate(selectedDate, offset);
+          const isSelected = offset === 0;
+          return (
+            <button
+              key={offset}
+              onClick={() => onSelectDate(d)}
+              className={`relative px-2 py-2 whitespace-nowrap transition-colors flex-shrink-0 ${
+                isSelected ? 'text-on-surface' : 'hover:text-on-surface-variant'
+              }`}
+            >
+              {formatDisplayDate(d)}
+              {isSelected && (
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-md" />
+              )}
+            </button>
+          );
+        })}
+        
+        {/* Date Picker fallback */}
+        <div className="relative flex items-center ml-auto flex-shrink-0">
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => onSelectDate(e.target.value)}
-            className="bg-transparent text-[10px] text-on-surface-variant/40 outline-none cursor-pointer border border-outline-variant rounded px-1 sm:px-1.5 py-0.5 w-[90px] sm:w-[110px] shrink-0"
+            className="bg-surface-container text-[11px] font-bold text-on-surface-variant/70 outline-none cursor-pointer border border-outline-variant/30 rounded-lg px-2 py-1.5 w-[110px]"
           />
         </div>
-
-        <button
-          onClick={() => onSelectDate(shiftDate(selectedDate, 1))}
-          className="flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant/50 hover:text-on-surface shrink-0"
-        >
-          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline lg:hidden xl:inline truncate max-w-[50px]">
-            {nextLabel}
-          </span>
-          <ChevronRight className="w-4 h-4 shrink-0" />
-        </button>
       </div>
 
       {/* ── Mobile toggle ───────────────────────────── */}
