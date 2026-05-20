@@ -237,8 +237,8 @@ function generatePredictiveData(homeTeamId: number, awayTeamId: number, count: n
     result[period] = PREDICTIVE_CONF.map(cfg => ({
       label: cfg.label,
       subLabel: cfg.subLabel,
-      homeMin: 0, homeMax: 0, homeDist: Array(count).fill(0),
-      awayMin: 0, awayMax: 0, awayDist: Array(count).fill(0),
+      homeMin: 0, homeMax: 0, homeDist: [],
+      awayMin: 0, awayMax: 0, awayDist: [],
       highlight: (cfg as any).highlight || 'none'
     }));
   }
