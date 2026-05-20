@@ -154,15 +154,31 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="text-[8px] uppercase tracking-widest text-emerald-400/60 font-bold">Mandante</span>
-              <p className="text-lg font-black text-emerald-400 tabular-nums mt-0.5">
-                {stat.homeMin} — {stat.homeMax}
-              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <div className="text-center">
+                  <span className="text-2xl font-black text-emerald-400 tabular-nums">{stat.homeMin}</span>
+                  <span className="block text-[7px] font-black uppercase tracking-widest text-emerald-400/40">Min</span>
+                </div>
+                <span className="text-lg font-black text-emerald-400/30">—</span>
+                <div className="text-center">
+                  <span className="text-2xl font-black text-emerald-400 tabular-nums">{stat.homeMax}</span>
+                  <span className="block text-[7px] font-black uppercase tracking-widest text-emerald-400/40">Max</span>
+                </div>
+              </div>
             </div>
             <div>
               <span className="text-[8px] uppercase tracking-widest text-blue-400/60 font-bold">Visitante</span>
-              <p className="text-lg font-black text-blue-400 tabular-nums mt-0.5">
-                {stat.awayMin} — {stat.awayMax}
-              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <div className="text-center">
+                  <span className="text-2xl font-black text-blue-400 tabular-nums">{stat.awayMin}</span>
+                  <span className="block text-[7px] font-black uppercase tracking-widest text-blue-400/40">Min</span>
+                </div>
+                <span className="text-lg font-black text-blue-400/30">—</span>
+                <div className="text-center">
+                  <span className="text-2xl font-black text-blue-400 tabular-nums">{stat.awayMax}</span>
+                  <span className="block text-[7px] font-black uppercase tracking-widest text-blue-400/40">Max</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -233,14 +249,16 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                       <div className="flex-1 flex flex-col gap-0.5">
                         <div className="flex items-center h-6 rounded overflow-hidden bg-surface-container-highest/30">
                           {/* Under (red, left side) */}
-                          <div 
-                            className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500 min-w-[24px]"
-                            style={{ width: `${homeUnder}%` }}
-                          >
-                            {homeUnder > 8 && (
-                              <span className="text-[9px] font-black text-white tabular-nums px-1">{homeUnder}%</span>
-                            )}
-                          </div>
+                          {homeUnder > 0 && (
+                            <div 
+                              className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
+                              style={{ width: `${homeUnder}%`, minWidth: homeUnder > 0 ? '20px' : '0' }}
+                            >
+                              {homeUnder > 8 && (
+                                <span className="text-[9px] font-black text-white tabular-nums px-1">{homeUnder}%</span>
+                              )}
+                            </div>
+                          )}
                           {/* Over (green, right side) */}
                           <div 
                             className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500 flex-1"
@@ -273,14 +291,16 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                             </span>
                           </div>
                           {/* Under (red, right side) */}
-                          <div 
-                            className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500 min-w-[24px]"
-                            style={{ width: `${awayUnder}%` }}
-                          >
-                            {awayUnder > 8 && (
-                              <span className="text-[9px] font-black text-white tabular-nums px-1">{awayUnder}%</span>
-                            )}
-                          </div>
+                          {awayUnder > 0 && (
+                            <div 
+                              className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
+                              style={{ width: `${awayUnder}%`, minWidth: awayUnder > 0 ? '20px' : '0' }}
+                            >
+                              {awayUnder > 8 && (
+                                <span className="text-[9px] font-black text-white tabular-nums px-1">{awayUnder}%</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
