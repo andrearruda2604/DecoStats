@@ -250,9 +250,9 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                         <div className="flex items-center h-6 rounded overflow-hidden bg-surface-container-highest/30">
                           {/* Under (red, left side) */}
                           {homeUnder > 0 && (
-                            <div 
+                            <div
                               className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
-                              style={{ width: `${homeUnder}%`, minWidth: homeUnder > 0 ? '20px' : '0' }}
+                              style={{ width: `${homeUnder}%` }}
                             >
                               {homeUnder > 8 && (
                                 <span className="text-[9px] font-black text-white tabular-nums px-1">{homeUnder}%</span>
@@ -260,14 +260,19 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                             </div>
                           )}
                           {/* Over (green, right side) */}
-                          <div 
-                            className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500 flex-1"
-                          >
-                            <span className="text-[9px] font-black text-white tabular-nums px-1">
-                              {homeOver}%
-                              <span className="opacity-60 font-medium text-[7px] ml-0.5">({hOverC}/{totalH})</span>
-                            </span>
-                          </div>
+                          {homeOver > 0 && (
+                            <div
+                              className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
+                              style={{ width: `${homeOver}%` }}
+                            >
+                              {homeOver > 12 && (
+                                <span className="text-[9px] font-black text-white tabular-nums px-1 truncate">
+                                  {homeOver}%
+                                  <span className="opacity-60 font-medium text-[7px] ml-0.5">({hOverC}/{totalH})</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -282,19 +287,24 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                       <div className="flex-1 flex flex-col gap-0.5">
                         <div className="flex items-center h-6 rounded overflow-hidden bg-surface-container-highest/30">
                           {/* Over (green, left side) */}
-                          <div 
-                            className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500 flex-1"
-                          >
-                            <span className="text-[9px] font-black text-white tabular-nums px-1">
-                              {awayOver}%
-                              <span className="opacity-60 font-medium text-[7px] ml-0.5">({aOverC}/{totalA})</span>
-                            </span>
-                          </div>
+                          {awayOver > 0 && (
+                            <div
+                              className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
+                              style={{ width: `${awayOver}%` }}
+                            >
+                              {awayOver > 12 && (
+                                <span className="text-[9px] font-black text-white tabular-nums px-1 truncate">
+                                  {awayOver}%
+                                  <span className="opacity-60 font-medium text-[7px] ml-0.5">({aOverC}/{totalA})</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {/* Under (red, right side) */}
                           {awayUnder > 0 && (
-                            <div 
+                            <div
                               className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
-                              style={{ width: `${awayUnder}%`, minWidth: awayUnder > 0 ? '20px' : '0' }}
+                              style={{ width: `${awayUnder}%` }}
                             >
                               {awayUnder > 8 && (
                                 <span className="text-[9px] font-black text-white tabular-nums px-1">{awayUnder}%</span>
