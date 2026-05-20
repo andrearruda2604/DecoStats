@@ -160,7 +160,7 @@ function AuthenticatedApp() {
         seasonOnly: seasonOnly,
         mandoOnly: mandoGame,
         leagueId: ligaFilter === 'game' ? matchDetail.fixture?.league_id : undefined,
-        season: matchDetail.league?.season || matchDetail.fixture?.season,
+        season: matchDetail.fixture?.season || matchDetail.league?.season,
         matchDate: matchDetail.fixture?.date,
       })
         .then(res => { if (isMounted) { setPredictiveBlock(res); setPredictiveLoading(false); } })
@@ -369,6 +369,7 @@ function AuthenticatedApp() {
                   awayTeam={matchDetail.awayTeam}
                   leagueDbId={matchDetail.fixture.league_id}
                   leagueName={matchDetail.league?.name ?? ''}
+                  season={matchDetail.fixture?.season || matchDetail.league?.season}
                 />
               )}
             </>
