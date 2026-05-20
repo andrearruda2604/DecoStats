@@ -604,7 +604,6 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
         <div className="text-center py-20">
           <TrendingUp className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-3" />
           <p className="text-sm text-on-surface-variant/40 font-bold">Nenhuma oportunidade gerada para {targetDate}</p>
-          <p className="text-[11px] text-on-surface-variant/25 mt-1">Execute o script <code className="font-mono">generateOpportunities.js</code> para popular.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
