@@ -23,7 +23,7 @@ import { useMatchStats } from './hooks/useMatchStats';
 import { useAuth } from './contexts/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import type { ToggleMode } from './types';
-import { fetchPredictiveData } from './services/api';
+import { fetchPredictiveData, fetchStandings } from './services/api';
 
 const VERSION = '1.0.2-live-engine';
 
@@ -77,6 +77,7 @@ function AuthenticatedApp() {
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
   const [activeDataTab, setActiveDataTab] = useState<'stats' | 'form' | 'table'>('stats');
+  const [teamRanks, setTeamRanks] = useState<{ home: number | null; away: number | null }>({ home: null, away: null });
 
   // Tracks when the app's own back button triggered history.back() so the
   // popstate handler knows not to double-navigate.
@@ -151,6 +152,19 @@ function AuthenticatedApp() {
   useEffect(() => {
     localStorage.setItem('decostats_sort_by', sortBy);
   }, [sortBy]);
+
+  // Fetch team rankings from standings when match detail loads
+  useEffect(() => {
+    if (!matchDetail) { setTeamRanks({ home: null, away: null }); return; }
+    const leagueId = matchDetail.fixture.league_id;
+    const season   = matchDetail.fixture?.season || matchDetail.league?.season;
+    if (!leagueId || !season) return;
+    fetchStandings(leagueId, season).then(rows => {
+      const homeRow = rows.find(r => r.team_api_id === matchDetail.homeTeam.api_id);
+      const awayRow = rows.find(r => r.team_api_id === matchDetail.awayTeam.api_id);
+      setTeamRanks({ home: homeRow?.rank ?? null, away: awayRow?.rank ?? null });
+    }).catch(() => setTeamRanks({ home: null, away: null }));
+  }, [matchDetail]);
 
 
   useEffect(() => {
@@ -227,7 +241,7 @@ function AuthenticatedApp() {
 
           {!detailLoading && !detailError && matchDetail && (
             <>
-              <Scoreboard data={matchDetail} />
+              <Scoreboard data={matchDetail} homeRank={teamRanks.home} awayRank={teamRanks.away} />
 
               {/* ── Tab switcher ── */}
               <div className="flex overflow-x-auto no-scrollbar border-b border-outline-variant/20 text-sm font-semibold text-on-surface-variant/60">

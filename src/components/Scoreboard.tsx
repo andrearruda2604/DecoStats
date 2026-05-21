@@ -8,9 +8,11 @@ import { STATUS_LABELS } from '../constants';
 
 interface ScoreboardProps {
   data: MatchDetailData;
+  homeRank?: number | null;
+  awayRank?: number | null;
 }
 
-export default function Scoreboard({ data }: ScoreboardProps) {
+export default function Scoreboard({ data, homeRank, awayRank }: ScoreboardProps) {
   const { fixture, homeTeam, awayTeam, league } = data;
   const statusConfig = STATUS_LABELS[fixture.status] || STATUS_LABELS['NS'];
   const isLive = statusConfig.pulse;
@@ -28,7 +30,13 @@ export default function Scoreboard({ data }: ScoreboardProps) {
       {/* Teams & Score Large */}
       <div className="flex justify-center items-center px-2 gap-2 sm:gap-6">
         {/* Home */}
-        <div className="flex flex-col items-center gap-3 w-1/3">
+        <div className="flex flex-col items-center gap-2 w-1/3">
+          {homeRank != null && (
+            <div className="flex flex-col items-center leading-none">
+              <span className="text-[8px] font-black uppercase tracking-widest text-primary/50">Posição</span>
+              <span className="text-2xl font-black text-primary tabular-nums">{homeRank}°</span>
+            </div>
+          )}
           <img
             src={homeTeam.logo_url}
             alt={homeTeam.name}
@@ -57,7 +65,13 @@ export default function Scoreboard({ data }: ScoreboardProps) {
         </div>
         
         {/* Away */}
-        <div className="flex flex-col items-center gap-3 w-1/3">
+        <div className="flex flex-col items-center gap-2 w-1/3">
+          {awayRank != null && (
+            <div className="flex flex-col items-center leading-none">
+              <span className="text-[8px] font-black uppercase tracking-widest text-primary/50">Posição</span>
+              <span className="text-2xl font-black text-primary tabular-nums">{awayRank}°</span>
+            </div>
+          )}
           <img
             src={awayTeam.logo_url}
             alt={awayTeam.name}
