@@ -208,8 +208,8 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                   Probabilidades
                 </span>
                 <div className="flex items-center gap-3 text-[8px] font-bold text-on-surface-variant/60">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-cyan-400 inline-block" /> Mais</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" /> Menos</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-sky-400 inline-block" /> Mais</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-pink-500 inline-block" /> Menos</span>
                 </div>
               </div>
 
@@ -247,11 +247,11 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                       
                       {/* ── HOME BAR (mirrored: Under left ← → Over right) ── */}
                       <div className="flex-1 flex flex-col gap-0.5">
-                        <div className="flex items-center h-7 rounded overflow-hidden bg-surface-container-highest/30">
+                        <div className="flex items-center h-7 rounded overflow-hidden bg-white/8">
                           {/* Under (red, left side) */}
                           {homeUnder > 0 && (
                             <div
-                              className="h-full bg-amber-500 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-pink-500 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${homeUnder}%` }}
                             >
                               {homeUnder > 6 && (
@@ -262,7 +262,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                           {/* Over (green, right side) */}
                           {homeOver > 0 && (
                             <div
-                              className="h-full bg-cyan-400 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-sky-400 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${homeOver}%` }}
                             >
                               {homeOver > 6 && (
@@ -285,11 +285,11 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
 
                       {/* ── AWAY BAR (normal: Over left → Under right) ── */}
                       <div className="flex-1 flex flex-col gap-0.5">
-                        <div className="flex items-center h-7 rounded overflow-hidden bg-surface-container-highest/30">
+                        <div className="flex items-center h-7 rounded overflow-hidden bg-white/8">
                           {/* Over (green, left side) */}
                           {awayOver > 0 && (
                             <div
-                              className="h-full bg-cyan-400 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-sky-400 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${awayOver}%` }}
                             >
                               {awayOver > 6 && (
@@ -303,7 +303,7 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                           {/* Under (red, right side) */}
                           {awayUnder > 0 && (
                             <div
-                              className="h-full bg-amber-500 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-pink-500 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${awayUnder}%` }}
                             >
                               {awayUnder > 6 && (
