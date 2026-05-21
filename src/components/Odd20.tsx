@@ -637,12 +637,31 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
         {activeTab === 'today' ? (
           <motion.div key="today" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             {/* Date nav */}
-            <div className="flex justify-between items-center bg-surface-container/20 border border-outline-variant/10 rounded-2xl p-1.5 max-w-[280px] mx-auto mb-8">
-              <button onClick={() => setDateOffset(prev => prev - 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-              <span className="text-[11px] font-black uppercase tracking-tighter text-white">
-                {dateOffset === 0 ? 'Hoje' : targetDateStr.split('-').reverse().slice(0, 2).join(' DE ')}
-              </span>
-              <button onClick={() => setDateOffset(prev => prev + 1)} className="p-2 text-on-surface-variant hover:text-primary transition-colors"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <button onClick={() => setDateOffset(prev => prev - 1)} className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex flex-col items-center min-w-[120px]">
+                <span className="text-sm font-bold text-on-surface">
+                  {dateOffset === 0 ? 'Hoje' : dateOffset === -1 ? 'Ontem' : dateOffset === 1 ? 'Amanhã' : targetDateStr.split('-').reverse().slice(0, 2).join('/')}
+                </span>
+                {dateOffset !== 0 && (
+                  <span className="text-[10px] text-on-surface-variant/50">
+                    {new Date(targetDateStr + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setDateOffset(prev => prev + 1)} className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              {dateOffset !== 0 && (
+                <button
+                  onClick={() => setDateOffset(0)}
+                  className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 transition-colors"
+                >
+                  Hoje
+                </button>
+              )}
             </div>
 
             {loading ? (

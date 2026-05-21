@@ -67,8 +67,6 @@ export default function LeagueFilter({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const displayDate = formatDisplayDate(selectedDate);
-  const prevLabel   = formatDisplayDate(shiftDate(selectedDate, -1));
-  const nextLabel   = formatDisplayDate(shiftDate(selectedDate, 1));
 
   const selectedSet = useMemo(() => new Set(selectedLeagueIds), [selectedLeagueIds]);
   const hasSelection = selectedLeagueIds.length > 0;
@@ -134,36 +132,55 @@ export default function LeagueFilter({
   return (
     <div className="space-y-2 mb-4 lg:mb-0">
       {/* ── Date Navigation ─────────────────────────── */}
-      <div className="flex gap-4 overflow-x-auto no-scrollbar text-sm font-semibold text-on-surface-variant/60 pb-2 mb-4 items-center">
-        {[-2, -1, 0, 1, 2].map(offset => {
-          const d = shiftDate(selectedDate, offset);
-          const isSelected = offset === 0;
-          return (
+      {(() => {
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        const todayStr = today.toISOString().slice(0, 10);
+        const isToday = selectedDate === todayStr;
+        const isFriendly = displayDate === 'Hoje' || displayDate === 'Ontem' || displayDate === 'Amanhã';
+        return (
+          <div className="flex items-center gap-2 mb-4">
             <button
-              key={offset}
-              onClick={() => onSelectDate(d)}
-              className={`relative px-2 py-2 whitespace-nowrap transition-colors flex-shrink-0 ${
-                isSelected ? 'text-on-surface' : 'hover:text-on-surface-variant'
-              }`}
+              onClick={() => onSelectDate(shiftDate(selectedDate, -1))}
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors flex-shrink-0"
             >
-              {formatDisplayDate(d)}
-              {isSelected && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-md" />
-              )}
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          );
-        })}
-        
-        {/* Date Picker fallback */}
-        <div className="relative flex items-center ml-auto flex-shrink-0">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => onSelectDate(e.target.value)}
-            className="bg-surface-container text-[11px] font-bold text-on-surface-variant/70 outline-none cursor-pointer border border-outline-variant/30 rounded-lg px-2 py-1.5 w-[110px]"
-          />
-        </div>
-      </div>
+
+            <div className="flex-1 flex flex-col items-center min-w-0">
+              <span className="text-sm font-bold text-on-surface">{displayDate}</span>
+              {isFriendly && (
+                <span className="text-[10px] text-on-surface-variant/50">
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => onSelectDate(shiftDate(selectedDate, 1))}
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors flex-shrink-0"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {!isToday && (
+              <button
+                onClick={() => onSelectDate(todayStr)}
+                className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 transition-colors flex-shrink-0"
+              >
+                Hoje
+              </button>
+            )}
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => onSelectDate(e.target.value)}
+              className="bg-surface-container text-[11px] font-bold text-on-surface-variant/70 outline-none cursor-pointer border border-outline-variant/30 rounded-lg px-2 py-1.5 w-[110px] flex-shrink-0"
+            />
+          </div>
+        );
+      })()}
 
       {/* ── Mobile toggle ───────────────────────────── */}
       <button
