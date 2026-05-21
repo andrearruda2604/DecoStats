@@ -5,8 +5,9 @@
 
 import { STATUS_LABELS } from '../constants';
 import type { MatchCardData } from '../types';
-import { Search } from 'lucide-react';
+import { Search, BarChart2, X } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
+import StandingsTab from './StandingsTab';
 
 interface LobbyProps {
   matches: MatchCardData[];
@@ -18,6 +19,7 @@ interface LobbyProps {
 
 export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: LobbyProps) {
   const [search, setSearch] = useState('');
+  const [standingsModal, setStandingsModal] = useState<{ leagueId: number; season: number; name: string; logoUrl: string } | null>(null);
   const [hideFinished, setHideFinished] = useState(() => {
     const saved = localStorage.getItem('decostats_hide_finished');
     return saved === 'true';
@@ -151,6 +153,16 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
                   </p>
                 </div>
               </div>
+              {firstMatch.league.id > 0 && (
+                <button
+                  onClick={() => setStandingsModal({ leagueId: firstMatch.league.id, season: firstMatch.league.season, name: leagueName, logoUrl })}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant/50 hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="Ver classificação"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Classificação</span>
+                </button>
+              )}
             </div>
 
             {/* Matches List */}
@@ -190,6 +202,43 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
           <p className="text-[9px] uppercase font-black tracking-[0.4em] text-on-surface-variant/15">
             DecoStats · Football Analytics
           </p>
+        </div>
+      )}
+
+      {/* Standings Modal */}
+      {standingsModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setStandingsModal(null)}
+          />
+          {/* Panel */}
+          <div className="relative w-full sm:max-w-2xl max-h-[85vh] flex flex-col bg-background rounded-t-3xl sm:rounded-3xl border border-outline-variant/20 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/15 flex-shrink-0">
+              <div className="w-6 h-6 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
+                <img src={standingsModal.logoUrl} alt="" className="w-full h-full object-contain" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black uppercase text-on-surface truncate">{standingsModal.name}</p>
+                <p className="text-[9px] text-on-surface-variant/50 uppercase tracking-widest">Classificação · {standingsModal.season}</p>
+              </div>
+              <button
+                onClick={() => setStandingsModal(null)}
+                className="p-1.5 rounded-lg text-on-surface-variant/50 hover:text-on-surface hover:bg-white/5 transition-colors flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Content */}
+            <div className="overflow-y-auto flex-1 px-3 py-3">
+              <StandingsTab
+                leagueId={standingsModal.leagueId}
+                season={standingsModal.season}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

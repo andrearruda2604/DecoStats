@@ -34,6 +34,9 @@ async function main() {
     runScript('generateOdd2.js');
     runScript('generateOdd3.js');
 
+    // 5. Sync league standings
+    runScript('syncStandings.js');
+
     console.log("\n\n🌟 DAILY ENGINE COMPLETED SUCCESSFULLY 🌟");
 }
 

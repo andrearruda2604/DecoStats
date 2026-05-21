@@ -17,6 +17,7 @@ import LoginPage from './components/LoginPage';
 import TestView from './components/TestView';
 import PrivacyPage from './components/PrivacyPage';
 import TeamFormTab from './components/TeamFormTab';
+import StandingsTab from './components/StandingsTab';
 import { useMatches } from './hooks/useMatches';
 import { useMatchStats } from './hooks/useMatchStats';
 import { useAuth } from './contexts/AuthContext';
@@ -75,7 +76,7 @@ function AuthenticatedApp() {
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
   const [predictiveLoading, setPredictiveLoading] = useState(false);
-  const [activeDataTab, setActiveDataTab] = useState<'stats' | 'form'>('stats');
+  const [activeDataTab, setActiveDataTab] = useState<'stats' | 'form' | 'table'>('stats');
 
   // Tracks when the app's own back button triggered history.back() so the
   // popstate handler knows not to double-navigate.
@@ -230,7 +231,7 @@ function AuthenticatedApp() {
 
               {/* ── Tab switcher ── */}
               <div className="flex overflow-x-auto no-scrollbar border-b border-outline-variant/20 text-sm font-semibold text-on-surface-variant/60">
-                {(['stats', 'form'] as const).map(tab => (
+                {(['stats', 'form', 'table'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveDataTab(tab)}
@@ -240,7 +241,7 @@ function AuthenticatedApp() {
                         : 'hover:text-on-surface-variant'
                     }`}
                   >
-                    {tab === 'stats' ? 'Estatísticas' : 'Forma'}
+                    {tab === 'stats' ? 'Estatísticas' : tab === 'form' ? 'Forma' : 'Tabela'}
                     {activeDataTab === tab && (
                       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-md" />
                     )}
@@ -411,6 +412,17 @@ function AuthenticatedApp() {
                   leagueDbId={matchDetail.fixture.league_id}
                   leagueName={matchDetail.league?.name ?? ''}
                   season={matchDetail.fixture?.season || matchDetail.league?.season}
+                />
+              )}
+
+              {/* ── Tabela tab ── */}
+              {activeDataTab === 'table' && (
+                <StandingsTab
+                  leagueId={matchDetail.fixture.league_id}
+                  season={matchDetail.fixture?.season || matchDetail.league?.season}
+                  leagueName={matchDetail.league?.name}
+                  homeTeamApiId={matchDetail.homeTeam.api_id}
+                  awayTeamApiId={matchDetail.awayTeam.api_id}
                 />
               )}
             </>

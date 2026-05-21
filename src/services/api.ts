@@ -5,7 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { MOCK_MATCHES_BY_DATE, MOCK_MATCH_DETAIL, MOCK_LEAGUES } from '../constants';
-import type { MatchCardData, MatchDetailData, StatComparison, ToggleMode } from '../types';
+import type { MatchCardData, MatchDetailData, StatComparison, StandingRow, ToggleMode } from '../types';
 
 function getTimezoneOffset(): string {
   const offsetMinutes = new Date().getTimezoneOffset();
@@ -31,7 +31,7 @@ export async function fetchMatches(
     .from('fixtures')
     .select(`
       id, api_id, date, status, home_score, away_score, round,
-      league:leagues!fixtures_league_id_fkey(name, country, country_code, flag_url, logo_url),
+      league:leagues!fixtures_league_id_fkey(id, name, country, country_code, flag_url, logo_url, season),
       home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
       away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
     `)
@@ -50,11 +50,13 @@ export async function fetchMatches(
     id: f.id,
     apiId: f.api_id,
     league: {
+      id: f.league?.id || 0,
       name: f.league?.name || '',
       country: f.league?.country || '',
       countryCode: f.league?.country_code || '',
       flagUrl: f.league?.flag_url || '',
       logoUrl: f.league?.logo_url || '',
+      season: f.league?.season || 0,
     },
     time: new Date(f.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     date: f.date,
@@ -201,6 +203,23 @@ export async function fetchLeagues() {
 
   if (error) throw error;
   return data || [];
+}
+
+// ─── Standings ──────────────────────────────────────────────
+
+export async function fetchStandings(leagueId: number, season: number): Promise<StandingRow[]> {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from('standings')
+    .select('*')
+    .eq('league_id', leagueId)
+    .eq('season', season)
+    .order('group', { ascending: true })
+    .order('rank',  { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as StandingRow[];
 }
 
 // ─── Real Historical Data ───────────────────────────────────────────

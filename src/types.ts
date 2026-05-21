@@ -82,15 +82,37 @@ export interface FixtureEvent {
 
 // ─── UI / View Models ──────────────────────────────────────────────
 
+export interface StandingRow {
+  id: number;
+  league_id: number;
+  season: number;
+  group: string;
+  rank: number;
+  team_api_id: number;
+  team_name: string;
+  team_logo: string;
+  points: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_diff: number;
+  form: string;
+}
+
 export interface MatchCardData {
   id: number;
   apiId: number;
   league: {
+    id: number;
     name: string;
     country: string;
     countryCode: string;
     flagUrl: string;
     logoUrl: string;
+    season: number;
   };
   time: string;
   date: string;
