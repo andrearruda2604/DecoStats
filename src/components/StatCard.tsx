@@ -247,15 +247,15 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                       
                       {/* ── HOME BAR (mirrored: Under left ← → Over right) ── */}
                       <div className="flex-1 flex flex-col gap-0.5">
-                        <div className="flex items-center h-6 rounded overflow-hidden bg-surface-container-highest/30">
+                        <div className="flex items-center h-7 rounded overflow-hidden bg-surface-container-highest/30">
                           {/* Under (red, left side) */}
                           {homeUnder > 0 && (
                             <div
-                              className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-rose-600 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${homeUnder}%` }}
                             >
-                              {homeUnder > 8 && (
-                                <span className="text-[9px] font-black text-white tabular-nums px-1">{homeUnder}%</span>
+                              {homeUnder > 6 && (
+                                <span className="text-[10px] font-black text-white tabular-nums px-1">{homeUnder}%</span>
                               )}
                             </div>
                           )}
@@ -265,10 +265,10 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                               className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${homeOver}%` }}
                             >
-                              {homeOver > 12 && (
-                                <span className="text-[9px] font-black text-white tabular-nums px-1 truncate">
+                              {homeOver > 6 && (
+                                <span className="text-[10px] font-black text-white tabular-nums px-1 truncate">
                                   {homeOver}%
-                                  <span className="opacity-60 font-medium text-[7px] ml-0.5">({hOverC}/{totalH})</span>
+                                  <span className="opacity-60 font-medium text-[8px] ml-0.5">({hOverC}/{totalH})</span>
                                 </span>
                               )}
                             </div>
@@ -285,17 +285,17 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
 
                       {/* ── AWAY BAR (normal: Over left → Under right) ── */}
                       <div className="flex-1 flex flex-col gap-0.5">
-                        <div className="flex items-center h-6 rounded overflow-hidden bg-surface-container-highest/30">
+                        <div className="flex items-center h-7 rounded overflow-hidden bg-surface-container-highest/30">
                           {/* Over (green, left side) */}
                           {awayOver > 0 && (
                             <div
                               className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${awayOver}%` }}
                             >
-                              {awayOver > 12 && (
-                                <span className="text-[9px] font-black text-white tabular-nums px-1 truncate">
+                              {awayOver > 6 && (
+                                <span className="text-[10px] font-black text-white tabular-nums px-1 truncate">
                                   {awayOver}%
-                                  <span className="opacity-60 font-medium text-[7px] ml-0.5">({aOverC}/{totalA})</span>
+                                  <span className="opacity-60 font-medium text-[8px] ml-0.5">({aOverC}/{totalA})</span>
                                 </span>
                               )}
                             </div>
@@ -303,11 +303,11 @@ export default function StatCard({ stat, index, show100Only = false, homeTeamNam
                           {/* Under (red, right side) */}
                           {awayUnder > 0 && (
                             <div
-                              className="h-full bg-rose-500/80 flex items-center justify-center transition-all duration-500"
+                              className="h-full bg-rose-600 flex items-center justify-center transition-all duration-500"
                               style={{ width: `${awayUnder}%` }}
                             >
-                              {awayUnder > 8 && (
-                                <span className="text-[9px] font-black text-white tabular-nums px-1">{awayUnder}%</span>
+                              {awayUnder > 6 && (
+                                <span className="text-[10px] font-black text-white tabular-nums px-1">{awayUnder}%</span>
                               )}
                             </div>
                           )}
