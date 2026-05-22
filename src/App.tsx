@@ -33,7 +33,7 @@ export default function App() {
     return <PrivacyPage />;
   }
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isRecovery } = useAuth();
 
   // Show loading spinner while checking auth
   if (authLoading) {
@@ -42,6 +42,11 @@ export default function App() {
         <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
       </div>
     );
+  }
+
+  // Password recovery flow (user clicked reset link in email)
+  if (isRecovery) {
+    return <LoginPage />;
   }
 
   // Show login page if not authenticated
