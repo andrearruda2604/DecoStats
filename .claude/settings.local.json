@@ -52,7 +52,31 @@
       "Bash(npx vite *)",
       "Bash(node --experimental-vm-modules scripts/generateOdd2.js 2026-05-19)",
       "Bash(node --experimental-vm-modules scripts/generateOdd3.js 2026-05-19)",
-      "Bash(node --experimental-vm-modules scripts/generateOdd2.js 2026-05-19 --force)"
+      "Bash(node --experimental-vm-modules scripts/generateOdd2.js 2026-05-19 --force)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\camil\\\\OneDrive\\\\Documentos\\\\Andre\\\\projetos\\\\DecoStats\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(xargs grep -l \"v3.football.api-sports.io\")",
+      "Bash(npm install *)",
+      "Bash(nslookup -type=CNAME clerk.decostats.com)",
+      "Bash(nslookup -type=CNAME accounts.decostats.com)",
+      "Bash(nslookup -type=CNAME clkmail.decostats.com)",
+      "Bash(nslookup -type=CNAME clk._domainkey.decostats.com)",
+      "Bash(nslookup -type=CNAME clk2._domainkey.decostats.com)",
+      "Bash(nslookup -type=CNAME clerk.decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME accounts.decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME clkmail.decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME clk._domainkey.decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME clk2._domainkey.decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=NS decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME clerk.decostats.com nebula.dns-parking.com)",
+      "Bash(nslookup -type=CNAME accounts.decostats.com nebula.dns-parking.com)",
+      "Bash(nslookup -type=CNAME www.decostats.com 8.8.8.8)",
+      "Bash(nslookup decostats.com 8.8.8.8)",
+      "Bash(nslookup -type=CNAME www.decostats.com nebula.dns-parking.com)",
+      "Bash(nslookup -type=CNAME clk._domainkey.decostats.com nebula.dns-parking.com)",
+      "Bash(nslookup -type=CNAME clkmail.decostats.com nebula.dns-parking.com)"
     ]
   }
 }
