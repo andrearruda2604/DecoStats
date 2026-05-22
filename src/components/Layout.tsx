@@ -5,7 +5,7 @@
 
 import { ArrowLeft, LayoutGrid, TrendingUp, LogOut, Ticket } from 'lucide-react';
 import { ReactNode, useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useUser, useClerk } from '@clerk/clerk-react';
 import { supabase } from '../services/supabaseClient';
 
 export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP';
@@ -20,7 +20,8 @@ interface LayoutProps {
 import InstallPrompt from './InstallPrompt';
 
 export default function Layout({ children, activeView, onNavigate, showBack = false }: LayoutProps) {
-  const { user, signOut } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const [dailyOdd, setDailyOdd] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,9 +39,10 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
       });
   }, []);
 
-  const avatarUrl = user?.user_metadata?.avatar_url;
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
-  const isAdmin = user?.email?.toLowerCase() === 'deco260483@gmail.com';
+  const avatarUrl = user?.imageUrl;
+  const email = user?.primaryEmailAddress?.emailAddress ?? '';
+  const displayName = user?.fullName || email.split('@')[0] || '';
+  const isAdmin = email.toLowerCase() === 'deco260483@gmail.com';
 
   return (
     <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary pb-20 sm:pb-0">
