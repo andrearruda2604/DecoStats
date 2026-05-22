@@ -21,14 +21,14 @@ try {
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 
-const TARGET_LOW  = 1.90;
+const TARGET_LOW  = 1.50;
 const TARGET_HIGH = 2.30;
 const MIN_PICKS   = 3;
 const MAX_PICKS   = 8; 
 const MAX_PICKS_PER_MATCH_DEFAULT = 2;
 const MAX_PICKS_PER_MATCH_FEW_GAMES = 2; 
 
-const MIN_HISTORICAL_PROB = 70; // Aceita picks com confiança ≥70% para garantir âncora acima de 1.4
+const MIN_HISTORICAL_PROB = 80; // Aceita apenas picks com confiança ≥ 80%
 const MIN_ODD = 1.03;        // Pequeno aumento na odd mínima para evitar lixo de 1.01
 const MIN_GAMES_HISTORY = 7;  // Mínimo de 7 jogos para incluir ligas com menos rodadas (ex: Argentina)
 const BOOKMAKER_ID = 8;      
@@ -643,9 +643,53 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
   return { selected, total: currentOdd };
 }
 
+function analyzeMatchMotivation(homeApiId, awayApiId, leagueStandings) {
+  if (!leagueStandings || leagueStandings.length === 0) return 'NORMAL';
+  const totalTeams = leagueStandings.length;
+  if (totalTeams < 10) return 'NORMAL';
+  
+  leagueStandings.sort((a, b) => a.rank - b.rank);
+  const homeTeam = leagueStandings.find(s => s.team_api_id === homeApiId);
+  const awayTeam = leagueStandings.find(s => s.team_api_id === awayApiId);
+  if (!homeTeam || !awayTeam) return 'NORMAL';
+  
+  const maxPlayed = Math.max(...leagueStandings.map(s => s.played));
+  let assumedTotalMatches = (totalTeams - 1) * 2;
+  if (assumedTotalMatches < maxPlayed) assumedTotalMatches = maxPlayed + 2;
+  
+  const isLateSeason = (homeTeam.played / assumedTotalMatches) >= 0.85;
+  if (!isLateSeason) return 'NORMAL';
+  
+  const pointsRank6 = leagueStandings[5]?.points || 0;
+  const pointsRank18 = leagueStandings[totalTeams - 3]?.points || 0;
+  
+  function getTeamMotivation(team) {
+    let matchesLeft = assumedTotalMatches - team.played;
+    if (matchesLeft <= 0) matchesLeft = 0;
+    const maxPoints = team.points + (matchesLeft * 3);
+    
+    if (team.rank <= 6) return 'FIGHTING';
+    if (team.rank >= totalTeams - 2) return 'FIGHTING';
+    
+    const canReachG6 = maxPoints >= pointsRank6;
+    const canBeRelegated = (team.points - pointsRank18) <= (matchesLeft * 3);
+    
+    if (canReachG6 || canBeRelegated) return 'FIGHTING';
+    return 'SAFE';
+  }
+  
+  const homeMot = getTeamMotivation(homeTeam);
+  const awayMot = getTeamMotivation(awayTeam);
+  
+  if (homeMot === 'SAFE' && awayMot === 'SAFE') return 'DEAD_RUBBER';
+  if (homeMot === 'FIGHTING' || awayMot === 'FIGHTING') return 'DECISIVE';
+  return 'NORMAL';
+}
+
 async function generateOdd2() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const today = process.argv[2] || brt.toISOString().split('T')[0];
+  let today = process.argv[2];
+  if (!today || today === '--force') today = brt.toISOString().split('T')[0];
   console.log(`\n=== Gerando Bilhete Odd 2.0 (Classic Lucrative) para ${today} ===\n`);
 
   // ── Guard: não sobrescrever bilhete existente ──
@@ -669,7 +713,7 @@ async function generateOdd2() {
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   let query = supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(id, api_id, name, logo_url)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
   
@@ -684,6 +728,17 @@ async function generateOdd2() {
   if (candidates.length === 0) {
     console.log('Nenhum fixture não-iniciado encontrado para hoje. Abortando.');
     return;
+  }
+
+  // Fetch standings for active leagues
+  const uniqueLeagueIds = [...new Set(candidates.map(c => c.league?.id))].filter(Boolean);
+  const { data: standingsData } = await supabase.from('standings').select('*').in('league_id', uniqueLeagueIds);
+  const standingsByLeague = {};
+  if (standingsData) {
+    for (const row of standingsData) {
+      if (!standingsByLeague[row.league_id]) standingsByLeague[row.league_id] = [];
+      standingsByLeague[row.league_id].push(row);
+    }
   }
 
   const allPickCandidates = [];
@@ -743,14 +798,26 @@ async function generateOdd2() {
       
       const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores);
       
+      const leagueStandings = standingsByLeague[f.league?.id] || [];
+      const motivation = analyzeMatchMotivation(f.home_team.api_id, f.away_team.api_id, leagueStandings);
+      
+      let filteredPicks = picks;
+      if (motivation === 'DEAD_RUBBER') {
+        filteredPicks = picks.filter(p => !(p.stat === 'CARTÕES' && p.type === 'OVER'));
+        const diff = picks.length - filteredPicks.length;
+        if (diff > 0) console.log(`   [Motivation] Jogo 'Amistoso' (Sem meta): ${diff} pick(s) de OVER Cartões bloqueadas.`);
+      } else if (motivation === 'DECISIVE') {
+        console.log(`   [Motivation] Jogo Decisivo! (Title/Relegation/Europe)`);
+      }
+      
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
          console.log(`Ignorado (Amostragem: Casa ${homeHistory?.length || 0}, Fora ${awayHistory?.length || 0} jogos)`);
          continue;
       } else {
-         console.log(`${picks.length} candidato(s) EV+`);
+         console.log(`${filteredPicks.length} candidato(s) EV+`);
       }
       
-      allPickCandidates.push(...picks.map(p => ({
+      allPickCandidates.push(...filteredPicks.map(p => ({
         ...p,
         home: homeName,
         away: awayName,
@@ -784,7 +851,21 @@ async function generateOdd2() {
   const maxPerMatch = uniqueFixtures.size <= 4 ? MAX_PICKS_PER_MATCH_FEW_GAMES : MAX_PICKS_PER_MATCH_DEFAULT;
   const { selected, total } = buildAccumulator(allPickCandidates, maxPerMatch);
   
-  console.log(`\nPicks selecionados: ${selected.length} | Odd total: ${total.toFixed(2)}`);
+  const avgProb = selected.length ? Math.round(selected.reduce((acc, p) => acc + p.probability, 0) / selected.length) : 0;
+  
+  if (total < 1.50 || avgProb < 80) {
+    console.log(`\n⚠️ Requisitos não atingidos: Odd Final = ${total.toFixed(2)} (Min: 1.50) | Prob. Média = ${avgProb}% (Min: 80%). Salvando bilhete vazio.`);
+    await supabase.from('odd_tickets').upsert({
+      date: today,
+      mode: '2.0',
+      matches_count: 0, total_odd: '1.00',
+      status: 'PENDING',
+      ticket_data: { entries: [], confidence_score: 0, generated_at: new Date().toISOString() }
+    }, { onConflict: 'date,mode' });
+    return;
+  }
+  
+  console.log(`\nPicks selecionados: ${selected.length} | Odd total: ${total.toFixed(2)} | Prob Média: ${avgProb}%`);
 
   const entriesMap = {};
   for (const pick of selected) {
