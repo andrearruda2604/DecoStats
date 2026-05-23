@@ -410,11 +410,7 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
     if (available.length === 0) break;
 
-    available.sort((a, b) => {
-      const scoreA = a.probability + (a.contextBonus || 0);
-      const scoreB = b.probability + (b.contextBonus || 0);
-      return scoreB - scoreA || a.odd - b.odd;
-    });
+    available.sort((a, b) => b.probability - a.probability || a.odd - b.odd);
     const pick = available[0];
 
     doAdd(pick);
@@ -425,96 +421,12 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const fallbacks = deduped
       .filter(c => canAdd(c))
       .filter(c => (currentOdd * c.odd) >= TARGET_LOW && (currentOdd * c.odd) <= maxAllowed)
-      .sort((a, b) => {
-        const scoreA = a.probability + (a.contextBonus || 0);
-        const scoreB = b.probability + (b.contextBonus || 0);
-        return scoreB - scoreA || b.odd - a.odd;
-      });
+      .sort((a, b) => b.probability - a.probability || b.odd - a.odd);
 
     if (fallbacks.length > 0) doAdd(fallbacks[0]);
   }
 
   return { selected, total: currentOdd };
-}
-
-function analyzeMatchMotivation(homeApiId, awayApiId, leagueStandings) {
-  if (!leagueStandings || leagueStandings.length === 0) return 'NORMAL';
-  const totalTeams = leagueStandings.length;
-  if (totalTeams < 10) return 'NORMAL';
-  
-  leagueStandings.sort((a, b) => a.rank - b.rank);
-  const homeTeam = leagueStandings.find(s => s.team_api_id === homeApiId);
-  const awayTeam = leagueStandings.find(s => s.team_api_id === awayApiId);
-  if (!homeTeam || !awayTeam) return 'NORMAL';
-  
-  const maxPlayed = Math.max(...leagueStandings.map(s => s.played));
-  let assumedTotalMatches = (totalTeams - 1) * 2;
-  if (assumedTotalMatches < maxPlayed) assumedTotalMatches = maxPlayed + 2;
-  
-  const isLateSeason = (homeTeam.played / assumedTotalMatches) >= 0.85;
-  if (!isLateSeason) return 'NORMAL';
-  
-  function getTeamMotivation(team) {
-    function canOvertake(hunter, target) {
-      const matchesLeftHunter = Math.max(0, assumedTotalMatches - hunter.played);
-      const hunterMaxPoints = hunter.points + (matchesLeftHunter * 3);
-      if (hunterMaxPoints > target.points) return true;
-      if (hunterMaxPoints === target.points) {
-        const hunterProjectedGD = (hunter.goal_diff || 0) + matchesLeftHunter;
-        if (hunterProjectedGD >= (target.goal_diff || 0)) return true;
-      }
-      return false;
-    }
-
-    const rank1 = leagueStandings[0];
-    const rank2 = leagueStandings[1];
-    if (rank1 && rank2) {
-      if (team.team_api_id === rank1.team_api_id) {
-         if (canOvertake(rank2, team)) return 'FIGHTING';
-      } else {
-         if (canOvertake(team, rank1)) return 'FIGHTING';
-      }
-    }
-
-    const rank4 = leagueStandings[3];
-    const rank5 = leagueStandings[4];
-    if (rank4 && rank5) {
-      if (team.rank <= 4) {
-         if (canOvertake(rank5, team)) return 'FIGHTING';
-      } else {
-         if (canOvertake(team, rank4)) return 'FIGHTING';
-      }
-    }
-
-    const rank6 = leagueStandings[5];
-    const rank7 = leagueStandings[6];
-    if (rank6 && rank7) {
-      if (team.rank <= 6) {
-         if (canOvertake(rank7, team)) return 'FIGHTING';
-      } else {
-         if (canOvertake(team, rank6)) return 'FIGHTING';
-      }
-    }
-
-    const safeRank = leagueStandings[totalTeams - 4];
-    const relRank = leagueStandings[totalTeams - 3];
-    if (safeRank && relRank) {
-      if (team.rank <= totalTeams - 3) {
-         if (canOvertake(relRank, team)) return 'FIGHTING';
-      } else {
-         if (canOvertake(team, safeRank)) return 'FIGHTING';
-      }
-    }
-
-    return 'SAFE';
-  }
-  
-  const homeMot = getTeamMotivation(homeTeam);
-  const awayMot = getTeamMotivation(awayTeam);
-  
-  if (homeMot === 'SAFE' && awayMot === 'SAFE') return 'DEAD_RUBBER';
-  if (homeMot === 'FIGHTING' || awayMot === 'FIGHTING') return 'DECISIVE';
-  return 'NORMAL';
 }
 
 async function generateOdd3() {
@@ -543,7 +455,7 @@ async function generateOdd3() {
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   let query = supabase
     .from('fixtures')
-    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(id, api_id, name, logo_url)')
+    .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
     .gte('date', `${today} 00:00:00`)
     .lte('date', `${today} 23:59:59`);
 
@@ -554,17 +466,6 @@ async function generateOdd3() {
 
   const candidates = (fixtures || []).filter(f => activeLeagueApiIds.has(f.league?.api_id));
   console.log(`Fixtures disponíveis: ${candidates.length}`);
-
-  // Fetch standings for active leagues
-  const uniqueLeagueIds = [...new Set(candidates.map(c => c.league?.id))].filter(Boolean);
-  const { data: standingsData } = await supabase.from('standings').select('*').in('league_id', uniqueLeagueIds);
-  const standingsByLeague = {};
-  if (standingsData) {
-    for (const row of standingsData) {
-      if (!standingsByLeague[row.league_id]) standingsByLeague[row.league_id] = [];
-      standingsByLeague[row.league_id].push(row);
-    }
-  }
 
   // ── Buscar bilhete 2.0 para evitar duplicidade de entrada ──
   const { data: ticket20 } = await supabase
@@ -657,41 +558,14 @@ async function generateOdd3() {
       
       const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, forbiddenPicks, htScores);
       
-      const leagueStandings = standingsByLeague[f.league?.id] || [];
-      const motivation = analyzeMatchMotivation(f.home_team.api_id, f.away_team.api_id, leagueStandings);
-      
-      let filteredPicks = picks;
-      if (motivation === 'DEAD_RUBBER') {
-        filteredPicks = picks.filter(p => !(p.stat === 'CARTÕES' && p.type === 'OVER'));
-        filteredPicks.forEach(p => {
-          if ((p.stat === 'CARTÕES' && p.type === 'UNDER') || (p.stat === 'ESCANTEIOS' && p.period === 'HT' && p.type === 'UNDER')) {
-            p.contextBonus = 15;
-            p.boostLabel = '🧊 Amistoso';
-          }
-        });
-        const diff = picks.length - filteredPicks.length;
-        if (diff > 0) console.log(`   [Motivation] Jogo 'Amistoso' (Sem meta): ${diff} pick(s) de OVER Cartões bloqueadas.`);
-      } else if (motivation === 'DECISIVE') {
-        filteredPicks = picks.filter(p => !(p.stat === 'CARTÕES' && p.type === 'UNDER'));
-        filteredPicks.forEach(p => {
-          if ((p.stat === 'CARTÕES' || p.stat === 'ESCANTEIOS') && p.type === 'OVER') {
-            p.contextBonus = 15;
-            p.boostLabel = '🔥 Alta Tensão';
-          }
-        });
-        const diff = picks.length - filteredPicks.length;
-        if (diff > 0) console.log(`   [Motivation] Jogo Decisivo (Alta Tensão): ${diff} pick(s) de UNDER Cartões bloqueadas.`);
-        else console.log(`   [Motivation] Jogo Decisivo! (Title/Relegation/Europe)`);
-      }
-      
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
          console.log(`Ignorado (Amostragem: Casa ${homeHistory?.length || 0}, Fora ${awayHistory?.length || 0} jogos)`);
          continue;
       } else {
-         console.log(`${filteredPicks.length} candidato(s) EV+`);
+         console.log(`${picks.length} candidato(s) EV+`);
       }
       
-      allPickCandidates.push(...filteredPicks.map(p => ({
+      allPickCandidates.push(...picks.map(p => ({
         ...p,
         home: homeName,
         away: awayName,
@@ -700,8 +574,6 @@ async function generateOdd3() {
         date_time: f.date,
         leagueName: f.league?.name || '',
         leagueLogo: f.league?.logo_url || '',
-        contextBonus: p.contextBonus || 0,
-        boostLabel: p.boostLabel || '',
       })));
       await delay(800);
     } catch (e) {
@@ -756,8 +628,6 @@ async function generateOdd3() {
       line: pick.line,
       odd: pick.odd,
       probability: pick.probability,
-      contextBonus: pick.contextBonus,
-      boostLabel: pick.boostLabel,
       histHits:    pick.histHits,
       histTotal:   pick.histTotal,
       market: pick.market,
@@ -773,8 +643,7 @@ async function generateOdd3() {
   for (const e of entries) {
     console.log(`\n  ${e.home} x ${e.away}`);
     for (const p of e.picks) {
-      const boostStr = p.boostLabel ? ` ${p.boostLabel}` : '';
-      console.log(`    [${p.probability}% Hist.]${boostStr} ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
+      console.log(`    [${p.probability}% Hist.] ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
     }
   }
   console.log(`\n  Odd Total: ${totalOdd.toFixed(2)}`);

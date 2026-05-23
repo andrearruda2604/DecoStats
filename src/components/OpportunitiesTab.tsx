@@ -631,7 +631,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
               <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 bg-surface/30">
                 {g.leagueLogo && (
                   <div className="w-4 h-4 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
-                    <img src={g.leagueLogo} alt="" className="w-full h-full object-contain" />
+                    <img referrerPolicy="no-referrer" src={g.leagueLogo} alt="" className="w-full h-full object-contain" />
                   </div>
                 )}
                 <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{g.leagueName}</span>
@@ -651,12 +651,12 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                 className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 border-b border-outline-variant/10 transition-colors ${onSelectMatch ? 'hover:bg-white/[0.04] cursor-pointer group' : ''}`}
               >
                 <div className="flex items-center gap-2 flex-1 justify-end">
-                  {g.homeLogo && <img src={g.homeLogo} alt="" className="w-5 h-5 object-contain" />}
+                  {g.homeLogo && <img referrerPolicy="no-referrer" src={g.homeLogo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-[13px] font-black text-on-surface">{g.home}</span>
                 </div>
                 <span className="text-[10px] font-bold text-on-surface-variant/30 px-2">vs</span>
                 <div className="flex items-center gap-2 flex-1">
-                  {g.awayLogo && <img src={g.awayLogo} alt="" className="w-5 h-5 object-contain" />}
+                  {g.awayLogo && <img referrerPolicy="no-referrer" src={g.awayLogo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-[13px] font-black text-on-surface">{g.away}</span>
                 </div>
                 {onSelectMatch && (

@@ -142,7 +142,7 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
             <div className="flex items-center justify-between px-4 py-3 bg-surface-container/30 border-b border-outline-variant/10">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
-                  <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                  <img referrerPolicy="no-referrer" src={logoUrl} alt="" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <p className="text-[9px] text-on-surface-variant/70 uppercase tracking-widest font-semibold leading-none mb-1">
@@ -218,7 +218,7 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/15 flex-shrink-0">
               <div className="w-6 h-6 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
-                <img src={standingsModal.logoUrl} alt="" className="w-full h-full object-contain" />
+                <img referrerPolicy="no-referrer" src={standingsModal.logoUrl} alt="" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-black uppercase text-on-surface truncate">{standingsModal.name}</p>
@@ -258,13 +258,13 @@ function MatchRow({ match, onSelectMatch, showLeagueLabel, isLast }: { match: Ma
       <div className="flex items-center gap-3">
         {/* Team Logos */}
         <div className="flex flex-col gap-1.5 items-center justify-center w-8">
-          <img
+          <img referrerPolicy="no-referrer"
             src={match.homeTeam.logoUrl}
             alt=""
             className="w-5 h-5 object-contain flex-shrink-0"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
-          <img
+          <img referrerPolicy="no-referrer"
             src={match.awayTeam.logoUrl}
             alt=""
             className="w-5 h-5 object-contain flex-shrink-0"

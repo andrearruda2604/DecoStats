@@ -122,7 +122,7 @@ export default function StandingsTab({ leagueId, season, leagueName, homeTeamApi
                 {/* Logo + Name */}
                 <div className="flex-1 flex items-center gap-2 ml-2 min-w-0">
                   {row.team_logo && (
-                    <img
+                    <img referrerPolicy="no-referrer"
                       src={row.team_logo}
                       alt=""
                       className="w-4 h-4 object-contain flex-shrink-0"

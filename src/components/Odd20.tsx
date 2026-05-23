@@ -816,7 +816,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                 <span className="flex items-center gap-1 px-2 py-1 bg-black/40 rounded-md">
                                   {lg.logo_url && (
                                     <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px flex-shrink-0 flex items-center justify-center">
-                                      <img src={lg.logo_url} className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                      <img referrerPolicy="no-referrer" src={lg.logo_url} className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                     </div>
                                   )}
                                   <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase tracking-tight">{lg.name}</span>
@@ -839,7 +839,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
 
                         <div className="flex items-center justify-between gap-4 mb-8">
                           <div className="flex flex-col items-center gap-2 flex-1">
-                            <img src={match.homeLogo} className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <img referrerPolicy="no-referrer" src={match.homeLogo} className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             <span className="text-[10px] font-black text-white text-center line-clamp-1">{match.home}</span>
                           </div>
                           <div className="flex flex-col items-center">
@@ -855,7 +855,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                             )}
                           </div>
                           <div className="flex flex-col items-center gap-2 flex-1">
-                            <img src={match.awayLogo} className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <img referrerPolicy="no-referrer" src={match.awayLogo} className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             <span className="text-[10px] font-black text-white text-center line-clamp-1">{match.away}</span>
                           </div>
                         </div>

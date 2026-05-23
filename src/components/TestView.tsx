@@ -176,7 +176,7 @@ function MatchRow({ m }: { m: MatchRow }) {
       {/* League */}
       {m.league?.logo_url
         ? <div className="w-4 h-4 bg-white/90 rounded-sm p-px shrink-0 flex items-center justify-center" title={m.league.name}>
-            <img src={m.league.logo_url} className="w-full h-full object-contain" />
+            <img referrerPolicy="no-referrer" src={m.league.logo_url} className="w-full h-full object-contain" />
           </div>
         : <div className="w-4 shrink-0" />
       }
@@ -203,7 +203,7 @@ function MatchRow({ m }: { m: MatchRow }) {
       {/* Opponent */}
       <div className="flex items-center gap-2 min-w-0 flex-1 ml-2">
         {m.opponent?.logo_url && (
-          <img
+          <img referrerPolicy="no-referrer"
             src={m.opponent.logo_url}
             className="w-5 h-5 object-contain shrink-0"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -305,7 +305,7 @@ export default function TestView() {
                   onClick={() => selectTeam(t)}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container/60 transition-colors text-left border-b border-outline-variant/10 last:border-0"
                 >
-                  <img src={t.logo_url} className="w-6 h-6 object-contain shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                  <img referrerPolicy="no-referrer" src={t.logo_url} className="w-6 h-6 object-contain shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                   <span className="text-sm font-bold text-on-surface">{t.name}</span>
                 </button>
               ))}
@@ -317,7 +317,7 @@ export default function TestView() {
           <>
             {/* Team header */}
             <div className="flex items-center gap-4 pt-1">
-              <img src={team.logo_url} className="w-12 h-12 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+              <img referrerPolicy="no-referrer" src={team.logo_url} className="w-12 h-12 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
               <div>
                 <h2 className="text-xl font-black text-white leading-tight">{team.name}</h2>
                 <p className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest">

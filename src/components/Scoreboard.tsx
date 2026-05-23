@@ -22,7 +22,7 @@ export default function Scoreboard({ data, homeRank, awayRank }: ScoreboardProps
       {/* League Header */}
       <div className="flex flex-col items-center w-full mb-6 px-4">
         <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 flex items-center gap-2">
-          <img src={league.flag_url} alt="" className="w-4 h-3 object-cover rounded-sm" />
+          <img referrerPolicy="no-referrer" src={league.flag_url} alt="" className="w-4 h-3 object-cover rounded-sm" />
           {league.country} <span className="text-on-surface-variant/30">&gt;</span> {league.name}
         </span>
       </div>
@@ -37,7 +37,7 @@ export default function Scoreboard({ data, homeRank, awayRank }: ScoreboardProps
               <span className="text-2xl font-black text-primary tabular-nums">{homeRank}°</span>
             </div>
           )}
-          <img
+          <img referrerPolicy="no-referrer"
             src={homeTeam.logo_url}
             alt={homeTeam.name}
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border border-outline-variant/20 shadow-xl object-contain p-1.5"
@@ -72,7 +72,7 @@ export default function Scoreboard({ data, homeRank, awayRank }: ScoreboardProps
               <span className="text-2xl font-black text-primary tabular-nums">{awayRank}°</span>
             </div>
           )}
-          <img
+          <img referrerPolicy="no-referrer"
             src={awayTeam.logo_url}
             alt={awayTeam.name}
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border border-outline-variant/20 shadow-xl object-contain p-1.5"

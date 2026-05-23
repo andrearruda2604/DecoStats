@@ -462,16 +462,24 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
       const _odd = parseFloat(_v.odd);
       if (_odd < MIN_ODD) continue;
       const _type = _v.value.toUpperCase();
+      
+      let finalLine = _v.value === 'Yes' ? 'Sim' : 'Não';
+      let finalStat = _m.stat;
+      if (_m.stat === 'CLEAN_SHEET' && _v.value === 'No') {
+        finalLine = 'Mais de 0.5 Gols Sofridos';
+        finalStat = ''; // Limpa o stat para não imprimir "CLEAN_SHEET" na tela
+      }
+
       const _c = {
         fixture_id: fixtureId, betId: _m.betId,
         market: _m.label, stat: _m.stat, period: _m.period, teamTarget: _m.teamTarget,
         team: _m.teamTarget === 'HOME' ? homeName : _m.teamTarget === 'AWAY' ? awayName : 'Total',
-        type: _type, threshold: 0, line: _v.value === 'Yes' ? 'Sim' : 'Não', odd: _odd,
+        type: _type, threshold: 0, line: finalLine, odd: _odd,
       };
       const _hist = _m.teamTarget === 'HOME' ? homeHistory : _m.teamTarget === 'AWAY' ? awayHistory : null;
       const _prob = evaluateHistoricalFrequency(_c, _hist || homeHistory, _m.teamTarget === 'TOTAL' ? awayHistory : null, matchTotals, htScores);
       if (_prob !== null && _prob.pct >= MIN_HISTORICAL_PROB) {
-        candidates.push({ ..._c, probability: Math.round(_prob.pct), histHits: _prob.hits, histTotal: _prob.total });
+        candidates.push({ ..._c, stat: finalStat, probability: Math.round(_prob.pct), histHits: _prob.hits, histTotal: _prob.total });
       }
     }
   }
@@ -560,7 +568,8 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
   return candidates;
 }
 
-const ANCHOR_MIN_ODD = 1.70; // Âncora precisa ter odd ≥ 1.70 para priorizar chutes sobre cartões
+const ANCHOR_MIN_ODD = 1.40; // Baixado de 1.70 para permitir linhas mais seguras
+const ANCHOR_MAX_ODD = 1.70; // Cap máximo para evitar riscos desnecessários na âncora
 
 function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_DEFAULT) {
   const deduped = [];
@@ -601,17 +610,18 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     currentOdd *= candidate.odd;
   }
 
-  // PASSO 1: seleciona pick âncora (melhor score com odd >= ANCHOR_MIN_ODD)
+  // PASSO 1: seleciona pick âncora (melhor score dentro da faixa de odd permitida)
   const anchorCandidates = deduped
-    .filter(c => canAdd(c) && c.odd >= ANCHOR_MIN_ODD && currentOdd * c.odd <= TARGET_HIGH)
+    .filter(c => canAdd(c) && c.odd >= ANCHOR_MIN_ODD && c.odd <= ANCHOR_MAX_ODD && currentOdd * c.odd <= TARGET_HIGH)
     .sort((a, b) => {
-      const scoreA = a.probability + (a.odd - 1.0) * 15;
-      const scoreB = b.probability + (b.odd - 1.0) * 15;
+      const scoreA = a.probability + (a.contextBonus || 0) + (a.odd - 1.0) * 15;
+      const scoreB = b.probability + (b.contextBonus || 0) + (b.odd - 1.0) * 15;
       return scoreB - scoreA;
     });
   if (anchorCandidates.length > 0) {
     doAdd(anchorCandidates[0]);
-    console.log(`  ⚓ Âncora: [${anchorCandidates[0].probability}%] ${anchorCandidates[0].line} ${anchorCandidates[0].market} @ ${anchorCandidates[0].odd}`);
+    const boostStr = anchorCandidates[0].boostLabel ? ` ${anchorCandidates[0].boostLabel}` : '';
+    console.log(`  ⚓ Âncora: [${anchorCandidates[0].probability}% Hist.]${boostStr} ${anchorCandidates[0].line} ${anchorCandidates[0].market} @ ${anchorCandidates[0].odd}`);
   }
 
   // PASSO 2: preenche com picks de alto score até atingir TARGET_LOW
@@ -622,8 +632,8 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     if (available.length === 0) break;
 
     available.sort((a, b) => {
-      const scoreA = a.probability + (a.odd - 1.0) * 15;
-      const scoreB = b.probability + (b.odd - 1.0) * 15;
+      const scoreA = a.probability + (a.contextBonus || 0) + (a.odd - 1.0) * 15;
+      const scoreB = b.probability + (b.contextBonus || 0) + (b.odd - 1.0) * 15;
       return scoreB - scoreA;
     });
 
@@ -635,7 +645,11 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     const fallbacks = deduped
       .filter(c => canAdd(c))
       .filter(c => (currentOdd * c.odd) >= TARGET_LOW && (currentOdd * c.odd) <= maxAllowed)
-      .sort((a, b) => b.probability - a.probability || b.odd - a.odd);
+      .sort((a, b) => {
+        const scoreA = a.probability + (a.contextBonus || 0);
+        const scoreB = b.probability + (b.contextBonus || 0);
+        return scoreB - scoreA || b.odd - a.odd;
+      });
 
     if (fallbacks.length > 0) doAdd(fallbacks[0]);
   }
@@ -660,21 +674,62 @@ function analyzeMatchMotivation(homeApiId, awayApiId, leagueStandings) {
   const isLateSeason = (homeTeam.played / assumedTotalMatches) >= 0.85;
   if (!isLateSeason) return 'NORMAL';
   
-  const pointsRank6 = leagueStandings[5]?.points || 0;
-  const pointsRank18 = leagueStandings[totalTeams - 3]?.points || 0;
-  
   function getTeamMotivation(team) {
-    let matchesLeft = assumedTotalMatches - team.played;
-    if (matchesLeft <= 0) matchesLeft = 0;
-    const maxPoints = team.points + (matchesLeft * 3);
-    
-    if (team.rank <= 6) return 'FIGHTING';
-    if (team.rank >= totalTeams - 2) return 'FIGHTING';
-    
-    const canReachG6 = maxPoints >= pointsRank6;
-    const canBeRelegated = (team.points - pointsRank18) <= (matchesLeft * 3);
-    
-    if (canReachG6 || canBeRelegated) return 'FIGHTING';
+    function canOvertake(hunter, target) {
+      const matchesLeftHunter = Math.max(0, assumedTotalMatches - hunter.played);
+      const hunterMaxPoints = hunter.points + (matchesLeftHunter * 3);
+      if (hunterMaxPoints > target.points) return true;
+      if (hunterMaxPoints === target.points) {
+        // O caçador só consegue empatar em pontos. Na vida real, reverter saldo de gols 
+        // na última rodada é irreal, e o time que está na frente joga pelo empate.
+        // Só é ameaça se o saldo atual já for melhor ou muito próximo.
+        // Usamos uma margem bem conservadora (1 gol por jogo restante) ou apenas o saldo atual.
+        const hunterProjectedGD = (hunter.goal_diff || 0) + matchesLeftHunter;
+        if (hunterProjectedGD >= (target.goal_diff || 0)) return true;
+      }
+      return false;
+    }
+
+    const rank1 = leagueStandings[0];
+    const rank2 = leagueStandings[1];
+    if (rank1 && rank2) {
+      if (team.team_api_id === rank1.team_api_id) {
+         if (canOvertake(rank2, team)) return 'FIGHTING';
+      } else {
+         if (canOvertake(team, rank1)) return 'FIGHTING';
+      }
+    }
+
+    const rank4 = leagueStandings[3];
+    const rank5 = leagueStandings[4];
+    if (rank4 && rank5) {
+      if (team.rank <= 4) {
+         if (canOvertake(rank5, team)) return 'FIGHTING';
+      } else {
+         if (canOvertake(team, rank4)) return 'FIGHTING';
+      }
+    }
+
+    const rank6 = leagueStandings[5];
+    const rank7 = leagueStandings[6];
+    if (rank6 && rank7) {
+      if (team.rank <= 6) {
+         if (canOvertake(rank7, team)) return 'FIGHTING';
+      } else {
+         if (canOvertake(team, rank6)) return 'FIGHTING';
+      }
+    }
+
+    const safeRank = leagueStandings[totalTeams - 4];
+    const relRank = leagueStandings[totalTeams - 3];
+    if (safeRank && relRank) {
+      if (team.rank <= totalTeams - 3) {
+         if (canOvertake(relRank, team)) return 'FIGHTING';
+      } else {
+         if (canOvertake(team, safeRank)) return 'FIGHTING';
+      }
+    }
+
     return 'SAFE';
   }
   
@@ -804,10 +859,25 @@ async function generateOdd2() {
       let filteredPicks = picks;
       if (motivation === 'DEAD_RUBBER') {
         filteredPicks = picks.filter(p => !(p.stat === 'CARTÕES' && p.type === 'OVER'));
+        filteredPicks.forEach(p => {
+          if ((p.stat === 'CARTÕES' && p.type === 'UNDER') || (p.stat === 'ESCANTEIOS' && p.period === 'HT' && p.type === 'UNDER')) {
+            p.contextBonus = 15;
+            p.boostLabel = '🧊 Amistoso';
+          }
+        });
         const diff = picks.length - filteredPicks.length;
         if (diff > 0) console.log(`   [Motivation] Jogo 'Amistoso' (Sem meta): ${diff} pick(s) de OVER Cartões bloqueadas.`);
       } else if (motivation === 'DECISIVE') {
-        console.log(`   [Motivation] Jogo Decisivo! (Title/Relegation/Europe)`);
+        filteredPicks = picks.filter(p => !(p.stat === 'CARTÕES' && p.type === 'UNDER'));
+        filteredPicks.forEach(p => {
+          if ((p.stat === 'CARTÕES' || p.stat === 'ESCANTEIOS') && p.type === 'OVER') {
+            p.contextBonus = 15;
+            p.boostLabel = '🔥 Alta Tensão';
+          }
+        });
+        const diff = picks.length - filteredPicks.length;
+        if (diff > 0) console.log(`   [Motivation] Jogo Decisivo (Alta Tensão): ${diff} pick(s) de UNDER Cartões bloqueadas.`);
+        else console.log(`   [Motivation] Jogo Decisivo! (Title/Relegation/Europe)`);
       }
       
       if ((homeHistory?.length || 0) < MIN_GAMES_HISTORY || (awayHistory?.length || 0) < MIN_GAMES_HISTORY) {
@@ -826,6 +896,8 @@ async function generateOdd2() {
         date_time: f.date,
         leagueName: f.league?.name || '',
         leagueLogo: f.league?.logo_url || '',
+        contextBonus: p.contextBonus || 0,
+        boostLabel: p.boostLabel || '',
       })));
       await delay(800);
     } catch (e) {
@@ -894,6 +966,8 @@ async function generateOdd2() {
       line: pick.line,
       odd: pick.odd,
       probability: pick.probability,
+      contextBonus: pick.contextBonus,
+      boostLabel: pick.boostLabel,
       histHits:    pick.histHits,
       histTotal:   pick.histTotal,
       market: pick.market,
@@ -909,7 +983,8 @@ async function generateOdd2() {
   for (const e of entries) {
     console.log(`\n  ${e.home} x ${e.away}`);
     for (const p of e.picks) {
-      console.log(`    [${p.probability}% Hist.] ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
+      const boostStr = p.boostLabel ? ` ${p.boostLabel}` : '';
+      console.log(`    [${p.probability}% Hist.]${boostStr} ${p.team}: ${p.line} ${p.stat} (${p.period}) → odd ${p.odd} [${p.market}]`);
     }
   }
   console.log(`\n  Odd Total: ${totalOdd.toFixed(2)}`);

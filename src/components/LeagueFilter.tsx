@@ -255,7 +255,7 @@ export default function LeagueFilter({
                     }`}
                   >
                     {group.flagUrl ? (
-                      <img
+                      <img referrerPolicy="no-referrer"
                         src={group.flagUrl}
                         alt=""
                         className="w-5 h-3.5 object-cover rounded-[3px] flex-shrink-0 shadow-sm"
@@ -317,7 +317,7 @@ export default function LeagueFilter({
                           <div className={`w-0.5 h-4 rounded-full flex-shrink-0 ${isSelected ? 'bg-primary' : 'bg-transparent'}`} />
 
                           <div className="w-5 h-5 bg-white/90 rounded-sm p-0.5 flex-shrink-0 flex items-center justify-center">
-                            <img
+                            <img referrerPolicy="no-referrer"
                               src={league.logo_url}
                               alt=""
                               className="w-full h-full object-contain"

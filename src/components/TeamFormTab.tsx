@@ -168,7 +168,7 @@ function HistoryRow({ m }: { m: MatchRow }) {
       {/* League logo */}
       {m.league?.logo_url
         ? <div className="w-3.5 h-3.5 bg-white/90 rounded-sm p-px shrink-0 flex items-center justify-center" title={m.league.name}>
-            <img src={m.league.logo_url} className="w-full h-full object-contain" />
+            <img referrerPolicy="no-referrer" src={m.league.logo_url} className="w-full h-full object-contain" />
           </div>
         : <div className="w-3.5 shrink-0" />
       }
@@ -195,7 +195,7 @@ function HistoryRow({ m }: { m: MatchRow }) {
       {/* Opponent */}
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {m.opponent?.logo_url && (
-          <img
+          <img referrerPolicy="no-referrer"
             src={m.opponent.logo_url}
             className="w-4 h-4 object-contain shrink-0"
             onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
@@ -234,7 +234,7 @@ function TeamPanel({
     <div className="bg-surface/40 border border-outline-variant/20 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className={`flex items-center gap-3 px-4 py-3 border-b-2 ${accentColor}`}>
-        <img
+        <img referrerPolicy="no-referrer"
           src={team.logo_url}
           className="w-7 h-7 object-contain shrink-0"
           onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
