@@ -23,6 +23,9 @@ async function main() {
     // 1. Sync today's fixtures and results
     runScript('syncToday.js');
 
+    // 1.5 Migrate any new logos fetched today to Supabase Storage
+    runScript('migrate_logos.js');
+
     // 2. Sync missing history statistics (crucial for accurate predictions)
     runScript('syncMissingStats.js');
 
