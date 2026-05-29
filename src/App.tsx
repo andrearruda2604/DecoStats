@@ -25,9 +25,39 @@ import { useState, useEffect, useRef } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData, fetchStandings } from './services/api';
 
-const VERSION = '1.0.2-live-engine';
+const VERSION = '1.0.3';
 
 export default function App() {
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const res = await fetch(`/version.json?t=${new Date().getTime()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.version && data.version !== VERSION) {
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const registration of registrations) {
+                await registration.unregister();
+              }
+            }
+            window.location.reload();
+          }
+        }
+      } catch (e) {
+        console.error('Failed to check version', e);
+      }
+    };
+    
+    checkVersion();
+    window.addEventListener('focus', checkVersion);
+    const interval = setInterval(checkVersion, 5 * 60 * 1000);
+    return () => {
+      window.removeEventListener('focus', checkVersion);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Public route — no auth required
   if (window.location.pathname === '/privacidade') {
     return <PrivacyPage />;
