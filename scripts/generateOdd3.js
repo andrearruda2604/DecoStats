@@ -602,6 +602,12 @@ async function generateOdd3() {
       continue;
     }
 
+    // Bloqueio manual da Champions League (api_id 2)
+    if (f.league?.api_id === 2) {
+      console.log(`  ${homeName} x ${awayName} ... Ignorado (Manual: Champions League - Final)`);
+      continue;
+    }
+
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
         .select('*').eq('team_id', f.home_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);

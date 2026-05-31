@@ -465,9 +465,13 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
       
       let finalLine = _v.value === 'Yes' ? 'Sim' : 'Não';
       let finalStat = _m.stat;
-      if (_m.stat === 'CLEAN_SHEET' && _v.value === 'No') {
-        finalLine = 'Mais de 0.5 Gols Sofridos';
-        finalStat = ''; // Limpa o stat para não imprimir "CLEAN_SHEET" na tela
+      if (_m.stat === 'CLEAN_SHEET') {
+        finalStat = 'GOLS_SOFRIDOS';
+        if (_v.value === 'No') {
+          finalLine = 'Mais de 0.5 Gols Sofridos';
+        } else {
+          finalLine = 'Menos de 0.5 Gols Sofridos';
+        }
       }
 
       const _c = {
@@ -800,6 +804,13 @@ async function generateOdd2() {
   for (const f of candidates) {
     const homeName = f.home_team?.name || 'Casa';
     const awayName = f.away_team?.name || 'Fora';
+
+    // Bloqueio manual da Champions League (api_id 2)
+    if (f.league?.api_id === 2) {
+      console.log(`  ${homeName} x ${awayName} ... Ignorado (Manual: Champions League - Final)`);
+      continue;
+    }
+
     process.stdout.write(`  ${homeName} x ${awayName} ... `);
 
     try {

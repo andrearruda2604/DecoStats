@@ -453,11 +453,17 @@ function parseOpportunitiesFromOdds(fixtureId, homeName, awayName, oddsResp, hom
       const _odd = parseFloat(_v.odd);
       if (_odd < MIN_ODD) continue;
       const _type = _v.value.toUpperCase();
+      let finalStat = _m.stat;
+      let finalLine = _v.value === 'Yes' ? 'Sim' : 'Não';
+      if (_m.stat === 'CLEAN_SHEET') {
+        finalStat = 'GOLS_SOFRIDOS';
+        finalLine = _v.value === 'No' ? 'Mais de 0.5 Gols Sofridos' : 'Menos de 0.5 Gols Sofridos';
+      }
       const _c = {
         fixture_id: fixtureId, betId: _m.betId,
-        market: _m.label, stat: _m.stat, period: _m.period, teamTarget: _m.teamTarget,
+        market: _m.label, stat: finalStat, period: _m.period, teamTarget: _m.teamTarget,
         team: _m.teamTarget === 'HOME' ? homeName : _m.teamTarget === 'AWAY' ? awayName : 'Total',
-        type: _type, threshold: 0, line: _v.value === 'Yes' ? 'Sim' : 'Não', odd: _odd,
+        type: _type, threshold: 0, line: finalLine, odd: _odd,
       };
       const _hist = _m.teamTarget === 'HOME' ? homeHistory : _m.teamTarget === 'AWAY' ? awayHistory : null;
       const _prob = evaluateHistoricalFrequency(_c, _hist || homeHistory, _m.teamTarget === 'TOTAL' ? awayHistory : null, matchTotals, htScores);
@@ -588,6 +594,14 @@ async function generateOpportunities() {
   for (const f of activeFix) {
     const homeName = f.home_team?.name || 'Casa';
     const awayName = f.away_team?.name || 'Fora';
+
+    // Bloqueio manual da Champions League (api_id 2)
+    if (f.league?.api_id === 2) {
+      console.log(`  [${analyzed + skipped + 1}/${activeFix.length}] ${homeName} x ${awayName} ... Ignorado (Manual: Champions League - Final)`);
+      skipped++;
+      continue;
+    }
+
     process.stdout.write(`  [${analyzed + skipped + 1}/${activeFix.length}] ${homeName} x ${awayName} ... `);
 
     try {

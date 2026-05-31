@@ -1,0 +1,27 @@
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+
+const env = fs.readFileSync('.env.local','utf8');
+const [,url] = env.match(/VITE_SUPABASE_URL="(.*?)"/);
+const [,key] = env.match(/VITE_SUPABASE_ANON_KEY="(.*?)"/);
+const supabase = createClient(url,key);
+
+async function check() {
+  const { data: t31 } = await supabase.from('odd_tickets').select('ticket_data').eq('date','2026-05-31').eq('mode','opp').single();
+  const { data: t30 } = await supabase.from('odd_tickets').select('ticket_data').eq('date','2026-05-30').eq('mode','opp').single();
+  
+  if (t31?.ticket_data?.opportunities) {
+    console.log('2026-05-31 ticket contains dates:');
+    const dates = [...new Set(t31.ticket_data.opportunities.map(o => o.date_time.split('T')[0]))];
+    console.log(dates);
+  } else {
+    console.log('2026-05-31 ticket does not exist or empty');
+  }
+
+  if (t30?.ticket_data?.opportunities) {
+    console.log('2026-05-30 ticket contains dates:');
+    const dates = [...new Set(t30.ticket_data.opportunities.map(o => o.date_time.split('T')[0]))];
+    console.log(dates);
+  }
+}
+check();
