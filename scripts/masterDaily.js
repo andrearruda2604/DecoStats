@@ -18,10 +18,11 @@ function runScript(name, args = '') {
 }
 
 async function main() {
-    console.log("🌟 DECOSTATS DAILY ENGINE STARTING 🌟");
+    const targetDate = process.argv[2] || '';
+    console.log(`🌟 DECOSTATS DAILY ENGINE STARTING ${targetDate ? 'FOR ' + targetDate : ''} 🌟`);
 
     // 1. Sync today's fixtures and results
-    runScript('syncToday.js');
+    runScript('syncToday.js', targetDate);
 
     // 1.5 Migrate any new logos fetched today to Supabase Storage
     runScript('migrate_logos.js');
@@ -34,8 +35,9 @@ async function main() {
     runScript('evaluateOdd2.js');
 
     // 4. Generate Today's Tickets
-    runScript('generateOdd2.js');
-    runScript('generateOdd3.js');
+    runScript('generateOdd2.js', targetDate);
+    runScript('generateOdd3.js', targetDate);
+    runScript('generateOpportunities.js', targetDate);
 
     // 5. Sync league standings
     runScript('syncStandings.js');

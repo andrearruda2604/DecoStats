@@ -23,7 +23,7 @@ const API_HEADERS = { 'x-apisports-key': env.VITE_API_FOOTBALL_KEY };
 
 const MIN_PROB        = 90;   // > 89%
 const MIN_ODD         = 1.03;
-const MIN_GAMES       = 7;
+const MIN_GAMES       = 5;
 const BOOKMAKER_ID    = 8;    // Bet365
 
 const MARKETS = {
@@ -556,7 +556,8 @@ async function generateOpportunities() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const tomorrow = new Date(brt);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const targetDate = process.argv[2] || tomorrow.toISOString().split('T')[0];
+  let targetDate = process.argv[2];
+  if (!targetDate || targetDate === '--force') targetDate = tomorrow.toISOString().split('T')[0];
 
   console.log(`\n=== Oportunidades do Dia — ${targetDate} (prob ≥ ${MIN_PROB}%) ===\n`);
 

@@ -86,6 +86,9 @@ async function syncStandings() {
 
         for (const group of leagueStandings) {
           for (const entry of group) {
+            // Skip generic "Group Stage" aggregate rows (e.g. World Cup)
+            if (entry.group === 'Group Stage') continue;
+
             rows.push({
               league_id:     league.id,
               season:        league.season,
@@ -105,6 +108,25 @@ async function syncStandings() {
               form:          entry.form || '',
               updated_at:    new Date().toISOString(),
             });
+          }
+        }
+      }
+
+      // Replace API-Sports logos with migrated Supabase Storage logos when available
+      if (rows.length > 0) {
+        const teamApiIds = [...new Set(rows.map(r => r.team_api_id))];
+        const { data: dbTeams } = await supabase
+          .from('teams')
+          .select('api_id, logo_url')
+          .in('api_id', teamApiIds);
+
+        if (dbTeams?.length) {
+          const logoMap = Object.fromEntries(dbTeams.map(t => [t.api_id, t.logo_url]));
+          for (const row of rows) {
+            const migrated = logoMap[row.team_api_id];
+            if (migrated && !migrated.includes('api-sports')) {
+              row.team_logo = migrated;
+            }
           }
         }
       }

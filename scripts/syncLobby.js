@@ -122,12 +122,26 @@ async function syncLobbyFixtures() {
       teamsMap.set(m.teams.away.id, { ...m.teams.away, league_id: dbLeagueId });
     });
     
+    // Fetch existing teams if any to avoid overwriting their migrated logo_url
+    const teamApiIds = Array.from(teamsMap.keys());
+    const { data: existingTeams } = await supabase
+      .from('teams')
+      .select('api_id, logo_url')
+      .in('api_id', teamApiIds);
+
+    const existingLogoMap = Object.fromEntries(
+      (existingTeams || [])
+        .filter(t => t.logo_url && !t.logo_url.includes('api-sports'))
+        .map(t => [t.api_id, t.logo_url])
+    );
+
     for (const [id, teamData] of teamsMap) {
+      const savedLogo = existingLogoMap[id];
       await supabase.from('teams').upsert({
         api_id: teamData.id,
         name: teamData.name,
         short_name: teamData.name?.substring(0, 3).toUpperCase(),
-        logo_url: teamData.logo,
+        logo_url: savedLogo || teamData.logo,
         league_id: teamData.league_id
       }, { onConflict: 'api_id' });
     }

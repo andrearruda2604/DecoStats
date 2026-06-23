@@ -30,7 +30,7 @@ const MAX_PICKS_PER_MATCH_FEW_GAMES = 2;
 
 const MIN_HISTORICAL_PROB = 80; // Aceita apenas picks com confiança ≥ 80%
 const MIN_ODD = 1.03;        // Pequeno aumento na odd mínima para evitar lixo de 1.01
-const MIN_GAMES_HISTORY = 7;  // Mínimo de 7 jogos para incluir ligas com menos rodadas (ex: Argentina)
+const MIN_GAMES_HISTORY = 5;  // Mínimo de 5 jogos para incluir ligas com menos rodadas (ex: Argentina)
 const BOOKMAKER_ID = 8;      
 
 const MARKETS = {
@@ -770,11 +770,15 @@ async function generateOdd2() {
   const activeLeagueApiIds = new Set((leagues || []).map(l => l.api_id));
 
   const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const nextDate = new Date(`${today}T03:00:00Z`);
+  nextDate.setDate(nextDate.getDate() + 1);
+  const endDateStr = nextDate.toISOString().replace('T', ' ').substring(0, 19);
+
   let query = supabase
     .from('fixtures')
     .select('api_id, date, status, season, home_team_id, away_team_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(id, api_id, name, logo_url)')
-    .gte('date', `${today} 00:00:00`)
-    .lte('date', `${today} 23:59:59`);
+    .gte('date', `${today} 03:00:00`)
+    .lte('date', endDateStr);
   
   if (today === brtNow) {
     query = query.in('status', ['NS', 'TBD']);
@@ -815,9 +819,9 @@ async function generateOdd2() {
 
     try {
       const { data: homeHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.home_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', true);
+        .select('*').eq('team_id', f.home_team.api_id).eq('season', f.season).eq('league_id', f.league.id).eq('is_home', true);
       const { data: awayHistory } = await supabase.from('teams_history')
-        .select('*').eq('team_id', f.away_team.api_id).eq('season', f.season).eq('league_id', f.league.api_id).eq('is_home', false);
+        .select('*').eq('team_id', f.away_team.api_id).eq('season', f.season).eq('league_id', f.league.id).eq('is_home', false);
 
       const matchTotals = {};
       

@@ -245,6 +245,29 @@ export default function Lobby({ matches, onSelectMatch, sortBy, onSortChange }: 
   );
 }
 
+function TeamLogo({ url, name }: { url: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const initial = name.charAt(0).toUpperCase();
+
+  if (!url || failed) {
+    return (
+      <div className="w-5 h-5 rounded-full bg-surface-container border border-outline-variant/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-[8px] font-black text-on-surface-variant/60">{initial}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      referrerPolicy="no-referrer"
+      src={url}
+      alt=""
+      className="w-5 h-5 object-contain flex-shrink-0"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function MatchRow({ match, onSelectMatch, showLeagueLabel, isLast }: { match: MatchCardData; onSelectMatch: (id: number) => void; showLeagueLabel?: boolean; isLast?: boolean }) {
   const statusConfig = STATUS_LABELS[match.status] || STATUS_LABELS['NS'];
   const isLive = statusConfig.pulse;
@@ -258,18 +281,8 @@ function MatchRow({ match, onSelectMatch, showLeagueLabel, isLast }: { match: Ma
       <div className="flex items-center gap-3">
         {/* Team Logos */}
         <div className="flex flex-col gap-1.5 items-center justify-center w-8">
-          <img referrerPolicy="no-referrer"
-            src={match.homeTeam.logoUrl}
-            alt=""
-            className="w-5 h-5 object-contain flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-          <img referrerPolicy="no-referrer"
-            src={match.awayTeam.logoUrl}
-            alt=""
-            className="w-5 h-5 object-contain flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <TeamLogo url={match.homeTeam.logoUrl} name={match.homeTeam.name} />
+          <TeamLogo url={match.awayTeam.logoUrl} name={match.awayTeam.name} />
         </div>
         
         {/* Team Names */}

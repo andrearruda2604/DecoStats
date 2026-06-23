@@ -82,12 +82,29 @@ async function syncToday() {
     const homeTeam = m.teams.home;
     const awayTeam = m.teams.away;
 
+    // Fetch existing teams if any to avoid overwriting their migrated logo_url
+    const { data: existingTeams } = await supabase
+      .from('teams')
+      .select('api_id, logo_url')
+      .in('api_id', [homeTeam.id, awayTeam.id]);
+
+    const existingHome = existingTeams?.find(t => t.api_id === homeTeam.id);
+    const existingAway = existingTeams?.find(t => t.api_id === awayTeam.id);
+
+    const homeLogoUrl = (existingHome && existingHome.logo_url && !existingHome.logo_url.includes('api-sports'))
+      ? existingHome.logo_url
+      : homeTeam.logo;
+
+    const awayLogoUrl = (existingAway && existingAway.logo_url && !existingAway.logo_url.includes('api-sports'))
+      ? existingAway.logo_url
+      : awayTeam.logo;
+
     const { data: dbTeams, error: teamErr } = await supabase
       .from('teams')
       .upsert(
         [
-          { api_id: homeTeam.id, name: homeTeam.name, logo_url: homeTeam.logo, league_id: dbLeagueId },
-          { api_id: awayTeam.id, name: awayTeam.name, logo_url: awayTeam.logo, league_id: dbLeagueId },
+          { api_id: homeTeam.id, name: homeTeam.name, logo_url: homeLogoUrl, league_id: dbLeagueId },
+          { api_id: awayTeam.id, name: awayTeam.name, logo_url: awayLogoUrl, league_id: dbLeagueId },
         ],
         { onConflict: 'api_id', ignoreDuplicates: false }
       )
@@ -139,6 +156,44 @@ async function syncToday() {
   }
 
   console.log(`\nSync concluído: ${upserted} jogos, ${errors} erros.`);
+
+  // ── Reconciliation: fix fixtures in DB for today that API no longer lists ──
+  const apiIdsToday = new Set(matches.map(m => m.fixture.id));
+
+  const { data: dbFixturesToday } = await supabase
+    .from('fixtures')
+    .select('id, api_id')
+    .gte('date', `${today}T00:00:00-03:00`)
+    .lte('date', `${today}T23:59:59-03:00`)
+    .eq('status', 'NS');
+
+  const staleFixtures = (dbFixturesToday || []).filter(f => !apiIdsToday.has(f.api_id));
+
+  if (staleFixtures.length > 0) {
+    console.log(`\n⚠️  ${staleFixtures.length} fixture(s) remarcada(s) detectada(s). Corrigindo...\n`);
+
+    for (const stale of staleFixtures) {
+      try {
+        const fixData = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?id=${stale.api_id}`);
+        const f = fixData.response?.[0];
+        if (!f) continue;
+
+        const { error: updErr } = await supabase
+          .from('fixtures')
+          .update({ date: f.fixture.date, status: f.fixture.status.short })
+          .eq('id', stale.id);
+
+        if (!updErr) {
+          const newDateLocal = new Date(f.fixture.date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+          console.log(`  ✓ ${f.teams.home.name} vs ${f.teams.away.name} → ${newDateLocal}`);
+        }
+        await new Promise(r => setTimeout(r, 1200));
+      } catch (e) {
+        console.error(`  ✗ Fixture ${stale.api_id}:`, e.message);
+      }
+    }
+  }
+
   return matches;
 }
 
