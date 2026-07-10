@@ -59,6 +59,70 @@ const MARKETS = {
   168:{ label: 'Impedimentos (Fora)',     stat: 'IMPEDIMENTOS',  period: 'FT', teamTarget: 'AWAY'  },
 };
 
+const FALLBACK_CANDIDATES = [
+  // 1x2
+  { betId: 1, market: '1x2 Resultado Final', stat: 'RESULTADO', period: 'FT', teamTarget: 'HOME', type: 'H', line: 'Vitória Casa', threshold: 0 },
+  { betId: 1, market: '1x2 Resultado Final', stat: 'RESULTADO', period: 'FT', teamTarget: 'TOTAL', type: 'D', line: 'Empate', threshold: 0 },
+  { betId: 1, market: '1x2 Resultado Final', stat: 'RESULTADO', period: 'FT', teamTarget: 'AWAY', type: 'A', line: 'Vitória Fora', threshold: 0 },
+  // Dupla Chance
+  { betId: 12, market: 'Dupla Chance', stat: 'DUPLA_CHANCE', period: 'FT', teamTarget: 'TOTAL', type: 'HD', line: 'Casa ou Empate', threshold: 0 },
+  { betId: 12, market: 'Dupla Chance', stat: 'DUPLA_CHANCE', period: 'FT', teamTarget: 'TOTAL', type: 'HA', line: 'Vitória Qualquer', threshold: 0 },
+  { betId: 12, market: 'Dupla Chance', stat: 'DUPLA_CHANCE', period: 'FT', teamTarget: 'TOTAL', type: 'DA', line: 'Fora ou Empate', threshold: 0 },
+  // Ambos Marcam
+  { betId: 8, market: 'Ambos Marcam (JT)', stat: 'AMBOS_MARCAM', period: 'FT', teamTarget: 'TOTAL', type: 'YES', line: 'Sim', threshold: 0 },
+  { betId: 8, market: 'Ambos Marcam (JT)', stat: 'AMBOS_MARCAM', period: 'FT', teamTarget: 'TOTAL', type: 'NO', line: 'Não', threshold: 0 },
+  { betId: 34, market: 'Ambos Marcam (1T)', stat: 'AMBOS_MARCAM', period: 'HT', teamTarget: 'TOTAL', type: 'YES', line: 'Sim', threshold: 0 },
+  { betId: 34, market: 'Ambos Marcam (1T)', stat: 'AMBOS_MARCAM', period: 'HT', teamTarget: 'TOTAL', type: 'NO', line: 'Não', threshold: 0 },
+  { betId: 35, market: 'Ambos Marcam (2T)', stat: 'AMBOS_MARCAM', period: '2H', teamTarget: 'TOTAL', type: 'YES', line: 'Sim', threshold: 0 },
+  { betId: 35, market: 'Ambos Marcam (2T)', stat: 'AMBOS_MARCAM', period: '2H', teamTarget: 'TOTAL', type: 'NO', line: 'Não', threshold: 0 },
+  // Clean Sheet
+  { betId: 27, market: 'Clean Sheet (Casa)', stat: 'GOLS_SOFRIDOS', period: 'FT', teamTarget: 'HOME', type: 'NO', line: 'Mais de 0.5 Gols Sofridos', threshold: 0 },
+  { betId: 27, market: 'Clean Sheet (Casa)', stat: 'GOLS_SOFRIDOS', period: 'FT', teamTarget: 'HOME', type: 'YES', line: 'Menos de 0.5 Gols Sofridos', threshold: 0 },
+  { betId: 28, market: 'Clean Sheet (Fora)', stat: 'GOLS_SOFRIDOS', period: 'FT', teamTarget: 'AWAY', type: 'NO', line: 'Mais de 0.5 Gols Sofridos', threshold: 0 },
+  { betId: 28, market: 'Clean Sheet (Fora)', stat: 'GOLS_SOFRIDOS', period: 'FT', teamTarget: 'AWAY', type: 'YES', line: 'Menos de 0.5 Gols Sofridos', threshold: 0 },
+  // Resultado HT
+  { betId: 13, market: 'Vencedor 1T', stat: 'RESULTADO_HT', period: 'HT', teamTarget: 'HOME', type: 'H', line: 'Vitória Casa', threshold: 0 },
+  { betId: 13, market: 'Vencedor 1T', stat: 'RESULTADO_HT', period: 'HT', teamTarget: 'TOTAL', type: 'D', line: 'Empate', threshold: 0 },
+  { betId: 13, market: 'Vencedor 1T', stat: 'RESULTADO_HT', period: 'HT', teamTarget: 'AWAY', type: 'A', line: 'Vitória Fora', threshold: 0 },
+];
+const OVER_UNDER_MARKETS = [
+  { betId: 5, market: 'Gols JOGO (Total)', stat: 'GOLS', period: 'FT', teamTarget: 'TOTAL', thresholds: [0.5, 1.5, 2.5, 3.5, 4.5, 5.5] },
+  { betId: 16, market: 'Gols JOGO (Casa)', stat: 'GOLS', period: 'FT', teamTarget: 'HOME', thresholds: [0.5, 1.5, 2.5, 3.5] },
+  { betId: 17, market: 'Gols JOGO (Fora)', stat: 'GOLS', period: 'FT', teamTarget: 'AWAY', thresholds: [0.5, 1.5, 2.5, 3.5] },
+  { betId: 6, market: 'Gols 1° Tempo (Total)', stat: 'GOLS', period: 'HT', teamTarget: 'TOTAL', thresholds: [0.5, 1.5, 2.5] },
+  { betId: 105, market: 'Gols 1° Tempo (Casa)', stat: 'GOLS', period: 'HT', teamTarget: 'HOME', thresholds: [0.5, 1.5] },
+  { betId: 106, market: 'Gols 1° Tempo (Fora)', stat: 'GOLS', period: 'HT', teamTarget: 'AWAY', thresholds: [0.5, 1.5] },
+  { betId: 26, market: 'Gols 2° Tempo (Total)', stat: 'GOLS', period: '2H', teamTarget: 'TOTAL', thresholds: [0.5, 1.5, 2.5] },
+  { betId: 107, market: 'Gols 2° Tempo (Casa)', stat: 'GOLS', period: '2H', teamTarget: 'HOME', thresholds: [0.5, 1.5] },
+  { betId: 108, market: 'Gols 2° Tempo (Fora)', stat: 'GOLS', period: '2H', teamTarget: 'AWAY', thresholds: [0.5, 1.5] },
+  { betId: 45, market: 'Escanteios JOGO (Total)', stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'TOTAL', thresholds: [7.5, 8.5, 9.5, 10.5, 11.5] },
+  { betId: 57, market: 'Escanteios JOGO (Casa)', stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'HOME', thresholds: [3.5, 4.5, 5.5, 6.5] },
+  { betId: 58, market: 'Escanteios JOGO (Fora)', stat: 'ESCANTEIOS', period: 'FT', teamTarget: 'AWAY', thresholds: [3.5, 4.5, 5.5, 6.5] },
+  { betId: 77, market: 'Escanteios 1° Tempo (T)', stat: 'ESCANTEIOS', period: 'HT', teamTarget: 'TOTAL', thresholds: [3.5, 4.5, 5.5] },
+  { betId: 80, market: 'Cartões JOGO (Total)', stat: 'CARTÕES', period: 'FT', teamTarget: 'TOTAL', thresholds: [3.5, 4.5, 5.5, 6.5] },
+  { betId: 82, market: 'Cartões JOGO (Casa)', stat: 'CARTÕES', period: 'FT', teamTarget: 'HOME', thresholds: [1.5, 2.5, 3.5] },
+  { betId: 83, market: 'Cartões JOGO (Fora)', stat: 'CARTÕES', period: 'FT', teamTarget: 'AWAY', thresholds: [1.5, 2.5, 3.5] },
+  { betId: 87, market: 'Chutes ao Gol (Total)', stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'TOTAL', thresholds: [6.5, 7.5, 8.5, 9.5] },
+  { betId: 88, market: 'Chutes ao Gol (Casa)', stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'HOME', thresholds: [3.5, 4.5, 5.5] },
+  { betId: 89, market: 'Chutes ao Gol (Fora)', stat: 'CHUTES_GOL', period: 'FT', teamTarget: 'AWAY', thresholds: [3.5, 4.5, 5.5] },
+  { betId: 211, market: 'Chutes Totais', stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'TOTAL', thresholds: [19.5, 21.5, 23.5, 25.5] },
+  { betId: 221, market: 'Chutes Totais (Casa)', stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'HOME', thresholds: [10.5, 12.5, 14.5] },
+  { betId: 220, market: 'Chutes Totais (Fora)', stat: 'CHUTES_TOTAL', period: 'FT', teamTarget: 'AWAY', thresholds: [9.5, 11.5, 13.5] },
+  { betId: 164, market: 'Impedimentos (Total)', stat: 'IMPEDIMENTOS', period: 'FT', teamTarget: 'TOTAL', thresholds: [2.5, 3.5, 4.5] },
+];
+for (const m of OVER_UNDER_MARKETS) {
+  for (const t of m.thresholds) {
+    FALLBACK_CANDIDATES.push({
+      betId: m.betId, market: m.market, stat: m.stat, period: m.period, teamTarget: m.teamTarget,
+      type: 'OVER', line: `Mais de ${t}`, threshold: t
+    });
+    FALLBACK_CANDIDATES.push({
+      betId: m.betId, market: m.market, stat: m.stat, period: m.period, teamTarget: m.teamTarget,
+      type: 'UNDER', line: `Menos de ${t}`, threshold: t
+    });
+  }
+}
+
 async function fetchApi(url) {
   for (let i = 3; i > 0; i--) {
     try {
@@ -348,6 +412,47 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   return { pct: ((homeHits + awayHits) / total) * 100, hits: homeHits + awayHits, total };
 }
 
+function parseOpportunitiesFallback(fixtureId, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores = {}) {
+  const opportunities = [];
+  
+  for (const f of FALLBACK_CANDIDATES) {
+    let line = f.line;
+    if (f.stat === 'RESULTADO' || f.stat === 'RESULTADO_HT' || f.stat === 'DUPLA_CHANCE') {
+        if (f.line === 'Vitória Casa') line = `Vitória ${homeName}`;
+        else if (f.line === 'Vitória Fora') line = `Vitória ${awayName}`;
+        else if (f.line === 'Casa ou Empate') line = `${homeName} ou Empate`;
+        else if (f.line === 'Fora ou Empate') line = `${awayName} ou Empate`;
+    }
+
+    const candidate = {
+      fixture_id: fixtureId, betId: f.betId,
+      market: f.market, stat: f.stat, period: f.period,
+      teamTarget: f.teamTarget,
+      team: f.teamTarget === 'HOME' ? homeName : f.teamTarget === 'AWAY' ? awayName : 'Total',
+      type: f.type, threshold: f.threshold, line: line, odd: 0
+    };
+
+    let prob = null;
+    if (f.teamTarget === 'TOTAL') {
+      prob = evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchTotals, htScores);
+    } else if (f.teamTarget === 'HOME') {
+      prob = evaluateHistoricalFrequency(candidate, homeHistory, null, matchTotals, htScores);
+    } else {
+      prob = evaluateHistoricalFrequency(candidate, awayHistory, null, matchTotals, htScores);
+    }
+
+    if (prob && prob.pct >= MIN_PROB) {
+      opportunities.push({
+        ...candidate,
+        probability: Math.round(prob.pct),
+        histHits: prob.hits,
+        histTotal: prob.total
+      });
+    }
+  }
+  return opportunities;
+}
+
 function parseOpportunitiesFromOdds(fixtureId, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores = {}) {
   const bet365 = (oddsResp || []).flatMap(r => r.bookmakers || []).find(b => b.id === BOOKMAKER_ID);
   if (!bet365) return [];
@@ -554,10 +659,8 @@ function parseOpportunitiesFromOdds(fixtureId, homeName, awayName, oddsResp, hom
 
 async function generateOpportunities() {
   const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const tomorrow = new Date(brt);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   let targetDate = process.argv[2];
-  if (!targetDate || targetDate === '--force') targetDate = tomorrow.toISOString().split('T')[0];
+  if (!targetDate || targetDate === '--force') targetDate = brt.toISOString().split('T')[0];
 
   console.log(`\n=== Oportunidades do Dia — ${targetDate} (prob ≥ ${MIN_PROB}%) ===\n`);
 
@@ -575,16 +678,25 @@ async function generateOpportunities() {
 
   // Janela BRT (UTC-3): dia D começa às 03:00 UTC e termina às 02:59 UTC do dia D+1.
   // Isso garante que jogos das 21h–23h59 BRT (00h–02h59 UTC do dia seguinte) sejam incluídos.
+  const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   const nextDate = new Date(`${targetDate}T03:00:00Z`);
   nextDate.setDate(nextDate.getDate() + 1);
   const endDateStr = nextDate.toISOString().replace('T', ' ').substring(0, 19); // D+1 03:00 UTC = D+1 00:00 BRT
 
-  const { data: fixtures } = await supabase
+  let query = supabase
     .from('fixtures')
     .select('id, api_id, date, status, season, league_id, home_team:teams!fixtures_home_team_id_fkey(api_id, name, logo_url), away_team:teams!fixtures_away_team_id_fkey(api_id, name, logo_url), league:leagues!fixtures_league_id_fkey(api_id, name, logo_url)')
     .gte('date', `${targetDate} 03:00:00`)
-    .lte('date', endDateStr)
-    .in('status', ['NS', 'TBD']);
+    .lte('date', endDateStr);
+
+  // Só filtra por NS/TBD quando gera para hoje SEM --force (evita incluir jogos já em andamento)
+  // Com --force ou para outras datas, aceita qualquer status (mesma lógica do generateOdd2/generateOdd3)
+  const isForce = process.argv.includes('--force');
+  if (targetDate === brtNow && !isForce) {
+    query = query.in('status', ['NS', 'TBD']);
+  }
+
+  const { data: fixtures } = await query;
 
   const activeFix = (fixtures || []).filter(f => activeLeagueApiIds.has(f.league?.api_id));
   console.log(`Fixtures ativos: ${activeFix.length}`);
@@ -658,7 +770,12 @@ async function generateOpportunities() {
       const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`);
       await delay(300);
 
-      const opps = parseOpportunitiesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores);
+      let opps = parseOpportunitiesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores);
+      
+      if (opps.length === 0) {
+        opps = parseOpportunitiesFallback(f.api_id, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores);
+        if (opps.length > 0) console.log(`[Usando Fallback] `);
+      }
 
       console.log(`${opps.length} oportunidade(s)`);
 
@@ -685,6 +802,19 @@ async function generateOpportunities() {
 
   if (allOpportunities.length === 0) {
     console.log('Nenhuma oportunidade ≥ 90% encontrada.');
+    
+    // Se não analisou nenhum jogo (todos foram ignorados por erro na API ou falta de dados),
+    // não apaga o registro antigo para evitar perder dados gerados anteriormente.
+    if (analyzed === 0 && skipped > 0) {
+      console.log('Nenhum jogo foi analisado com sucesso. O registro anterior será mantido.');
+      return;
+    }
+
+    // Limpa registro antigo se existir (evita dados obsoletos na UI)
+    const { error } = await supabase.from('odd_tickets')
+      .delete().eq('date', targetDate).eq('mode', 'opp');
+    if (error) console.error('Erro ao limpar registro antigo:', error.message);
+    else console.log(`Registro antigo para ${targetDate} removido (se existia).`);
     return;
   }
 

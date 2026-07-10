@@ -39,6 +39,9 @@ async function main() {
     runScript('generateOdd3.js', targetDate);
     runScript('generateOpportunities.js', targetDate);
 
+    // 4.5 Validate if opportunities were generated
+    runScript('validateOpportunities.js', targetDate);
+
     // 5. Sync league standings
     runScript('syncStandings.js');
 
