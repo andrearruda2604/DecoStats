@@ -412,8 +412,24 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
   return { pct: ((homeHits + awayHits) / total) * 100, hits: homeHits + awayHits, total };
 }
 
-function parseOpportunitiesFallback(fixtureId, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores = {}) {
+function parseOpportunitiesFallback(fixtureId, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores = {}, oddsResp = []) {
   const opportunities = [];
+
+  // Monta um mapa de odds de TODOS os bookmakers disponíveis para lookup rápido
+  // Chave: "betId|value" → odd (pega a melhor odd entre todos os bookmakers)
+  const oddsLookup = {};
+  const allBookmakers = (oddsResp || []).flatMap(r => r.bookmakers || []);
+  for (const bk of allBookmakers) {
+    for (const bet of (bk.bets || [])) {
+      for (const v of (bet.values || [])) {
+        const key = `${bet.id}|${String(v.value)}`;
+        const odd = parseFloat(v.odd);
+        if (!oddsLookup[key] || odd > oddsLookup[key]) {
+          oddsLookup[key] = odd;
+        }
+      }
+    }
+  }
   
   for (const f of FALLBACK_CANDIDATES) {
     let line = f.line;
@@ -424,12 +440,34 @@ function parseOpportunitiesFallback(fixtureId, homeName, awayName, homeHistory, 
         else if (f.line === 'Fora ou Empate') line = `${awayName} ou Empate`;
     }
 
+    // Tenta encontrar a odd correspondente nos bookmakers disponíveis
+    let matchedOdd = 0;
+    if (f.type === 'OVER' || f.type === 'UNDER') {
+      const valueName = `${f.type === 'OVER' ? 'Over' : 'Under'} ${f.threshold}`;
+      matchedOdd = oddsLookup[`${f.betId}|${valueName}`] || 0;
+    } else if (f.type === 'YES' || f.type === 'NO') {
+      const valueName = f.type === 'YES' ? 'Yes' : 'No';
+      matchedOdd = oddsLookup[`${f.betId}|${valueName}`] || 0;
+    } else if (f.type === 'H') {
+      matchedOdd = oddsLookup[`${f.betId}|Home`] || 0;
+    } else if (f.type === 'D') {
+      matchedOdd = oddsLookup[`${f.betId}|Draw`] || 0;
+    } else if (f.type === 'A') {
+      matchedOdd = oddsLookup[`${f.betId}|Away`] || 0;
+    } else if (f.type === 'HD') {
+      matchedOdd = oddsLookup[`${f.betId}|Home/Draw`] || 0;
+    } else if (f.type === 'HA') {
+      matchedOdd = oddsLookup[`${f.betId}|Home/Away`] || 0;
+    } else if (f.type === 'DA') {
+      matchedOdd = oddsLookup[`${f.betId}|Draw/Away`] || 0;
+    }
+
     const candidate = {
       fixture_id: fixtureId, betId: f.betId,
       market: f.market, stat: f.stat, period: f.period,
       teamTarget: f.teamTarget,
       team: f.teamTarget === 'HOME' ? homeName : f.teamTarget === 'AWAY' ? awayName : 'Total',
-      type: f.type, threshold: f.threshold, line: line, odd: 0
+      type: f.type, threshold: f.threshold, line: line, odd: matchedOdd
     };
 
     let prob = null;
@@ -778,7 +816,7 @@ async function generateOpportunities() {
       let opps = parseOpportunitiesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores);
       
       if (opps.length === 0) {
-        opps = parseOpportunitiesFallback(f.api_id, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores);
+        opps = parseOpportunitiesFallback(f.api_id, homeName, awayName, homeHistory, awayHistory, matchTotals, htScores, oddsResp);
         if (opps.length > 0) console.log(`[Usando Fallback] `);
       }
 
