@@ -406,23 +406,39 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     currentOdd *= candidate.odd;
   }
 
+  // PASSO 1: seleciona pick âncora (melhor score com odd entre 1.25-1.70 para puxar a múltipla)
+  const anchorCandidates = deduped
+    .filter(c => canAdd(c) && c.odd >= 1.25 && c.odd <= 1.70 && currentOdd * c.odd <= TARGET_HIGH)
+    .sort((a, b) => {
+      const scoreA = a.probability + (a.contextBonus || 0) + (a.odd - 1.0) * 20;
+      const scoreB = b.probability + (b.contextBonus || 0) + (b.odd - 1.0) * 20;
+      return scoreB - scoreA;
+    });
+  if (anchorCandidates.length > 0) {
+    doAdd(anchorCandidates[0]);
+    console.log(`  ⚓ Âncora 3.0: [${anchorCandidates[0].probability}% Hist.] ${anchorCandidates[0].line} ${anchorCandidates[0].market} @ ${anchorCandidates[0].odd}`);
+  }
+
+  // PASSO 2: preenche priorizando um score combinado de probabilidade + contribuição da odd
   while (selected.length < MAX_PICKS) {
     if (currentOdd >= TARGET_LOW && selected.length >= MIN_PICKS) break;
 
-    // Remove forced diversification to prioritize strict highest % and odd
     const available = deduped.filter(c => canAdd(c) && currentOdd * c.odd <= TARGET_HIGH);
     if (available.length === 0) break;
 
+    // Score que valoriza odds mais altas quando estamos longe do alvo
+    const distanceToTarget = TARGET_LOW / currentOdd; // quanto falta multiplicar
     available.sort((a, b) => {
-      const scoreA = a.probability + (a.contextBonus || 0);
-      const scoreB = b.probability + (b.contextBonus || 0);
-      return scoreB - scoreA || a.odd - b.odd;
+      const scoreA = a.probability + (a.contextBonus || 0) + (a.odd - 1.0) * (distanceToTarget > 1.5 ? 25 : 15);
+      const scoreB = b.probability + (b.contextBonus || 0) + (b.odd - 1.0) * (distanceToTarget > 1.5 ? 25 : 15);
+      return scoreB - scoreA;
     });
     const pick = available[0];
 
     doAdd(pick);
   }
 
+  // PASSO 3: fallback — se ainda não atingiu o alvo, tenta um pick que feche a conta
   if (currentOdd < TARGET_LOW && selected.length < MAX_PICKS) {
     const maxAllowed = TARGET_HIGH + 0.15;
     const fallbacks = deduped
