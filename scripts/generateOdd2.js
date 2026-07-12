@@ -385,14 +385,17 @@ function evaluateHistoricalFrequency(candidate, homeHistory, awayHistory, matchT
 }
 
 function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, homeHistory, awayHistory, matchTotals, htScores = {}) {
-  const bet365 = (oddsResponse || [])
-    .flatMap(r => r.bookmakers || [])
-    .find(b => b.id === BOOKMAKER_ID);
-  if (!bet365) return [];
+  // Prioriza Bet365, mas faz fallback para outras casas se não encontrar
+  const allBookmakers = (oddsResponse || []).flatMap(r => r.bookmakers || []);
+  const bet365 = allBookmakers.find(b => b.id === BOOKMAKER_ID);
+  const fallbackBookmaker = !bet365 ? allBookmakers[0] : null;
+  const bookmaker = bet365 || fallbackBookmaker;
+  if (!bookmaker) return [];
+  if (fallbackBookmaker) console.log(`    ⚠️ Bet365 indisponível, usando ${fallbackBookmaker.name || 'casa alternativa'} (id: ${fallbackBookmaker.id})`);
 
   const candidates = [];
 
-  for (const bet of (bet365.bets || [])) {
+  for (const bet of (bookmaker.bets || [])) {
     const market = MARKETS[bet.id];
     if (!market) continue;
 
@@ -455,7 +458,7 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
     { betId: 28, stat: 'CLEAN_SHEET',  period: 'FT',  teamTarget: 'AWAY',  label: 'Clean Sheet (Fora)' },
   ];
   for (const _m of _yesNoMarkets) {
-    const _bet = (bet365.bets || []).find(b => b.id === _m.betId);
+    const _bet = (bookmaker.bets || []).find(b => b.id === _m.betId);
     if (!_bet) continue;
     for (const _v of (_bet.values || [])) {
       if (!['Yes', 'No'].includes(_v.value)) continue;
@@ -503,7 +506,7 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
     { betId: 13, stat: 'RESULTADO_HT', period: 'HT', label: 'Vencedor 1T' },
   ];
   for (const _rm of _resultMarkets) {
-    const _bet = (bet365.bets || []).find(b => b.id === _rm.betId);
+    const _bet = (bookmaker.bets || []).find(b => b.id === _rm.betId);
     if (!_bet) continue;
     for (const _v of (_bet.values || [])) {
       const _map = _outcomeMap[_v.value];
@@ -536,7 +539,7 @@ function parseCandidatesFromOdds(fixtureId, homeName, awayName, oddsResponse, ho
     { betId: 107, label: 'Gols Sofridos 2T (Fora)', period: '2H',  teamTarget: 'AWAY', team: awayName, hist: awayHistory },
   ];
   for (const m of sofridosMap) {
-    const bet = (bet365.bets || []).find(b => b.id === m.betId);
+    const bet = (bookmaker.bets || []).find(b => b.id === m.betId);
     if (!bet) continue;
     const pairs = {};
     for (const v of (bet.values || [])) {
@@ -864,7 +867,7 @@ async function generateOdd2() {
          }
        }
 
-      const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}&bookmaker=${BOOKMAKER_ID}`);
+      const oddsResp = await fetchApi(`https://v3.football.api-sports.io/odds?fixture=${f.api_id}`);
       
       const picks = parseCandidatesFromOdds(f.api_id, homeName, awayName, oddsResp, homeHistory, awayHistory, matchTotals, htScores);
       
