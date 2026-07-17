@@ -1,10 +1,15 @@
+/**
+ * Avaliação de bilhetes — Usa dados do banco (fixtures + teams_history) como fonte primária.
+ * Suporta todos os stats: GOLS, GOLS_SOFRIDOS, ESCANTEIOS, CARTÕES, CHUTES_GOL, CHUTES_TOTAL,
+ * IMPEDIMENTOS, RESULTADO, AMBOS_MARCAM, CLEAN_SHEET, DUPLA_CHANCE, RESULTADO_HT, RESULTADO_2H
+ */
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
 let env = process.env;
 try {
   const envFile = fs.readFileSync('.env.local', 'utf8');
-  envFile.split('\n').forEach(line => {
+  envFile.split(/\r?\n/).forEach(line => {
     const match = line.match(/^([^=]+)=(.*)$/);
     if (match) {
       let val = match[2].trim();
@@ -16,61 +21,323 @@ try {
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
-const API_KEY = process.env.VITE_API_FOOTBALL_KEY || env.VITE_API_FOOTBALL_KEY || env.API_FOOTBALL_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY || !API_KEY) {
+if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Credentials");
   process.exit(1);
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const headers = { 'x-apisports-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io' };
 
-async function fetchWithRetry(url) {
-  let retries = 3;
-  while (retries > 0) {
-    try {
-      const resp = await fetch(url, { headers });
-      const data = await resp.json();
-      return data;
-    } catch (err) {
-      await new Promise(r => setTimeout(r, 2000));
-      retries--;
-      if (retries === 0) throw err;
+const FT_STATUSES = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
+
+/**
+ * Avalia um pick individual contra os dados reais do banco
+ * Retorna { result: 'WON'|'LOST'|null, actualValue: number|string|null }
+ */
+function evaluatePick(pick, fixture, homeHist, awayHist) {
+  let teamTarget = pick.teamTarget;
+  const period = pick.period || 'FT';
+  let type = pick.type;
+  const threshold = pick.threshold !== undefined
+    ? pick.threshold
+    : parseFloat((pick.line || '').split(' ').pop()) || 0;
+
+  // Fallback para type ausente
+  if (!type && pick.line) {
+    if (pick.line.includes('Menos')) type = 'UNDER';
+    else if (pick.line.includes('Mais')) type = 'OVER';
+  }
+
+  let actualValue = null;
+
+  // ─── GOLS ───
+  if (pick.stat === 'GOLS' || pick.stat === 'GOLS MARCADOS') {
+    const htHome = fixture.ht_home_score ?? 0;
+    const htAway = fixture.ht_away_score ?? 0;
+    const ftHome = fixture.home_score ?? 0;
+    const ftAway = fixture.away_score ?? 0;
+
+    if (period === 'FT') {
+      if (teamTarget === 'TOTAL') actualValue = ftHome + ftAway;
+      else if (teamTarget === 'HOME') actualValue = ftHome;
+      else actualValue = ftAway;
+    } else if (period === 'HT') {
+      if (teamTarget === 'TOTAL') actualValue = htHome + htAway;
+      else if (teamTarget === 'HOME') actualValue = htHome;
+      else actualValue = htAway;
+    } else if (period === '2H') {
+      if (teamTarget === 'TOTAL') actualValue = (ftHome + ftAway) - (htHome + htAway);
+      else if (teamTarget === 'HOME') actualValue = ftHome - htHome;
+      else actualValue = ftAway - htAway;
     }
   }
+
+  // ─── GOLS_SOFRIDOS ───
+  // "Gols sofridos pelo time X" = gols marcados pelo adversário
+  // HOME sofre = away_score, AWAY sofre = home_score
+  // Caso especial: picks de Clean Sheet convertidos têm type=YES/NO
+  //   NO  (Clean Sheet = Não) → sofreu gols → equivalente a OVER 0.5
+  //   YES (Clean Sheet = Sim) → não sofreu  → equivalente a UNDER 0.5
+  else if (pick.stat === 'GOLS_SOFRIDOS') {
+    const htHome = fixture.ht_home_score ?? 0;
+    const htAway = fixture.ht_away_score ?? 0;
+    const ftHome = fixture.home_score ?? 0;
+    const ftAway = fixture.away_score ?? 0;
+
+    if (period === 'FT') {
+      if (teamTarget === 'HOME') actualValue = ftAway;
+      else if (teamTarget === 'AWAY') actualValue = ftHome;
+    } else if (period === 'HT') {
+      if (teamTarget === 'HOME') actualValue = htAway;
+      else if (teamTarget === 'AWAY') actualValue = htHome;
+    } else if (period === '2H') {
+      if (teamTarget === 'HOME') actualValue = ftAway - htAway;
+      else if (teamTarget === 'AWAY') actualValue = ftHome - htHome;
+    }
+
+    // Conversão Clean Sheet: YES/NO → UNDER/OVER 0.5
+    if (actualValue !== null && (type === 'NO' || type === 'YES')) {
+      const won = type === 'NO' ? actualValue > 0 : actualValue === 0;
+      return { result: won ? 'WON' : 'LOST', actualValue };
+    }
+  }
+
+  // ─── ESCANTEIOS ───
+  else if (pick.stat === 'ESCANTEIOS') {
+    if (teamTarget === 'TOTAL') {
+      const hc = homeHist?.corners;
+      const ac = awayHist?.corners;
+      if (hc != null && ac != null) actualValue = hc + ac;
+    } else if (teamTarget === 'HOME') {
+      actualValue = homeHist?.corners ?? null;
+    } else {
+      actualValue = awayHist?.corners ?? null;
+    }
+  }
+
+  // ─── CARTÕES AMARELOS ───
+  else if (pick.stat === 'CARTÕES_AMARELOS') {
+    const getYellowCards = (hist) => {
+      if (!hist) return null;
+      if (period === 'HT' && hist.stats_1h) {
+        return parseInt((hist.stats_1h.find(s => s.type === 'Yellow Cards'))?.value || 0);
+      }
+      if (hist.stats_ft) {
+        return parseInt((hist.stats_ft.find(s => s.type === 'Yellow Cards'))?.value || 0);
+      }
+      return hist.yellow_cards ?? null;
+    };
+    if (teamTarget === 'TOTAL') {
+      const hc = getYellowCards(homeHist);
+      const ac = getYellowCards(awayHist);
+      if (hc != null && ac != null) actualValue = hc + ac;
+    } else if (teamTarget === 'HOME') {
+      actualValue = getYellowCards(homeHist);
+    } else {
+      actualValue = getYellowCards(awayHist);
+    }
+  }
+
+  // ─── FALTAS ───
+  else if (pick.stat === 'FALTAS') {
+    const getFouls = (hist) => {
+      if (!hist || !hist.stats_ft) return null;
+      return parseInt((hist.stats_ft.find(s => s.type === 'Fouls'))?.value || 0);
+    };
+    if (teamTarget === 'TOTAL') {
+      const h = getFouls(homeHist);
+      const a = getFouls(awayHist);
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = getFouls(homeHist);
+    } else {
+      actualValue = getFouls(awayHist);
+    }
+  }
+
+  // ─── DESARMES ───
+  else if (pick.stat === 'DESARMES') {
+    const getTackles = (hist) => {
+      if (!hist || !hist.stats_ft) return null;
+      return parseInt((hist.stats_ft.find(s => s.type === 'Total tackles' || s.type === 'Tackles'))?.value || 0);
+    };
+    if (teamTarget === 'TOTAL') {
+      const h = getTackles(homeHist);
+      const a = getTackles(awayHist);
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = getTackles(homeHist);
+    } else {
+      actualValue = getTackles(awayHist);
+    }
+  }
+
+  // ─── CARTÕES ───
+  else if (pick.stat === 'CARTÕES' || pick.stat === 'CARTÃO AMARELO') {
+    const getCards = (hist) => {
+      if (!hist) return null;
+      if (hist.stats_ft) {
+        const y = parseInt((hist.stats_ft.find(s => s.type === 'Yellow Cards'))?.value || 0);
+        const r = parseInt((hist.stats_ft.find(s => s.type === 'Red Cards'))?.value || 0);
+        return y + r;
+      }
+      return hist.yellow_cards ?? null;
+    };
+
+    if (teamTarget === 'TOTAL') {
+      const hc = getCards(homeHist);
+      const ac = getCards(awayHist);
+      if (hc != null && ac != null) actualValue = hc + ac;
+    } else if (teamTarget === 'HOME') {
+      actualValue = getCards(homeHist);
+    } else {
+      actualValue = getCards(awayHist);
+    }
+  }
+
+  // ─── CHUTES AO GOL ───
+  else if (pick.stat === 'CHUTES_GOL' || pick.stat === 'CHUTES NO GOL') {
+    if (teamTarget === 'TOTAL') {
+      const h = homeHist?.shots_on_goal;
+      const a = awayHist?.shots_on_goal;
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = homeHist?.shots_on_goal ?? null;
+    } else {
+      actualValue = awayHist?.shots_on_goal ?? null;
+    }
+  }
+
+  // ─── CHUTES TOTAIS ───
+  else if (pick.stat === 'CHUTES_TOTAL' || pick.stat === 'CHUTES') {
+    if (teamTarget === 'TOTAL') {
+      const h = homeHist?.shots_total;
+      const a = awayHist?.shots_total;
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = homeHist?.shots_total ?? null;
+    } else {
+      actualValue = awayHist?.shots_total ?? null;
+    }
+  }
+
+  // ─── IMPEDIMENTOS ───
+  else if (pick.stat === 'IMPEDIMENTOS') {
+    if (teamTarget === 'TOTAL') {
+      const h = homeHist?.offsides;
+      const a = awayHist?.offsides;
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = homeHist?.offsides ?? null;
+    } else {
+      actualValue = awayHist?.offsides ?? null;
+    }
+  }
+
+  // ─── DEFESAS ───
+  else if (pick.stat === 'DEFESAS') {
+    if (teamTarget === 'TOTAL') {
+      const h = homeHist?.goalkeeper_saves;
+      const a = awayHist?.goalkeeper_saves;
+      if (h != null && a != null) actualValue = h + a;
+    } else if (teamTarget === 'HOME') {
+      actualValue = homeHist?.goalkeeper_saves ?? null;
+    } else {
+      actualValue = awayHist?.goalkeeper_saves ?? null;
+    }
+  }
+
+  // ─── RESULTADO (1x2) ───
+  else if (pick.stat === 'RESULTADO') {
+    const ftHome = fixture.home_score ?? 0;
+    const ftAway = fixture.away_score ?? 0;
+    const outcome = ftHome > ftAway ? 'H' : ftHome < ftAway ? 'A' : 'D';
+    return { result: outcome === type ? 'WON' : 'LOST', actualValue: `${ftHome}-${ftAway}` };
+  }
+
+  // ─── AMBOS_MARCAM ───
+  else if (pick.stat === 'AMBOS_MARCAM') {
+    const ftHome = fixture.home_score ?? 0;
+    const ftAway = fixture.away_score ?? 0;
+    const htHome = fixture.ht_home_score ?? 0;
+    const htAway = fixture.ht_away_score ?? 0;
+
+    let hit = false;
+    if (period === 'FT') hit = ftHome > 0 && ftAway > 0;
+    else if (period === 'HT') hit = htHome > 0 && htAway > 0;
+    else if (period === '2H') hit = (ftHome - htHome) > 0 && (ftAway - htAway) > 0;
+
+    return { result: (type === 'YES' ? hit : !hit) ? 'WON' : 'LOST', actualValue: hit ? 1 : 0 };
+  }
+
+  // ─── CLEAN_SHEET ───
+  else if (pick.stat === 'CLEAN_SHEET') {
+    const conceded = teamTarget === 'HOME' ? (fixture.away_score ?? 0) : (fixture.home_score ?? 0);
+    const hit = conceded === 0;
+    return { result: (type === 'YES' ? hit : !hit) ? 'WON' : 'LOST', actualValue: conceded };
+  }
+
+  // ─── DUPLA_CHANCE ───
+  else if (pick.stat === 'DUPLA_CHANCE') {
+    const ftHome = fixture.home_score ?? 0;
+    const ftAway = fixture.away_score ?? 0;
+    const outcome = ftHome > ftAway ? 'H' : ftHome < ftAway ? 'A' : 'D';
+    let hit = false;
+    if (type === 'HD') hit = outcome !== 'A';
+    else if (type === 'HA') hit = outcome !== 'D';
+    else if (type === 'DA') hit = outcome !== 'H';
+    return { result: hit ? 'WON' : 'LOST', actualValue: `${ftHome}-${ftAway}` };
+  }
+
+  // ─── RESULTADO_HT ───
+  else if (pick.stat === 'RESULTADO_HT') {
+    const htHome = fixture.ht_home_score;
+    const htAway = fixture.ht_away_score;
+    if (htHome == null) return { result: null, actualValue: null };
+    const outcome = htHome > htAway ? 'H' : htHome < htAway ? 'A' : 'D';
+    return { result: outcome === type ? 'WON' : 'LOST', actualValue: `${htHome}-${htAway}` };
+  }
+
+  // ─── RESULTADO_2H ───
+  else if (pick.stat === 'RESULTADO_2H') {
+    const htHome = fixture.ht_home_score;
+    if (htHome == null) return { result: null, actualValue: null };
+    const h2H = (fixture.home_score ?? 0) - htHome;
+    const a2H = (fixture.away_score ?? 0) - (fixture.ht_away_score ?? 0);
+    const outcome = h2H > a2H ? 'H' : h2H < a2H ? 'A' : 'D';
+    return { result: outcome === type ? 'WON' : 'LOST', actualValue: `${h2H}-${a2H}` };
+  }
+
+  if (actualValue === null) return { result: null, actualValue: null };
+
+  // Avaliar OVER/UNDER/YES/NO
+  let result = null;
+  if (type === 'OVER') result = actualValue > threshold ? 'WON' : 'LOST';
+  else if (type === 'UNDER') result = actualValue < threshold ? 'WON' : 'LOST';
+  else if (type === 'YES') result = actualValue > 0 ? 'WON' : 'LOST';
+  else if (type === 'NO') result = actualValue === 0 ? 'WON' : 'LOST';
+
+  return { result, actualValue };
 }
 
-const STAT_MAPPING = {
-  'CHUTES': 'Total Shots',
-  'CHUTES_GOL': 'Shots on Goal',
-  'CHUTES NO GOL': 'Shots on Goal',
-  'ESCANTEIOS': 'Corner Kicks',
-  'FALTAS COMETIDAS': 'Fouls',
-  'CARTÃO AMARELO': 'Yellow Cards',
-  'CARTÕES': 'Yellow Cards',
-  'GOLS MARCADOS': 'Goals',
-  'GOLS': 'Goals',
-  'DEFESAS': 'Goalkeeper Saves'
-};
-
 async function evaluateTicket() {
+  const args = process.argv.slice(2).filter(a => !a.startsWith('--'));
   let targetDate;
-  if (process.argv[2]) {
-    targetDate = process.argv[2];
+  if (args[0]) {
+    targetDate = args[0];
   } else {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     targetDate = yesterday.toISOString().split('T')[0];
   }
 
-  console.log(`\n=== Avaliando Ticket Retro: ${targetDate} ===`);
+  console.log(`\n=== Avaliando Tickets: ${targetDate} ===`);
 
   const { data: tickets, error } = await supabase
     .from('odd_tickets')
     .select('*')
     .eq('date', targetDate);
-
 
   if (error || !tickets || tickets.length === 0) {
     console.log("Nenhum ticket encontrado para avaliar nesta data.");
@@ -80,179 +347,86 @@ async function evaluateTicket() {
   for (const ticket of tickets) {
     console.log(`\n--- Avaliando Ticket Modo: ${ticket.mode} (Odd ${ticket.total_odd}) ---`);
 
-
-  const entries = ticket.ticket_data.entries || [];
-  let allGreen = true;
-  let evaluatedEntries = [];
-
-  let hasIncompleteMatch = false;
-  for (const entry of entries) {
-    console.log(`\nAvaliando ${entry.home} x ${entry.away} (${entry.fixture_id})`);
-    
-    // Fetch stats from API-Football with half=true to get period splits
-    const statsData = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${entry.fixture_id}&half=true`);
-    const teamsStats = statsData.response || [];
-
-    // Also fetch fixture details to get Goals since Goals are not always in 'statistics' endpoint
-    const fixData = await fetchWithRetry(`https://v3.football.api-sports.io/fixtures?id=${entry.fixture_id}`);
-    const matchDetail = fixData.response?.[0];
-    
-    if (!matchDetail || !['FT', 'AET', 'PEN'].includes(matchDetail.fixture.status.short)) {
-       console.log(`Partida não finalizada ou erro na API.`);
-       hasIncompleteMatch = true;
-       entry.matchResult = 'PENDING';
-       entry.result = 'PENDING';
-       evaluatedEntries.push(entry);
-       continue;
+    const entries = ticket.ticket_data.entries || [];
+    if (!entries.length) {
+      console.log('  Bilhete sem entries.');
+      continue;
     }
 
-    const homeId = matchDetail.teams.home.id;
-    const awayId = matchDetail.teams.away.id;
+    // Coleta todos os fixture_ids do bilhete
+    const fixtureIds = [...new Set(entries.map(e => e.fixture_id))];
 
-    // Fallback: Check if we have stats in our DB already
-    const { data: dbStats } = await supabase.from('fixture_stats').select('*').eq('fixture_id', entry.fixture_id);
+    // Busca fixtures do banco (fonte de verdade para placares)
+    const { data: fixtures } = await supabase
+      .from('fixtures')
+      .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
+      .in('api_id', fixtureIds);
 
-    const homeGoals = matchDetail.goals.home || 0;
-    const awayGoals = matchDetail.goals.away || 0;
+    const fixMap = {};
+    for (const f of (fixtures || [])) fixMap[f.api_id] = f;
 
-    let matchGreen = true;
-    for (const pick of entry.picks) {
-        let isAETPolluted = false;
-        const line = pick.threshold !== undefined ? pick.threshold : parseFloat(pick.line.split(' ').pop());
-        let teamTarget = pick.teamTarget;
-        if (!teamTarget && pick.team) {
-            if (pick.team === 'Total') teamTarget = 'TOTAL';
-            else if (pick.team === entry.home) teamTarget = 'HOME';
-            else if (pick.team === entry.away) teamTarget = 'AWAY';
-        }
-        
-        const isHome = teamTarget === 'HOME';
-        let actualValue = 0;
-        let pType = pick.type;
+    // Busca teams_history para estatísticas (escanteios, cartões, chutes, etc.)
+    const { data: histRows } = await supabase
+      .from('teams_history')
+      .select('fixture_id, team_id, is_home, corners, shots_on_goal, shots_total, yellow_cards, offsides, goalkeeper_saves, stats_ft, stats_1h')
+      .in('fixture_id', fixtureIds);
 
-        // Fallback for missing type
-        if (!pType && pick.line) {
-            if (pick.line.includes('Menos')) pType = 'UNDER';
-            else if (pick.line.includes('Mais')) pType = 'OVER';
-            else if (pick.line.includes('-')) pType = 'UNDER';
-            else if (pick.line.includes('+')) pType = 'OVER';
-        }
-        
-        // Save deduced properties back to pick for future use
-        pick.teamTarget = teamTarget;
-        pick.type = pType;
+    const histMap = {};
+    for (const r of (histRows || [])) {
+      const key = `${r.fixture_id}-${r.is_home ? 'HOME' : 'AWAY'}`;
+      histMap[key] = r;
+    }
 
-        if (pick.stat === 'GOLS' || pick.stat === 'GOLS MARCADOS') {
-            const htHome = matchDetail.score?.halftime?.home || 0;
-            const htAway = matchDetail.score?.halftime?.away || 0;
-            if (pick.period === 'FT') {
-                actualValue = pick.teamTarget === 'TOTAL' ? (homeGoals + awayGoals) : (isHome ? homeGoals : awayGoals);
-            } else if (pick.period === 'HT') {
-                actualValue = pick.teamTarget === 'TOTAL' ? (htHome + htAway) : (isHome ? htHome : htAway);
-            } else if (pick.period === '2H') {
-                const ftG = pick.teamTarget === 'TOTAL' ? (homeGoals + awayGoals) : (isHome ? homeGoals : awayGoals);
-                const htG = pick.teamTarget === 'TOTAL' ? (htHome + htAway) : (isHome ? htHome : htAway);
-                actualValue = ftG - htG;
-            }
-        } else {
-            const translatedType = STAT_MAPPING[pick.stat] || pick.stat;
-            const homeStatsObj = teamsStats.find(s => s.team.id === matchDetail.teams.home.id) || {};
-            const awayStatsObj = teamsStats.find(s => s.team.id === matchDetail.teams.away.id) || {};
-            
-            let val = 0;
-            const status = matchDetail.fixture.status.short;
-            const isAET = ['AET', 'PEN'].includes(status);
+    let allGreen = true;
+    let hasIncomplete = false;
 
-            const getStatValue = (teamArr, tType, statKey = 'statistics') => {
-                const arr = teamArr[statKey] || teamArr.statistics; // fallback to total if missing
-                if (!arr) return 0;
-                const statObj = arr.find(s => s.type === tType);
-                return statObj && statObj.value !== null ? parseInt(statObj.value) : 0;
-            };
+    for (const entry of entries) {
+      console.log(`\nAvaliando ${entry.home} x ${entry.away} (${entry.fixture_id})`);
 
-            const getSumForPeriod = (statKey) => {
-                if (pick.teamTarget === 'TOTAL') {
-                    return getStatValue(homeStatsObj, translatedType, statKey) + 
-                           getStatValue(awayStatsObj, translatedType, statKey);
-                }
-                return getStatValue(isHome ? homeStatsObj : awayStatsObj, translatedType, statKey);
-            };
+      const fix = fixMap[entry.fixture_id];
+      if (!fix || !FT_STATUSES.includes(fix.status)) {
+        console.log(`  Partida não finalizada (status: ${fix?.status || 'N/A'})`);
+        hasIncomplete = true;
+        entry.matchResult = 'PENDING';
+        entry.result = 'PENDING';
+        continue;
+      }
 
-            if (pick.period === 'HT') {
-                val = getSumForPeriod('statistics_1h');
-            } else if (pick.period === '2H') {
-                val = getSumForPeriod('statistics_2h');
-            } else if (pick.period === 'FT' && isAET) {
-                console.log(`🔍 Somando 1H+2H para garantir 90min (Status: ${status})`);
-                const h1 = getSumForPeriod('statistics_1h');
-                const h2 = getSumForPeriod('statistics_2h');
-                
-                if (h1 === 0 && h2 === 0) {
-                    isAETPolluted = true;
-                    val = getSumForPeriod('statistics'); // Fallback to total if periods are completely missing
-                } else {
-                    val = h1 + h2;
-                }
-            } else if (pick.period === 'FT') {
-                val = getSumForPeriod('statistics');
-            }
+      const homeHist = histMap[`${entry.fixture_id}-HOME`];
+      const awayHist = histMap[`${entry.fixture_id}-AWAY`];
 
-            // Fallback to DB if still 0
-            if (val === 0 && dbStats && dbStats.length > 0) {
-                const dbMatch = dbStats.find(s => s.period === pick.period && s.team_id === (isHome ? homeId : awayId));
-                if (dbMatch) {
-                    const dbField = translatedType.toLowerCase().replace(/ /g, '_');
-                    const localMapping = { 'corner_kicks': 'corners', 'goalkeeper_saves': 'goalkeeper_saves', 'shots_on_goal': 'shots_on_goal' };
-                    const field = localMapping[dbField] || dbField;
-                    val = dbMatch[field] || 0;
-                    if (val > 0) console.log(`📦 Fallback DB para ${pick.stat}: ${val}`);
-                }
-            }
-            
-            actualValue = val;
+      let matchGreen = true;
+      for (const pick of entry.picks) {
+        const { result, actualValue } = evaluatePick(pick, fix, homeHist, awayHist);
+
+        if (result === null) {
+          console.log(`  ⚠️ ${pick.stat} ${pick.line} — SEM DADOS`);
+          hasIncomplete = true;
+          continue;
         }
 
-        let isPickGreen = pType === 'UNDER' ? actualValue < line : actualValue > line;
-        let result = isPickGreen ? 'WON' : 'LOST';
-
-        if (isAETPolluted && isPickGreen) {
-            result = 'CHECK';
-            console.log(`⚠️ Marcar como CHECK (Prorrogação s/ dados separados)`);
-        }
-
-        if (!isPickGreen && result !== 'CHECK') { matchGreen = false; allGreen = false; }
-        if (result === 'CHECK') { hasIncompleteMatch = true; } 
-        
         pick.result = result;
         pick.actualValue = actualValue;
-        
-        console.log(`[${pick.result}] ${pick.period} ${pick.stat} ${pick.teamTarget} ${pick.type === 'UNDER' ? '<' : '>'} ${line} (Fez: ${actualValue})`);
+
+        const symbol = result === 'WON' ? '✅' : '❌';
+        console.log(`  ${symbol} [${pick.period}] ${pick.stat} ${pick.teamTarget} ${pick.line} → Real: ${actualValue} = ${result}`);
+
+        if (result !== 'WON') { matchGreen = false; allGreen = false; }
+      }
+
+      entry.matchResult = matchGreen ? 'WON' : 'LOST';
+      entry.result = entry.matchResult;
     }
-    
-    entry.matchResult = matchGreen ? 'WON' : 'LOST';
-    entry.result = entry.matchResult; // Sync both fields for UI compatibility
-    evaluatedEntries.push(entry);
-    await new Promise(r => setTimeout(r, 1000));
-  }
 
-  ticket.ticket_data.entries = evaluatedEntries;
-  
-  let finalStatus = 'PENDING';
-  if (!allGreen) {
-    finalStatus = 'LOST';
-  } else if (!hasIncompleteMatch) {
-    finalStatus = 'WON';
-  }
+    const finalStatus = hasIncomplete ? 'PENDING' : allGreen ? 'WON' : 'LOST';
 
-  await supabase.from('odd_tickets').update({
-     status: finalStatus,
-     ticket_data: ticket.ticket_data
-  }).eq('date', targetDate).eq('mode', ticket.mode);
+    await supabase.from('odd_tickets').update({
+      status: finalStatus,
+      ticket_data: ticket.ticket_data
+    }).eq('date', targetDate).eq('mode', ticket.mode);
 
-
-    console.log(`Ticket ${ticket.mode} Avaliado como: ${finalStatus}`);
+    console.log(`\nTicket ${ticket.mode} Avaliado como: ${finalStatus}`);
   }
 }
-
 
 evaluateTicket().catch(console.error);

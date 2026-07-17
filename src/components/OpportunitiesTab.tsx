@@ -121,6 +121,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [hideFinished, setHideFinished] = useState(false);
   const [finishedIds, setFinishedIds] = useState<Set<number>>(new Set());
   const [loadingFinished, setLoadingFinished] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({});
   const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
   const [histStats, setHistStats] = useState<Record<string, HistEntry>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -625,10 +626,19 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
             </button>
           </div>
 
-          {grouped.map(g => (
+          {grouped.map(g => {
+            const isCollapsed = !!collapsedGroups[g.fixture_id];
+            return (
             <div key={g.fixture_id} className="bg-surface/20 border border-outline-variant/10 rounded-2xl overflow-hidden">
               {/* Liga */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 bg-surface/30">
+                <button
+                  onClick={() => setCollapsedGroups(prev => ({ ...prev, [g.fixture_id]: !prev[g.fixture_id] }))}
+                  className="p-1 -ml-2 rounded-lg text-on-surface-variant/50 hover:bg-white/5 hover:text-on-surface transition-colors"
+                  title={isCollapsed ? 'Expandir' : 'Recolher'}
+                >
+                  {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                </button>
                 {g.leagueLogo && (
                   <div className="w-4 h-4 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
                     <img referrerPolicy="no-referrer" src={g.leagueLogo} alt="" className="w-full h-full object-contain" />
@@ -665,6 +675,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
               </button>
 
               {/* Opportunities rows */}
+              {!isCollapsed && (
               <div className="divide-y divide-outline-variant/5">
                 {g.rows.map((o, i) => {
                   const result = evalPick(o) ?? o.result ?? null;
@@ -720,14 +731,19 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
 
                     {/* Odd */}
                     <div className="text-right w-14">
-                      <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
+                      {o.odd > 0 ? (
+                        <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-[10px] text-on-surface-variant/40 italic" title="Buscar cotação manualmente">Sem odd</span>
+                      )}
                     </div>
                   </div>
                   );
                 })}
               </div>
+              )}
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>
