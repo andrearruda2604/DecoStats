@@ -2,11 +2,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '../services/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
+const ADMIN_EMAIL = 'deco260483@gmail.com';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isRecovery: boolean;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -16,7 +19,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, session: null, loading: true, isRecovery: false,
+  user: null, session: null, loading: true, isRecovery: false, isAdmin: false,
   signInWithGoogle: async () => {},
   signInWithEmail: async () => ({ error: null }),
   signUpWithEmail: async () => ({ error: null }),
@@ -92,9 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   };
 
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
   return (
     <AuthContext.Provider value={{
-      user, session, loading, isRecovery,
+      user, session, loading, isRecovery, isAdmin,
       signInWithGoogle, signInWithEmail, signUpWithEmail,
       resetPassword, updatePassword, signOut,
     }}>

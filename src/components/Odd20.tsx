@@ -5,7 +5,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp, X, BarChart2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Trophy, ChevronLeft, ChevronRight, Info, History, TrendingUp, X, BarChart2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -293,6 +294,8 @@ interface TicketModeProps {
 }
 
 export default function Odd20({ mode = '2.0' }: TicketModeProps) {
+  const { isAdmin } = useAuth();
+  const [adminEditing, setAdminEditing] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'today' | 'history'>(() =>
     (localStorage.getItem(`decostats_odd_tab_${mode}`) as 'today' | 'history') || 'today'
@@ -741,6 +744,45 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     </span>
                   </div>
 
+                  {/* Admin: override ticket status */}
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5 mt-3">
+                      <span className="text-[8px] text-on-surface-variant/30 font-bold uppercase mr-1">Admin:</span>
+                      {(['WON', 'LOST', 'PENDING'] as const).map(s => (
+                        <button
+                          key={s}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const newEntries = ticket.ticket_data.entries.map((ent: any) => {
+                              if (s === 'PENDING') {
+                                const cleanPicks = ent.picks.map((p: any) => ({ ...p, result: undefined, actualValue: undefined }));
+                                return { ...ent, result: undefined, matchResult: undefined, picks: cleanPicks };
+                              }
+                              return ent;
+                            });
+                            const updatedData = { ...ticket.ticket_data, entries: s === 'PENDING' ? newEntries : ticket.ticket_data.entries };
+                            const { error } = await supabase.from('odd_tickets')
+                              .update({ status: s, ticket_data: updatedData })
+                              .eq('date', ticket.date).eq('mode', mode);
+                            if (!error) {
+                              setTicket((prev: any) => ({ ...prev, status: s, ticket_data: updatedData }));
+                              setAllTickets(prev => prev.map(t => t.date === ticket.date && t.mode === mode ? { ...t, status: s, ticket_data: updatedData } : t));
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
+                            ticket.status === s
+                              ? s === 'WON' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                : s === 'LOST' ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
+                                : 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                              : 'bg-white/5 border-white/10 text-on-surface-variant/40 hover:border-white/30'
+                          }`}
+                        >
+                          {s === 'WON' ? '✓ GREEN' : s === 'LOST' ? '✗ RED' : '⟲ Limpar'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Bet365 branding */}
                   <a
                     href="https://www.bet365.bet.br/#/HO/"
@@ -864,8 +906,9 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                           {picksWithResult.map((pick: any, j: number) => {
                             const result = pick.computedResult;
                             const actual = pick.actual;
+                            const adminKey = `${match.fixture_id}-${j}`;
                             return (
-                              <div key={j} className={`rounded-xl p-3.5 border transition-colors ${
+                              <div key={j} className={`rounded-xl p-3.5 border transition-colors relative ${
                                 result === 'WON'
                                   ? 'bg-emerald-500/10 border-emerald-500/30'
                                   : result === 'LOST'
@@ -892,6 +935,16 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                         </span>
                                       </div>
                                     )}
+                                    {/* Admin edit button */}
+                                    {isAdmin && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setAdminEditing(adminEditing === adminKey ? null : adminKey); }}
+                                        className="p-1 rounded-md hover:bg-white/10 text-on-surface-variant/30 hover:text-primary transition-colors"
+                                        title="Editar resultado"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex justify-between items-end">
@@ -910,6 +963,50 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                     </span>
                                   )}
                                 </div>
+                                {/* Admin inline edit dropdown */}
+                                {isAdmin && adminEditing === adminKey && (
+                                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/5">
+                                    {([['WON', '✓ GREEN', 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'], ['LOST', '✗ RED', 'bg-rose-500/15 border-rose-500/40 text-rose-400'], [null, '⟲ Limpar', 'bg-white/5 border-white/10 text-on-surface-variant/50']] as const).map(([val, label, cls]) => (
+                                      <button
+                                        key={label}
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          const entries = [...ticket.ticket_data.entries];
+                                          const entryIdx = entries.findIndex((en: any) => en.fixture_id === match.fixture_id);
+                                          if (entryIdx === -1) return;
+                                          const entry = { ...entries[entryIdx] };
+                                          const picks = [...entry.picks];
+                                          picks[j] = { ...picks[j], result: val || undefined, actualValue: val ? picks[j].actualValue : undefined };
+                                          entry.picks = picks;
+                                          // Recalculate match result
+                                          const anyLost = picks.some((p: any) => p.result === 'LOST');
+                                          const allWon = picks.every((p: any) => p.result === 'WON');
+                                          const anyPending = picks.some((p: any) => !p.result);
+                                          entry.result = anyLost ? 'LOST' : allWon ? 'WON' : anyPending ? undefined : entry.result;
+                                          entry.matchResult = entry.result;
+                                          entries[entryIdx] = entry;
+                                          // Recalculate ticket status
+                                          const ticketAnyLost = entries.some((en: any) => en.result === 'LOST');
+                                          const ticketAllWon = entries.every((en: any) => en.result === 'WON');
+                                          const ticketAnyPending = entries.some((en: any) => !en.result);
+                                          const newStatus = ticketAnyLost ? 'LOST' : ticketAllWon ? 'WON' : ticketAnyPending ? 'PENDING' : ticket.status;
+                                          const updatedData = { ...ticket.ticket_data, entries };
+                                          const { error } = await supabase.from('odd_tickets')
+                                            .update({ status: newStatus, ticket_data: updatedData })
+                                            .eq('date', ticket.date).eq('mode', mode);
+                                          if (!error) {
+                                            setTicket((prev: any) => ({ ...prev, status: newStatus, ticket_data: updatedData }));
+                                            setAllTickets(prev => prev.map(t => t.date === ticket.date && t.mode === mode ? { ...t, status: newStatus, ticket_data: updatedData } : t));
+                                          }
+                                          setAdminEditing(null);
+                                        }}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-black border transition-all ${cls}`}
+                                      >
+                                        {label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

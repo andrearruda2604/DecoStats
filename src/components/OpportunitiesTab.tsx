@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { TrendingUp, Search, ChevronDown, ChevronUp, ExternalLink, ChevronLeft, ChevronRight, Save, Pencil } from 'lucide-react';
 
 interface Opportunity {
   fixture_id: number;
@@ -31,6 +32,9 @@ const STAT_LABELS: Record<string, string> = {
   GOLS: 'Gols',
   ESCANTEIOS: 'Escanteios',
   CARTÕES: 'Cartões',
+  CARTÕES_AMARELOS: 'Cartões Amarelos',
+  FALTAS: 'Faltas',
+  DESARMES: 'Desarmes',
   CHUTES_GOL: 'Chutes a Gol',
   CHUTES_TOTAL: 'Chutes Totais',
   RESULTADO: '1x2 Resultado',
@@ -59,6 +63,9 @@ const STAT_OPTIONS = [
   { value: 'GOLS_SOFRIDOS',label: 'Gols Sofridos' },
   { value: 'ESCANTEIOS',   label: 'Escanteios' },
   { value: 'CARTÕES',      label: 'Cartões' },
+  { value: 'CARTÕES_AMARELOS', label: 'Cartões Amarelos' },
+  { value: 'FALTAS',       label: 'Faltas' },
+  { value: 'DESARMES',     label: 'Desarmes' },
   { value: 'CHUTES_GOL',   label: 'Chutes a Gol' },
   { value: 'CHUTES_TOTAL', label: 'Chutes Totais' },
   { value: 'IMPEDIMENTOS', label: 'Impedimentos' },
@@ -108,8 +115,10 @@ function fmtDisplayDate(d: string) {
 }
 
 export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
+  const { isAdmin } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminEditingOpp, setAdminEditingOpp] = useState<string | null>(null);
   const [targetDate, setTargetDate] = useState('');
   const [search, setSearch] = useState('');
   const [filterStat, setFilterStat] = useState<string>('all');
@@ -681,62 +690,117 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
                   const result = evalPick(o) ?? o.result ?? null;
                   const isFinishedGame = FT_STATUSES.includes(scores[o.fixture_id]?.status ?? '');
                   return (
-                  <div key={i} className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-2.5 transition-colors ${
-                    result === 'WON' ? 'bg-emerald-500/[0.04]' : result === 'LOST' ? 'bg-rose-500/[0.04]' : 'hover:bg-white/[0.02]'
-                  }`}>
-                    {/* Market + line + resultado */}
-                    <div className="min-w-0">
-                      <div className="text-[12px] font-bold text-on-surface leading-tight truncate">
-                        {o.market}
-                        {o.teamTarget !== 'TOTAL' && (
-                          <span className="ml-1.5 text-[10px] text-on-surface-variant/40 font-normal">
-                            ({o.teamTarget === 'HOME' ? 'Casa' : 'Fora'})
+                  <div key={i} className="flex flex-col border-b border-white/5 last:border-0">
+                    <div className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-4 py-2.5 transition-colors ${
+                      result === 'WON' ? 'bg-emerald-500/[0.04]' : result === 'LOST' ? 'bg-rose-500/[0.04]' : 'hover:bg-white/[0.02]'
+                    }`}>
+                      {/* Market + line + resultado */}
+                      <div className="min-w-0">
+                        <div className="text-[12px] font-bold text-on-surface leading-tight truncate">
+                          {o.market}
+                          {o.teamTarget !== 'TOTAL' && (
+                            <span className="ml-1.5 text-[10px] text-on-surface-variant/40 font-normal">
+                              ({o.teamTarget === 'HOME' ? 'Casa' : 'Fora'})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className={`text-[11px] font-black ${
+                            ['OVER','H','YES','HD','HA'].includes(o.type) ? 'text-emerald-400'
+                            : ['D','DA'].includes(o.type) ? 'text-amber-400'
+                            : 'text-sky-400'
+                          }`}>
+                            {o.line}
                           </span>
+                          <span className="text-[10px] text-on-surface-variant/30">
+                            {PERIOD_LABELS[o.period] || o.period}
+                          </span>
+                          {result === 'WON' && (
+                            <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">✓ GREEN</span>
+                          )}
+                          {result === 'LOST' && (
+                            <span className="text-[10px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded">✗ RED</span>
+                          )}
+                          {result === null && isFinishedGame && (
+                            <span className="text-[10px] font-bold text-on-surface-variant/30 italic">sem dados</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Historico */}
+                      <div className="hidden sm:block text-center w-28">
+                        <div className="text-[11px] font-bold text-on-surface-variant/60">
+                          {o.histHits}/{o.histTotal} jogos
+                        </div>
+                      </div>
+
+                      {/* Probabilidade */}
+                      <div className="flex justify-center w-20">
+                        <ProbBadge pct={o.probability} />
+                      </div>
+
+                      {/* Odd */}
+                      <div className="text-right w-14">
+                        {o.odd > 0 ? (
+                          <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-[10px] text-on-surface-variant/40 italic" title="Buscar cotação manualmente">Sem odd</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-[11px] font-black ${
-                          ['OVER','H','YES','HD','HA'].includes(o.type) ? 'text-emerald-400'
-                          : ['D','DA'].includes(o.type) ? 'text-amber-400'
-                          : 'text-sky-400'
-                        }`}>
-                          {o.line}
-                        </span>
-                        <span className="text-[10px] text-on-surface-variant/30">
-                          {PERIOD_LABELS[o.period] || o.period}
-                        </span>
-                        {result === 'WON' && (
-                          <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">✓ GREEN</span>
-                        )}
-                        {result === 'LOST' && (
-                          <span className="text-[10px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded">✗ RED</span>
-                        )}
-                        {result === null && isFinishedGame && (
-                          <span className="text-[10px] font-bold text-on-surface-variant/30 italic">sem dados</span>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Historico */}
-                    <div className="hidden sm:block text-center w-28">
-                      <div className="text-[11px] font-bold text-on-surface-variant/60">
-                        {o.histHits}/{o.histTotal} jogos
-                      </div>
-                    </div>
-
-                    {/* Probabilidade */}
-                    <div className="flex justify-center w-20">
-                      <ProbBadge pct={o.probability} />
-                    </div>
-
-                    {/* Odd */}
-                    <div className="text-right w-14">
-                      {o.odd > 0 ? (
-                        <span className="text-[14px] font-black text-amber-400">{o.odd.toFixed(2)}</span>
-                      ) : (
-                        <span className="text-[10px] text-on-surface-variant/40 italic" title="Buscar cotação manualmente">Sem odd</span>
+                      {/* Admin edit button */}
+                      {isAdmin && (
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const key = `${o.fixture_id}-${o.stat}-${o.period}-${o.teamTarget}-${o.type}-${o.threshold}`;
+                              setAdminEditingOpp(adminEditingOpp === key ? null : key);
+                            }}
+                            className="p-1 rounded-md hover:bg-white/10 text-on-surface-variant/30 hover:text-primary transition-colors"
+                            title="Editar resultado"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
+
+                    {/* Admin inline override */}
+                    {isAdmin && adminEditingOpp === `${o.fixture_id}-${o.stat}-${o.period}-${o.teamTarget}-${o.type}-${o.threshold}` && (
+                      <div className="flex items-center gap-1.5 px-4 pb-2">
+                        {([['WON', '✓ GREEN', 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'], ['LOST', '✗ RED', 'bg-rose-500/15 border-rose-500/40 text-rose-400'], [null, '⟲ Limpar', 'bg-white/5 border-white/10 text-on-surface-variant/50']] as const).map(([val, label, cls]) => (
+                          <button
+                            key={label}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              // Update the opportunity result in the array
+                              const updatedOpps = opportunities.map(op => {
+                                if (op.fixture_id === o.fixture_id && op.stat === o.stat && op.period === o.period && op.teamTarget === o.teamTarget && op.type === o.type && op.threshold === o.threshold) {
+                                  return { ...op, result: val || undefined } as Opportunity;
+                                }
+                                return op;
+                              });
+                              setOpportunities(updatedOpps);
+                              // Save to DB
+                              const { data: existing } = await supabase
+                                .from('odd_tickets').select('ticket_data')
+                                .eq('date', targetDate).eq('mode', 'opp').maybeSingle();
+                              if (existing) {
+                                const now = new Date().toISOString();
+                                await supabase.from('odd_tickets')
+                                  .update({ ticket_data: { ...existing.ticket_data, opportunities: updatedOpps, results_saved_at: now } })
+                                  .eq('date', targetDate).eq('mode', 'opp');
+                              }
+                              setAdminEditingOpp(null);
+                            }}
+                            className={`px-2 py-0.5 rounded text-[9px] font-black border transition-all ${cls}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   );
                 })}
