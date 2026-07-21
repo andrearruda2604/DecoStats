@@ -101,7 +101,7 @@ function ProbBadge({ pct }: { pct: number }) {
 
 const FT_STATUSES = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
 
-type ScoreEntry = { home: number; away: number; htHome: number | null; htAway: number | null; status: string };
+type ScoreEntry = { home: number; away: number; htHome: number | null; htAway: number | null; status: string; date?: string; };
 type HistEntry = { corners: number | null; yellow_cards: number | null; shots_on_goal: number | null; shots_total: number | null; stats_ft: any[] | null };
 
 function todayBrt() {
@@ -155,7 +155,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
         const f = payload.new as any;
         setScores(prev => {
           if (!(f.api_id in prev) && !fixIdsRef.current.includes(f.api_id)) return prev;
-          const entry: ScoreEntry = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
+          const entry: ScoreEntry = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status, date: f.date ?? prev[f.api_id]?.date };
           const updated = { ...prev, [f.api_id]: entry };
           if (FT_STATUSES.includes(f.status)) {
             setFinishedIds(prev2 => new Set([...prev2, f.api_id]));
@@ -172,11 +172,11 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
     if (!fixIds.length) return;
     const { data: fixes } = await supabase
       .from('fixtures')
-      .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status')
+      .select('api_id, home_score, away_score, ht_home_score, ht_away_score, status, date')
       .in('api_id', fixIds);
     const map: Record<number, ScoreEntry> = {};
     (fixes || []).forEach(f => {
-      map[f.api_id] = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status };
+      map[f.api_id] = { home: f.home_score ?? 0, away: f.away_score ?? 0, htHome: f.ht_home_score, htAway: f.ht_away_score, status: f.status, date: f.date };
     });
     setScores(map);
     const fin = new Set<number>((fixes || []).filter(f => FT_STATUSES.includes(f.status)).map(f => f.api_id as number));
@@ -406,8 +406,22 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const savedResultsCount = opportunities.filter(o => o.result).length;
   const evaluatedCount = opportunities.filter(o => evalPick(o) !== null).length;
 
+  // ─── FILTERS ─────────────────────────────────────────────────────────────
+  
+  const d = new Date(targetDate + 'T03:00:00Z');
+  const startMs = d.getTime();
+  d.setDate(d.getDate() + 1);
+  const endMs = d.getTime();
+
+  const isWithinTargetDate = (dateStr?: string) => {
+    if (!dateStr) return true;
+    const t = new Date(dateStr).getTime();
+    return t >= startMs && t < endMs;
+  };
+
   const filtered = opportunities
     .filter(o => {
+      if (!isWithinTargetDate(scores[o.fixture_id]?.date)) return false;
       if (hideFinished && finishedIds.has(o.fixture_id)) return false;
       if (filterStat !== 'all' && o.stat !== filterStat) return false;
       if (filterPeriod !== 'all' && o.period !== filterPeriod) return false;
