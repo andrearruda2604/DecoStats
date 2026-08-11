@@ -502,7 +502,7 @@ function AuthenticatedApp() {
 
       {/* ═══ OPORTUNIDADES DO DIA ═══ */}
       {activeView === 'OPP' && (
-        <OpportunitiesTab onSelectMatch={handleSelectMatch} />
+        <OpportunitiesTab onSelectMatch={handleSelectMatch} leagues={leagues} />
       )}
 
       {/* ═══ ODD 4.0 ═══ */}

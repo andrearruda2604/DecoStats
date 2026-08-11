@@ -114,7 +114,10 @@ function fmtDisplayDate(d: string) {
   return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (id: number) => void }) {
+import LeagueFilter from './LeagueFilter';
+import type { League } from '../types';
+
+export default function OpportunitiesTab({ onSelectMatch, leagues }: { onSelectMatch?: (id: number) => void; leagues?: League[] }) {
   const { isAdmin } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +141,10 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   const [savedAt, setSavedAt] = useState('');
   const [layoutMode, setLayoutMode] = useState<'LEAGUE' | 'TIME'>('LEAGUE');
   const fixIdsRef = useRef<number[]>([]);
+
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<number[]>([]);
+  const [collapsedLeagues, setCollapsedLeagues] = useState<Record<string, boolean>>({});
+
 
   // Initialize to today (BRT)
   useEffect(() => {
@@ -666,7 +673,19 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
   };
 
   return (
-    <div className="space-y-6">
+    <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-5 lg:items-start">
+      {leagues && (
+        <aside className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto lg:pb-4 no-scrollbar hidden lg:block">
+          <LeagueFilter
+            leagues={leagues}
+            selectedLeagueIds={selectedLeagueIds}
+            onSelectLeagues={setSelectedLeagueIds}
+            selectedDate={targetDate}
+            onSelectDate={(date) => { setTargetDate(date); setSelectedLeagueIds([]); }}
+          />
+        </aside>
+      )}
+      <div className="space-y-6 w-full min-w-0">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -878,21 +897,35 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           </div>
 
           {layoutMode === 'LEAGUE' ? (
-            leagueGroups.map(lg => (
-              <div key={lg.leagueName} className="bg-surface/20 border border-outline-variant/10 rounded-2xl overflow-hidden shadow-lg">
-                <div className="flex items-center gap-3 px-4 py-3 bg-surface-container/30 border-b border-outline-variant/10">
-                  {lg.leagueLogo && (
-                    <div className="w-5 h-5 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
-                      <img referrerPolicy="no-referrer" src={lg.leagueLogo} alt="" className="w-full h-full object-contain" />
+            leagueGroups.map(lg => {
+              const isCollapsed = !!collapsedLeagues[lg.leagueName];
+              return (
+                <div key={lg.leagueName} className="bg-surface/20 border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm">
+                  <button
+                    onClick={() => setCollapsedLeagues(prev => ({ ...prev, [lg.leagueName]: !isCollapsed }))}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-surface-container/30 border-b border-outline-variant/10 hover:bg-surface-container/50 transition-colors text-left"
+                  >
+                    <div className="p-1 -ml-2 rounded-lg text-on-surface-variant/50">
+                      {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                    </div>
+                    {lg.leagueLogo && (
+                      <div className="w-5 h-5 bg-white/90 rounded-sm flex-shrink-0 flex items-center justify-center p-[2px]">
+                        <img referrerPolicy="no-referrer" src={lg.leagueLogo} alt="" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wider">{lg.leagueName}</span>
+                    <span className="ml-auto text-[10px] text-on-surface-variant/40 font-bold bg-black/20 px-2 py-0.5 rounded-full">
+                      {lg.fixtures.reduce((acc, f) => acc + f.rows.length, 0)} picks
+                    </span>
+                  </button>
+                  {!isCollapsed && (
+                    <div className="bg-black/10 flex flex-col p-3 gap-3">
+                      {lg.fixtures.map(g => renderFixtureGroup(g, true))}
                     </div>
                   )}
-                  <span className="text-xs font-bold text-on-surface uppercase tracking-wider">{lg.leagueName}</span>
                 </div>
-                <div className="bg-black/10 flex flex-col p-3 gap-3">
-                  {lg.fixtures.map(g => renderFixtureGroup(g, true))}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="space-y-4">
               {timeSortedFixtures.map(g => renderFixtureGroup(g, false))}
@@ -900,6 +933,7 @@ export default function OpportunitiesTab({ onSelectMatch }: { onSelectMatch?: (i
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
