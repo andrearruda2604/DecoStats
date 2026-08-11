@@ -1,21 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
-const env = fs.readFileSync('.env.local', 'utf8');
-const urlMatch = env.match(/VITE_SUPABASE_URL=\"(.*?)\"/);
-const keyMatch = env.match(/VITE_SUPABASE_ANON_KEY=\"(.*?)\"/);
-const supabase = createClient(urlMatch[1], keyMatch[1]);
+let env = process.env;
+try {
+  const envFile = fs.readFileSync('.env.local', 'utf8');
+  envFile.split(/\r?\n/).forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      let val = match[2].trim();
+      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+      env[match[1].trim()] = val;
+    }
+  });
+} catch (e) {}
 
-async function check() {
-  const { data: tickets } = await supabase.from('odd_tickets').select('id, ticket_data').limit(1);
-  if (tickets && tickets.length > 0) {
-    console.log('Ticket keys:', Object.keys(tickets[0].ticket_data));
-    console.log('Ticket entry logos:', tickets[0].ticket_data.entries[0]?.homeLogo, tickets[0].ticket_data.entries[0]?.awayLogo);
-  }
+const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 
-  const { data: opps } = await supabase.from('opportunities').select('*').limit(1);
-  if (opps && opps.length > 0) {
-    console.log('Opp keys:', Object.keys(opps[0]));
-  }
+async function run() {
+  const { data } = await supabase.from('teams_history').select('stats_ft').not('stats_ft', 'is', null).limit(1);
+  console.log(JSON.stringify(data[0].stats_ft, null, 2));
 }
-check();
+run();

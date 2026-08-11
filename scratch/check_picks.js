@@ -1,9 +1,8 @@
-
-import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
 
-const env = {};
 const envFile = fs.readFileSync('.env.local', 'utf8');
+const env = {};
 envFile.split(/\r?\n/).forEach(line => {
   const match = line.match(/^([^=]+)=(.*)$/);
   if (match) {
@@ -12,18 +11,9 @@ envFile.split(/\r?\n/).forEach(line => {
     env[match[1].trim()] = val;
   }
 });
-
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-
-async function check() {
-  const { data: ticket } = await supabase.from('odd_tickets')
-    .select('ticket_data')
-    .eq('date', '2026-05-12')
-    .eq('mode', '2.0')
-    .single();
-
-  const entry = ticket.ticket_data.entries.find(e => e.fixture_id === 1544850);
-  console.log(JSON.stringify(entry.picks, null, 2));
+async function run() {
+  const { data } = await supabase.from('odd_tickets').select('ticket_data').eq('date', '2026-07-08').eq('mode', '2.0').single();
+  console.log(JSON.stringify(data?.ticket_data, null, 2));
 }
-
-check();
+run();

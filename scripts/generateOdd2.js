@@ -641,12 +641,25 @@ function buildAccumulator(allCandidates, maxPicksPerMatch = MAX_PICKS_PER_MATCH_
     if (usedKeys.has(key)) return false;
 
     // Evita sobreposição: mesmo stat + teamTarget + período no mesmo jogo
-    const hasOverlap = selected.some(s =>
-      s.fixture_id === candidate.fixture_id &&
-      s.stat === candidate.stat &&
-      s.teamTarget === candidate.teamTarget &&
-      s.period === candidate.period
-    );
+    const hasOverlap = selected.some(s => {
+      if (s.fixture_id !== candidate.fixture_id) return false;
+      if (s.period !== candidate.period) return false;
+
+      // Exact match
+      if (s.stat === candidate.stat && s.teamTarget === candidate.teamTarget) return true;
+
+      // Gols vs Gols Sofridos overlap (mesmo evento real)
+      if (s.stat === 'GOLS' && candidate.stat === 'GOLS_SOFRIDOS') {
+        if (s.teamTarget === 'HOME' && candidate.teamTarget === 'AWAY') return true;
+        if (s.teamTarget === 'AWAY' && candidate.teamTarget === 'HOME') return true;
+      }
+      if (s.stat === 'GOLS_SOFRIDOS' && candidate.stat === 'GOLS') {
+        if (s.teamTarget === 'HOME' && candidate.teamTarget === 'AWAY') return true;
+        if (s.teamTarget === 'AWAY' && candidate.teamTarget === 'HOME') return true;
+      }
+
+      return false;
+    });
     if (hasOverlap) return false;
 
     const matchCount = picksPerMatch[candidate.fixture_id] || 0;
