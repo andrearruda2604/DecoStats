@@ -53,7 +53,7 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
   
   // Store raw history to avoid refetching when filters change
   const [rawHistory, setRawHistory] = useState<any[]>([]);
-  const [teamMap, setTeamMap] = useState<Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number; leagueId: number }>>(new Map());
+  const [teamMap, setTeamMap] = useState<Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number }>>(new Map());
 
   // 1. Fetch matches and history when date changes
   useEffect(() => {
@@ -68,21 +68,21 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
           return;
         }
 
-        const tMap = new Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number; leagueId: number }>();
+        const tMap = new Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number }>();
         const teamIds = new Set<number>();
 
         matches.forEach(m => {
           teamIds.add(m.homeTeam.id);
           teamIds.add(m.awayTeam.id);
-          tMap.set(m.homeTeam.id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.id, isHome: true, season: m.league.season, leagueId: m.league.id });
-          tMap.set(m.awayTeam.id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.id, isHome: false, season: m.league.season, leagueId: m.league.id });
+          tMap.set(m.homeTeam.id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.id, isHome: true, season: m.league.season });
+          tMap.set(m.awayTeam.id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.id, isHome: false, season: m.league.season });
         });
 
         const allTeamIds = Array.from(teamIds);
         
         const { data: history, error } = await supabase
           .from('teams_history')
-          .select('team_id, season, league_id, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal, stats_ft, stats_1h, stats_2h')
+          .select('team_id, season, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal, stats_ft, stats_1h, stats_2h')
           .in('team_id', allTeamIds)
           .order('match_date', { ascending: false });
 
@@ -122,17 +122,17 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
       const teamInfo = teamMap.get(teamId)!;
       let th = historyByTeam.get(teamId) || [];
 
-      // Always respect the team's location, season, AND league of TODAY's match!
-      // This strictly avoids mixing cup games with league games, and forces cup games to only look at cup history.
+      // Always respect the team's location and season
+      // This mixes competitions naturally (e.g. UCL + Premier League) to reach the 20 games quota
       if (teamInfo.isHome) {
-        th = th.filter(h => h.is_home && h.season === teamInfo.season && h.league_id === teamInfo.leagueId);
+        th = th.filter(h => h.is_home && h.season === teamInfo.season);
       } else {
-        th = th.filter(h => !h.is_home && h.season === teamInfo.season && h.league_id === teamInfo.leagueId);
+        th = th.filter(h => !h.is_home && h.season === teamInfo.season);
       }
 
       // Take last 20 matching games
       const filtered = th.slice(0, 20);
-      // Require at least 7 games in this exact scenario to be considered (eliminates cups that don't have enough games)
+      // Require at least 7 games in this exact scenario to be considered (same as MIN_RECORDS for predictive tickets)
       if (filtered.length < 7) return;
 
       CRITERIA.forEach(crit => {
