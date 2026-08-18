@@ -53,7 +53,7 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
   
   // Store raw history to avoid refetching when filters change
   const [rawHistory, setRawHistory] = useState<any[]>([]);
-  const [teamMap, setTeamMap] = useState<Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean }>>(new Map());
+  const [teamMap, setTeamMap] = useState<Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number }>>(new Map());
 
   // 1. Fetch matches and history when date changes
   useEffect(() => {
@@ -68,22 +68,21 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
           return;
         }
 
-        const tMap = new Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean }>();
+        const tMap = new Map<number, { name: string; logoUrl: string; fixtureId: number; isHome: boolean; season: number }>();
         const teamIds = new Set<number>();
 
         matches.forEach(m => {
           teamIds.add(m.homeTeam.id);
           teamIds.add(m.awayTeam.id);
-          tMap.set(m.homeTeam.id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.apiId, isHome: true });
-          tMap.set(m.awayTeam.id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.apiId, isHome: false });
+          tMap.set(m.homeTeam.id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.id, isHome: true, season: m.league.season });
+          tMap.set(m.awayTeam.id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.id, isHome: false, season: m.league.season });
         });
 
         const allTeamIds = Array.from(teamIds);
         
-        // Fetch history in chunks if necessary, but typically < 200 is fine for Supabase `in`
         const { data: history, error } = await supabase
           .from('teams_history')
-          .select('team_id, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal, stats_ft, stats_1h, stats_2h')
+          .select('team_id, season, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal, stats_ft, stats_1h, stats_2h')
           .in('team_id', allTeamIds)
           .order('match_date', { ascending: false });
 
@@ -123,11 +122,11 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
       const teamInfo = teamMap.get(teamId)!;
       let th = historyByTeam.get(teamId) || [];
 
-      // Always respect the team's location in TODAY's match
+      // Always respect the team's location in TODAY's match and ONLY consider the current season
       if (teamInfo.isHome) {
-        th = th.filter(h => h.is_home); // Only look at their HOME history
+        th = th.filter(h => h.is_home && h.season === teamInfo.season); // Only look at their HOME history for THIS season
       } else {
-        th = th.filter(h => !h.is_home); // Only look at their AWAY history
+        th = th.filter(h => !h.is_home && h.season === teamInfo.season); // Only look at their AWAY history for THIS season
       }
 
       // Take last 20 matching games
