@@ -38,6 +38,7 @@ async function main() {
     runScript('generateOdd2.js', targetDate);
     runScript('generateOdd3.js', targetDate);
     runScript('generateOpportunities.js', targetDate);
+    runScript('generateTops.js', targetDate);
 
     // 4.5 Validate if opportunities were generated
     runScript('validateOpportunities.js', targetDate);
