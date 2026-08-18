@@ -11,6 +11,7 @@ import Lobby from './components/Lobby';
 import Odd20 from './components/Odd20';
 import OpportunitiesTab from './components/OpportunitiesTab';
 import LeagueFilter from './components/LeagueFilter';
+import TopsTab from './components/TopsTab';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import LoginPage from './components/LoginPage';
@@ -106,7 +107,7 @@ function AuthenticatedApp() {
   });
   const [lobbyScrollPos, setLobbyScrollPos] = useState(0);
   const [oddScrollPos, setOddScrollPos] = useState(0);
-  const [lastListView, setLastListView] = useState<'LOBBY' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP'>('LOBBY');
+  const [lastListView, setLastListView] = useState<'LOBBY' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP' | 'TOPS'>('LOBBY');
 
 
   const [predictiveBlock, setPredictiveBlock] = useState<any>(null);
@@ -143,6 +144,9 @@ function AuthenticatedApp() {
     } else if (activeView === 'OPP') {
       setOddScrollPos(window.scrollY);
       setLastListView('OPP');
+    } else if (activeView === 'TOPS') {
+      setOddScrollPos(window.scrollY);
+      setLastListView('TOPS');
     }
     setSelectedMatchId(matchId);
     setActiveView('DATA');
@@ -168,7 +172,7 @@ function AuthenticatedApp() {
       if (activeView === 'DATA') {
         setSelectedMatchId(null);
         setActiveView(lastListView);
-      } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP') {
+      } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP' || activeView === 'TOPS') {
         setActiveView('LOBBY');
       }
     };
@@ -179,8 +183,8 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (activeView === 'LOBBY') {
       setTimeout(() => window.scrollTo(0, lobbyScrollPos), 10);
-    } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP') {
-      setTimeout(() => window.scrollTo(0, oddScrollPos), 10);
+    } else if (activeView === 'ODD20' || activeView === 'ODD30' || activeView === 'ODD40' || activeView === 'OPP' || activeView === 'TOPS') {
+        setTimeout(() => window.scrollTo(0, oddScrollPos), 10);
     }
   }, [activeView, lobbyScrollPos, oddScrollPos]);
 
@@ -503,6 +507,11 @@ function AuthenticatedApp() {
       {/* ═══ OPORTUNIDADES DO DIA ═══ */}
       {activeView === 'OPP' && (
         <OpportunitiesTab onSelectMatch={handleSelectMatch} leagues={leagues} />
+      )}
+
+      {/* ═══ TOPS DO DIA ═══ */}
+      {activeView === 'TOPS' && (
+        <TopsTab onSelectMatch={handleSelectMatch} leagues={leagues} />
       )}
 
       {/* ═══ ODD 4.0 ═══ */}

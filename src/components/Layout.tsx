@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ArrowLeft, LayoutGrid, TrendingUp, LogOut, Ticket } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, TrendingUp, LogOut, Ticket, Crown } from 'lucide-react';
 import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
 
-export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP';
+export type ViewType = 'LOBBY' | 'DATA' | 'ODD20' | 'ODD30' | 'ODD40' | 'OPP' | 'TOPS';
 
 interface LayoutProps {
   children: ReactNode;
@@ -102,6 +102,17 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
               Oportunidades
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
             </button>
+            <button
+              onClick={() => onNavigate('TOPS')}
+              className={`relative group px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all overflow-hidden flex items-center gap-2 ${
+                activeView === 'TOPS'
+                  ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.6)] scale-105'
+                  : 'bg-rose-500/80 text-white hover:bg-rose-500 hover:shadow-[0_0_15px_rgba(244,63,94,0.5)] hover:scale-105'
+              }`}
+            >
+              Tops do Dia
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+            </button>
             {isAdmin && (
               <button
                 onClick={() => onNavigate('ODD30')}
@@ -187,6 +198,13 @@ export default function Layout({ children, activeView, onNavigate, showBack = fa
           icon={<TrendingUp className="w-6 h-6" />}
           accent="sky"
         />
+        <MobileNavItem
+          label="Tops"
+          active={activeView === 'TOPS'}
+          onClick={() => onNavigate('TOPS')}
+          icon={<Crown className="w-6 h-6" />}
+          accent="rose"
+        />
         {isAdmin && (
           <MobileNavItem
             label="ODD 3.0"
@@ -212,16 +230,18 @@ function MobileNavItem({
   active: boolean;
   onClick: () => void;
   icon: ReactNode;
-  accent?: 'amber' | 'sky' | 'primary';
+  accent?: 'amber' | 'sky' | 'primary' | 'rose';
 }) {
   const accentColor =
     accent === 'amber' ? 'text-amber-400'
     : accent === 'sky' ? 'text-sky-400'
+    : accent === 'rose' ? 'text-rose-400'
     : 'text-primary';
 
   const activeBg =
     accent === 'amber' ? 'bg-amber-400/12 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
     : accent === 'sky'  ? 'bg-sky-500/12 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+    : accent === 'rose' ? 'bg-rose-500/12 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
     : 'bg-primary/12 shadow-[0_0_12px_rgba(var(--primary-rgb),0.2)]';
 
   return (

@@ -1,0 +1,337 @@
+ID: 1 | Name: Match Winner
+ID: 2 | Name: Home/Away
+ID: 3 | Name: Second Half Winner
+ID: 4 | Name: Asian Handicap
+ID: 5 | Name: Goals Over/Under
+ID: 6 | Name: Goals Over/Under First Half
+ID: 7 | Name: HT/FT Double
+ID: 8 | Name: Both Teams Score
+ID: 9 | Name: Handicap Result
+ID: 10 | Name: Exact Score
+ID: 11 | Name: Highest Scoring Half
+ID: 12 | Name: Double Chance
+ID: 13 | Name: First Half Winner
+ID: 14 | Name: Team To Score First
+ID: 15 | Name: Team To Score Last
+ID: 16 | Name: Total - Home
+ID: 17 | Name: Total - Away
+ID: 18 | Name: Handicap Result - First Half
+ID: 19 | Name: Asian Handicap First Half
+ID: 20 | Name: Double Chance - First Half
+ID: 21 | Name: Odd/Even
+ID: 22 | Name: Odd/Even - First Half
+ID: 23 | Name: Home Odd/Even
+ID: 24 | Name: Results/Both Teams Score
+ID: 25 | Name: Result/Total Goals
+ID: 26 | Name: Goals Over/Under - Second Half
+ID: 27 | Name: Clean Sheet - Home
+ID: 28 | Name: Clean Sheet - Away
+ID: 29 | Name: Win to Nil - Home
+ID: 30 | Name: Win to Nil - Away
+ID: 31 | Name: Correct Score - First Half
+ID: 32 | Name: Win Both Halves
+ID: 33 | Name: Double Chance - Second Half
+ID: 34 | Name: Both Teams Score - First Half
+ID: 35 | Name: Both Teams To Score - Second Half
+ID: 36 | Name: Win To Nil
+ID: 37 | Name: Home win both halves
+ID: 38 | Name: Exact Goals Number
+ID: 39 | Name: To Win Either Half
+ID: 40 | Name: Home Team Exact Goals Number
+ID: 41 | Name: Away Team Exact Goals Number
+ID: 42 | Name: Second Half Exact Goals Number
+ID: 43 | Name: Home Team Score a Goal
+ID: 44 | Name: Away Team Score a Goal
+ID: 45 | Name: Corners Over Under
+ID: 46 | Name: Exact Goals Number - First Half
+ID: 47 | Name: Winning Margin
+ID: 48 | Name: To Score In Both Halves By Teams
+ID: 49 | Name: Total Goals/Both Teams To Score
+ID: 50 | Name: Goal Line
+ID: 51 | Name: Halftime Result/Total Goals
+ID: 52 | Name: Halftime Result/Both Teams Score
+ID: 53 | Name: Away win both halves
+ID: 54 | Name: First 10 min Winner
+ID: 55 | Name: Corners 1x2
+ID: 56 | Name: Corners Asian Handicap
+ID: 57 | Name: Home Corners Over/Under
+ID: 58 | Name: Away Corners Over/Under
+ID: 59 | Name: Own Goal
+ID: 60 | Name: Away Odd/Even
+ID: 61 | Name: To Qualify
+ID: 62 | Name: Correct Score - Second Half
+ID: 63 | Name: Odd/Even - Second Half
+ID: 72 | Name: Goal Line (1st Half)
+ID: 73 | Name: Both Teams to Score 1st Half - 2nd Half
+ID: 74 | Name: 10 Over/Under
+ID: 75 | Name: Last Corner
+ID: 76 | Name: First Corner
+ID: 77 | Name: Total Corners (1st Half)
+ID: 78 | Name: RTG_H1
+ID: 79 | Name: Cards European Handicap
+ID: 80 | Name: Cards Over/Under
+ID: 81 | Name: Cards Asian Handicap
+ID: 82 | Name: Home Team Total Cards
+ID: 83 | Name: Away Team Total Cards
+ID: 84 | Name: Total Corners (3 way) (1st Half)
+ID: 85 | Name: Total Corners (3 way)
+ID: 86 | Name: RCARD
+ID: 87 | Name: Total ShotOnGoal
+ID: 88 | Name: Home Total ShotOnGoal
+ID: 89 | Name: Away Total ShotOnGoal
+ID: 91 | Name: Total Goals (3 way)
+ID: 92 | Name: Anytime Goal Scorer
+ID: 93 | Name: First Goal Scorer
+ID: 94 | Name: Last Goal Scorer
+ID: 95 | Name: To Score Two or More Goals
+ID: 96 | Name: Last Goal Scorer
+ID: 97 | Name: First Goal Method
+ID: 99 | Name: To Score A Penalty
+ID: 100 | Name: To Miss A Penalty
+ID: 102 | Name: Player to be booked
+ID: 103 | Name: Player to be Sent Off
+ID: 104 | Name: Asian Handicap (2nd Half)
+ID: 105 | Name: Home Team Total Goals(1st Half)
+ID: 106 | Name: Away Team Total Goals(1st Half)
+ID: 107 | Name: Home Team Total Goals(2nd Half)
+ID: 108 | Name: Away Team Total Goals(2nd Half)
+ID: 109 | Name: Draw No Bet (1st Half)
+ID: 110 | Name: Scoring Draw
+ID: 111 | Name: Home team will score in both halves
+ID: 112 | Name: Away team will score in both halves
+ID: 113 | Name: Both Teams To Score in Both Halves
+ID: 114 | Name: Home Team Score a Goal (1st Half)
+ID: 115 | Name: Home Team Score a Goal (2nd Half)
+ID: 116 | Name: Away Team Score a Goal (1st Half)
+ID: 117 | Name: Away Team Score a Goal (2nd Half)
+ID: 118 | Name: Home Win/Over
+ID: 119 | Name: Home Win/Under
+ID: 120 | Name: Away Win/Over
+ID: 121 | Name: Away Win/Under
+ID: 122 | Name: Home team will win either half
+ID: 123 | Name: Away team will win either half
+ID: 124 | Name: Home Come From Behind and Win
+ID: 125 | Name: Corners Asian Handicap (1st Half)
+ID: 126 | Name: Corners Asian Handicap (2nd Half)
+ID: 127 | Name: Total Corners (2nd Half)
+ID: 128 | Name: Total Corners (3 way) (2nd Half)
+ID: 129 | Name: Away Come From Behind and Win
+ID: 130 | Name: Corners 1x2 (1st Half)
+ID: 131 | Name: Corners 1x2 (2nd Half)
+ID: 132 | Name: Home Total Corners (1st Half)
+ID: 133 | Name: Home Total Corners (2nd Half)
+ID: 134 | Name: Away Total Corners (1st Half)
+ID: 135 | Name: Away Total Corners (2nd Half)
+ID: 136 | Name: 1x2 - 15 minutes
+ID: 137 | Name: 1x2 - 60 minutes
+ID: 138 | Name: 1x2 - 75 minutes
+ID: 139 | Name: 1x2 - 30 minutes
+ID: 140 | Name: DC - 30 minutes
+ID: 141 | Name: DC - 15 minutes
+ID: 142 | Name: DC - 60 minutes
+ID: 143 | Name: DC - 75 minutes
+ID: 144 | Name: Goal in 1-15 minutes
+ID: 145 | Name: Goal in 16-30 minutes
+ID: 146 | Name: Goal in 31-45 minutes
+ID: 147 | Name: Goal in 46-60 minutes
+ID: 148 | Name: Goal in 61-75 minutes
+ID: 149 | Name: Goal in 76-90 minutes
+ID: 150 | Name: Home Team Yellow Cards
+ID: 151 | Name: Away Team Yellow Cards
+ID: 152 | Name: Yellow Asian Handicap
+ID: 153 | Name: Yellow Over/Under
+ID: 154 | Name: Yellow Double Chance
+ID: 155 | Name: Yellow Over/Under (1st Half)
+ID: 156 | Name: Yellow Over/Under (2nd Half)
+ID: 157 | Name: Yellow Odd/Even
+ID: 158 | Name: Yellow Cards 1x2
+ID: 159 | Name: Yellow Asian Handicap (1st Half)
+ID: 160 | Name: Yellow Asian Handicap (2nd Half)
+ID: 161 | Name: Yellow Cards 1x2 (1st Half)
+ID: 162 | Name: Yellow Cards 1x2 (2nd Half)
+ID: 163 | Name: Penalty Awarded
+ID: 164 | Name: Offsides Total
+ID: 165 | Name: Offsides 1x2
+ID: 166 | Name: Offsides Handicap
+ID: 167 | Name: Offsides Home Total
+ID: 168 | Name: Offsides Away Total
+ID: 169 | Name: Offsides Double Chance
+ID: 170 | Name: Fouls. Away Total
+ID: 171 | Name: Fouls. Home Total
+ID: 172 | Name: Fouls. Double Chance
+ID: 173 | Name: Fouls. Total
+ID: 174 | Name: Fouls. Handicap
+ID: 175 | Name: Fouls. 1x2
+ID: 176 | Name: ShotOnTarget 1x2
+ID: 177 | Name: ShotOnTarget Handicap
+ID: 178 | Name: ShotOnTarget Double Chance
+ID: 179 | Name: First Team to Score
+ID: 180 | Name: Last Team to Score
+ID: 181 | Name: European Handicap (2nd Half)
+ID: 182 | Name: Draw No Bet (2nd Half)
+ID: 183 | Name: Double Chance/Total
+ID: 184 | Name: To Score in Both Halves
+ID: 185 | Name: First Team to Score (3 way) 1st Half
+ID: 186 | Name: Total Goals Number By Ranges
+ID: 187 | Name: Total Goals By Ranges (1st Half)
+ID: 188 | Name: Clean Sheet
+ID: 189 | Name: To Advance Handicap
+ID: 190 | Name: Home Exact Goals Number (1st Half)
+ID: 191 | Name: Away Exact Goals Number (1st Half)
+ID: 192 | Name: Home Highest Scoring Half
+ID: 193 | Name: Away Highest Scoring Half
+ID: 194 | Name: Result/Total Goals (2nd Half)
+ID: 195 | Name: Either Team Wins By 1 Goals
+ID: 196 | Name: Either Team Wins By 2 Goals
+ID: 197 | Name: Over/Under 15m-30m
+ID: 198 | Name: Over/Under 30m-45m
+ID: 199 | Name: Home Win To Nill (1st Half)
+ID: 200 | Name: Home Win To Nill (2nd Half)
+ID: 201 | Name: To Score In 1st Half
+ID: 202 | Name: To Score In 2nd Half
+ID: 203 | Name: Yellow Cards. Odd/Even (1st Half)
+ID: 204 | Name: Yellow Cards. Odd/Even (2nd Half)
+ID: 205 | Name: First Team to Score (3 way) 2nd Half
+ID: 206 | Name: Home No Bet
+ID: 207 | Name: Away No Bet
+ID: 208 | Name: Corners. First Corner (3 way)
+ID: 209 | Name: Home Come From Behind and Draw
+ID: 210 | Name: Away Come From Behind and Draw
+ID: 211 | Name: Total Shots
+ID: 212 | Name: Player Assists
+ID: 213 | Name: Player Triples
+ID: 214 | Name: Player Points
+ID: 215 | Name: Player Singles
+ID: 216 | Name: Multi Touchdown Scorer (2 or More)
+ID: 217 | Name: Multi Touchdown Scorer (3 or More)
+ID: 218 | Name: Away Anytime Goal Scorer
+ID: 219 | Name: Away First Goal Scorer
+ID: 220 | Name: Shots. Away Total
+ID: 221 | Name: Shots. Home Total
+ID: 222 | Name: To Win From Behind
+ID: 223 | Name: Number of Goals In Match (Range)
+ID: 224 | Name: Game Decided After Penalties
+ID: 225 | Name: Game Decided in Extra Time
+ID: 226 | Name: Away Last Goal Scorer
+ID: 227 | Name: Goal Method Header
+ID: 228 | Name: Home Goal Method Header
+ID: 229 | Name: Goal Method Outside the Box
+ID: 230 | Name: Home Goal Method Outside the Box
+ID: 231 | Name: Home Anytime Goal Scorer
+ID: 232 | Name: Home First Goal Scorer
+ID: 233 | Name: Home Last Goal Scorer
+ID: 234 | Name: Home To Score Three or More Goals
+ID: 235 | Name: Away To Score Three or More Goals
+ID: 236 | Name: Away To Score Two or More Goals
+ID: 237 | Name: Home To Score Two or More Goals
+ID: 238 | Name: Home Team Goalscorers First
+ID: 239 | Name: Corners. European Handicap
+ID: 240 | Name: Home Player Shots
+ID: 241 | Name: Away Player Shots
+ID: 242 | Name: Player Shots On Target
+ID: 243 | Name: Home Shots On Target
+ID: 244 | Name: Away Shots On Target
+ID: 245 | Name: Away Goal Method Header
+ID: 246 | Name: Away Goal Method Outside the Box
+ID: 247 | Name: Corners Race To
+ID: 248 | Name: Time Of 1st Score
+ID: 249 | Name: Multicorners
+ID: 250 | Name: First Card Received (3 way)
+ID: 251 | Name: Player to be booked
+ID: 252 | Name: Both Teams to Receive a Card
+ID: 253 | Name: Time Of 1st Score
+ID: 254 | Name: Team Performances (Range)
+ID: 255 | Name: Home Player Assists
+ID: 256 | Name: Away Player Assists
+ID: 257 | Name: Player to Score or Assist
+ID: 258 | Name: Home Player to Score or Assist
+ID: 259 | Name: Away Player to Score or Assist
+ID: 260 | Name: Team Time Of 1st Score
+ID: 261 | Name: Total Goal Minutes (Range)
+ID: 262 | Name: Late Goal (Range)
+ID: 263 | Name: Early Goal (Range)
+ID: 264 | Name: Player Shots On Target Total
+ID: 265 | Name: Player Shots Total
+ID: 266 | Name: Player Fouls Committed
+ID: 267 | Name: Goalkeeper Saves
+ID: 268 | Name: Home Goalkeeper Saves
+ID: 269 | Name: Home Player Shots On Target Total
+ID: 270 | Name: Home Player Shots Total
+ID: 271 | Name: Home Player Fouls Committed
+ID: 272 | Name: Home Player Tackles
+ID: 273 | Name: Home Player Passes
+ID: 274 | Name: Away Goalkeeper Saves
+ID: 275 | Name: Away Player Shots On Target Total
+ID: 276 | Name: Away Player Shots Total
+ID: 277 | Name: Away Player Fouls Committed
+ID: 278 | Name: Away Player Tackles
+ID: 279 | Name: Away Player Passes
+ID: 280 | Name: First Set Piece 5 Minutes
+ID: 281 | Name: Total Tackles
+ID: 282 | Name: Double Chance/Both Teams To Score
+ID: 283 | Name: Away Win To Nill (1st Half)
+ID: 284 | Name: Away Win To Nill (2nd Half)
+ID: 285 | Name: Team To Score (Goals)
+ID: 286 | Name: Team Goalscorers First
+ID: 287 | Name: Team Goalscorers Last
+ID: 288 | Name: Home Team Goalscorers Last
+ID: 289 | Name: Away Team Goalscorers First
+ID: 290 | Name: Away Team Goalscorers Last
+ID: 291 | Name: Time of First Goal Brackets (Range)
+ID: 292 | Name: Over/Under between 0 and 10m
+ID: 293 | Name: Double Chance 0-15m
+ID: 294 | Name: Double Chance 15-30m
+ID: 295 | Name: Corners. Total (Range)
+ID: 296 | Name: Double Chance 30-45m
+ID: 297 | Name: Corners. total between 0 and 10m
+ID: 298 | Name: Method of Victory
+ID: 299 | Name: Cards over/under between 0 and 10 m
+ID: 300 | Name: Both Teams to Receive 2+ Cards
+ID: 301 | Name: Tackles. Away Total
+ID: 302 | Name: Tackles. Home Total
+ID: 303 | Name: Over/Under between 0 and 10 m
+ID: 304 | Name: Over/Under between  0 and 10 m
+ID: 305 | Name: Race to the 2nd goal?
+ID: 306 | Name: Race to the 3rd goal?
+ID: 307 | Name: Corners. Double Chance
+ID: 308 | Name: Race To
+ID: 309 | Name: Yellow Cards. Home Total (1st Half)
+ID: 310 | Name: Yellow Cards Away Total (1st Half)
+ID: 311 | Name: Which team will score the 1st goal?
+ID: 312 | Name: 1x2 - 20 minutes
+ID: 313 | Name: Offsides Odd/Even
+ID: 314 | Name: Fouls Odd/Even
+ID: 315 | Name: Saves Total
+ID: 316 | Name: Saves 1x2
+ID: 317 | Name: Saves Asian H
+ID: 318 | Name: Saves O/U Home
+ID: 319 | Name: Saves O/U Away
+ID: 320 | Name: Saves Double Chance
+ID: 321 | Name: Penalty Awarded (1st Half)
+ID: 322 | Name: Penalty Awarded (2nd Half)
+ID: 323 | Name: Saves Odd/Even
+ID: 324 | Name: Corner in 1-15 minutes
+ID: 325 | Name: Corner in 16-30 minutes
+ID: 326 | Name: Corner in 31-45 minutes
+ID: 327 | Name: Corner in 45-60 minutes
+ID: 328 | Name: Corner in 60-75 minutes
+ID: 329 | Name: Corner in 75-90 minutes
+ID: 330 | Name: Home Not lose/Over
+ID: 331 | Name: Home Not lose/Under
+ID: 332 | Name: Away Not lose/Over
+ID: 333 | Name: Away Not lose/Under
+ID: 334 | Name: 1x2 - 70 minutes
+ID: 335 | Name: Red Cards Over/Under
+ID: 336 | Name: Goal Line
+ID: 337 | Name: Asian Handicap (Sets)
+ID: 338 | Name: Corners. Odd/Even
+ID: 339 | Name: Corners. Double Chance
+ID: 340 | Name: Shots.1x2
+ID: 342 | Name: Red Card In The Match (1st Half)
+ID: 343 | Name: Fouls. Odd/Even
+ID: 344 | Name: Odd/Even (1st Set)
+ID: 345 | Name: Set Betting
+ID: 346 | Name: Extra Point (1st Set)
+ID: 347 | Name: Home Winning Margin (1st Set)
+ID: 348 | Name: Away Winning Margin (1st Set)
+ID: 349 | Name: Number Of Goals In Match
