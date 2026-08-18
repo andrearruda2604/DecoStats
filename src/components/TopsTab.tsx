@@ -137,7 +137,8 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
 
       // Take last 20 matching games
       const filtered = th.slice(0, 20);
-      if (filtered.length === 0) return;
+      // Require at least 5 games to be considered in the ranking
+      if (filtered.length < 5) return;
 
       CRITERIA.forEach(crit => {
         let sum = 0;
