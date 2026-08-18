@@ -9,7 +9,6 @@ interface TopsTabProps {
   leagues?: League[];
 }
 
-type FilterMode = 'ALL' | 'HOME' | 'AWAY';
 
 interface TeamStat {
   teamId: number;
@@ -49,7 +48,6 @@ function extractStatFromJsonb(jsonbArr: any[], apiType: string): number {
 export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
   const [targetDate, setTargetDate] = useState(todayBrt());
   const [loading, setLoading] = useState(true);
-  const [filterMode, setFilterMode] = useState<FilterMode>('ALL');
   const [periodFilter, setPeriodFilter] = useState<ToggleMode>('FT');
   const [teamsData, setTeamsData] = useState<Record<string, TeamStat[]>>({});
   
@@ -125,13 +123,10 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
       const teamInfo = teamMap.get(teamId)!;
       let th = historyByTeam.get(teamId) || [];
 
-      // Filter by Home/Away based on the team's status in TODAY's match
-      if (filterMode === 'HOME') {
-        if (!teamInfo.isHome) return; // Team is playing AWAY today, skip
+      // Always respect the team's location in TODAY's match
+      if (teamInfo.isHome) {
         th = th.filter(h => h.is_home); // Only look at their HOME history
-      }
-      if (filterMode === 'AWAY') {
-        if (teamInfo.isHome) return; // Team is playing HOME today, skip
+      } else {
         th = th.filter(h => !h.is_home); // Only look at their AWAY history
       }
 
@@ -190,7 +185,7 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
 
     setTeamsData(computedData);
 
-  }, [rawHistory, filterMode, periodFilter, teamMap]);
+  }, [rawHistory, periodFilter, teamMap]);
 
   function changeDate(delta: number) {
     if (!targetDate) return;
@@ -256,36 +251,7 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
             </div>
           </div>
 
-          {/* Location Filter */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 ml-1">Filtro de Local</span>
-            <div className="flex bg-surface/60 p-1.5 rounded-xl border border-outline-variant/10 shadow-inner">
-              <button
-                onClick={() => setFilterMode('ALL')}
-                className={`flex-1 md:px-6 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
-                  filterMode === 'ALL' ? 'bg-rose-500 text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setFilterMode('HOME')}
-                className={`flex-1 md:px-6 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
-                  filterMode === 'HOME' ? 'bg-rose-500 text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Casa
-              </button>
-              <button
-                onClick={() => setFilterMode('AWAY')}
-                className={`flex-1 md:px-6 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
-                  filterMode === 'AWAY' ? 'bg-rose-500 text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Fora
-              </button>
-            </div>
-          </div>
+
         </div>
       </div>
 
