@@ -119,12 +119,14 @@ export interface MatchCardData {
   status: FixtureStatus;
   homeTeam: {
     id: number;
+    api_id: number;
     name: string;
     logoUrl: string;
     score: number | null;
   };
   awayTeam: {
     id: number;
+    api_id: number;
     name: string;
     logoUrl: string;
     score: number | null;

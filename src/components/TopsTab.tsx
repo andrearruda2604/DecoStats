@@ -72,10 +72,10 @@ export default function TopsTab({ onSelectMatch, leagues }: TopsTabProps) {
         const teamIds = new Set<number>();
 
         matches.forEach(m => {
-          teamIds.add(m.homeTeam.id);
-          teamIds.add(m.awayTeam.id);
-          tMap.set(m.homeTeam.id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.id, isHome: true, season: m.league.season, leagueId: m.league.id });
-          tMap.set(m.awayTeam.id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.id, isHome: false, season: m.league.season, leagueId: m.league.id });
+          teamIds.add(m.homeTeam.api_id);
+          teamIds.add(m.awayTeam.api_id);
+          tMap.set(m.homeTeam.api_id, { name: m.homeTeam.name, logoUrl: m.homeTeam.logoUrl, fixtureId: m.id, isHome: true, season: m.league.season, leagueId: m.league.id });
+          tMap.set(m.awayTeam.api_id, { name: m.awayTeam.name, logoUrl: m.awayTeam.logoUrl, fixtureId: m.id, isHome: false, season: m.league.season, leagueId: m.league.id });
         });
 
         const allTeamIds = Array.from(teamIds);

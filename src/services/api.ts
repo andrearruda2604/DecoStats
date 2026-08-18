@@ -32,8 +32,8 @@ export async function fetchMatches(
     .select(`
       id, api_id, date, status, home_score, away_score, round,
       league:leagues!fixtures_league_id_fkey(id, name, country, country_code, flag_url, logo_url, season),
-      home_team:teams!fixtures_home_team_id_fkey(id, name, logo_url),
-      away_team:teams!fixtures_away_team_id_fkey(id, name, logo_url)
+      home_team:teams!fixtures_home_team_id_fkey(id, api_id, name, logo_url),
+      away_team:teams!fixtures_away_team_id_fkey(id, api_id, name, logo_url)
     `)
     .gte('date', `${date}T00:00:00${offset}`)
     .lte('date', `${date}T23:59:59${offset}`)
@@ -63,12 +63,14 @@ export async function fetchMatches(
     status: f.status,
     homeTeam: {
       id: f.home_team?.id || 0,
+      api_id: f.home_team?.api_id || 0,
       name: f.home_team?.name || '',
       logoUrl: f.home_team?.logo_url || '',
       score: f.home_score,
     },
     awayTeam: {
       id: f.away_team?.id || 0,
+      api_id: f.away_team?.api_id || 0,
       name: f.away_team?.name || '',
       logoUrl: f.away_team?.logo_url || '',
       score: f.away_score,

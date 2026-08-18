@@ -26,7 +26,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { ToggleMode } from './types';
 import { fetchPredictiveData, fetchStandings } from './services/api';
 
-const VERSION = '1.0.5';
+const VERSION = '1.0.6';
 
 export default function App() {
   useEffect(() => {
