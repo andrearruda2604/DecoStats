@@ -76,13 +76,17 @@ async function generateTops(targetDateStr) {
     }
 
     console.log(`[generateTops] Fetching history for ${allTeamIds.length} teams...`);
-    const { data: history, error: hErr } = await supabase
-      .from('teams_history')
-      .select('team_id, season, league_id, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal')
-      .in('team_id', allTeamIds)
-      .order('match_date', { ascending: false });
-
-    if (hErr) throw hErr;
+    let history = [];
+    for (let i = 0; i < allTeamIds.length; i += 10) {
+      const batchIds = allTeamIds.slice(i, i + 10);
+      const { data: historyBatch, error: hErr } = await supabase
+        .from('teams_history')
+        .select('team_id, season, league_id, is_home, match_date, goals_for, corners, yellow_cards, red_cards, shots_total, shots_on_goal')
+        .in('team_id', batchIds)
+        .order('match_date', { ascending: false });
+      if (hErr) throw hErr;
+      if (historyBatch) history.push(...historyBatch);
+    }
 
     const historyByTeam = new Map();
     (history || []).forEach(row => {
@@ -149,7 +153,7 @@ async function generateTops(targetDateStr) {
     // Check if entry exists
     const { data: existing } = await supabase
       .from('odd_tickets')
-      .select('id, ticket_data')
+      .select('date')
       .eq('date', targetDate)
       .eq('mode', 'tops')
       .single();
@@ -163,7 +167,8 @@ async function generateTops(targetDateStr) {
       await supabase
         .from('odd_tickets')
         .update({ ticket_data: newTicketData })
-        .eq('id', existing.id);
+        .eq('date', targetDate)
+        .eq('mode', 'tops');
       console.log(`[generateTops] Updated existing Tops entry.`);
     } else {
       await supabase

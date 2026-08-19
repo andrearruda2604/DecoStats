@@ -783,24 +783,40 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                     </div>
                   )}
 
-                  {/* Bet365 branding */}
-                  <a
-                    href="https://www.bet365.bet.br/#/HO/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all group"
-                  >
-                    <span className="text-[9px] text-on-surface-variant/50 font-bold uppercase tracking-widest">odds by</span>
-                    <span
-                      className="inline-flex items-center rounded-[3px] px-1.5 py-0.5 text-[9px] font-black text-white tracking-tight"
-                      style={{ background: '#00884c' }}
-                    >
-                      bet365
-                    </span>
-                    <svg className="w-2.5 h-2.5 text-on-surface-variant/40 group-hover:text-on-surface-variant/70 transition-colors" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M1 9L9 1M9 1H4M9 1V6" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </a>
+                  {/* Betting house links */}
+                  {isAdmin && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                      <span className="text-[8px] text-on-surface-variant/40 font-bold uppercase tracking-widest mr-1">Apostar em:</span>
+                      {[
+                        { name: 'bet365', url: 'https://www.bet365.bet.br/#/AS/B1/', bg: '#00884c', text: 'white' },
+                        { name: 'Betano', url: 'https://www.betano.bet.br/sport/futebol/', bg: '#1a1a2e', text: '#00e676', border: '#00e676' },
+                        { name: 'Esportiva', url: 'https://www.esportiva.bet.br/sports#tab=pre-match&sport=football', bg: '#0d1117', text: '#ffd700', border: '#ffd700' },
+                      ].map(house => (
+                        <a
+                          key={house.name}
+                          href={house.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-200 hover:scale-105 hover:shadow-lg group"
+                          style={{
+                            background: house.bg,
+                            borderColor: house.border || house.bg,
+                          }}
+                        >
+                          <span
+                            className="text-[9px] font-black tracking-tight"
+                            style={{ color: house.text }}
+                          >
+                            {house.name}
+                          </span>
+                          <svg className="w-2.5 h-2.5 opacity-50 group-hover:opacity-100 transition-opacity" style={{ color: house.text }} viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M1 9L9 1M9 1H4M9 1V6" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Match cards */}
@@ -901,6 +917,29 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                             <span className="text-[10px] font-black text-white text-center line-clamp-1">{match.away}</span>
                           </div>
                         </div>
+
+                        {/* Quick bet links per match */}
+                        {!isFinished && isAdmin && (
+                          <div className="flex items-center justify-center gap-1.5 mb-4">
+                            {[
+                              { label: 'bet365', url: 'https://www.bet365.bet.br/#/AS/B1/', color: '#00884c' },
+                              { label: 'Betano', url: 'https://www.betano.bet.br/sport/futebol/', color: '#00e676' },
+                              { label: 'Esportiva', url: 'https://www.esportiva.bet.br/sports#tab=pre-match&sport=football', color: '#ffd700' },
+                            ].map(h => (
+                              <a
+                                key={h.label}
+                                href={h.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider border border-white/10 bg-white/5 hover:bg-white/15 transition-all hover:scale-105"
+                                style={{ color: h.color, borderColor: h.color + '40' }}
+                              >
+                                {h.label}
+                              </a>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="space-y-2.5">
                           {picksWithResult.map((pick: any, j: number) => {
