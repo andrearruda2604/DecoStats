@@ -922,9 +922,9 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                         {!isFinished && isAdmin && (
                           <div className="flex items-center justify-center gap-1.5 mb-4">
                             {[
-                              { label: 'bet365', url: 'https://www.bet365.bet.br/#/AS/B1/', color: '#00884c' },
-                              { label: 'Betano', url: 'https://www.betano.bet.br/sport/futebol/', color: '#00e676' },
-                              { label: 'Esportiva', url: 'https://www.esportiva.bet.br/sports#tab=pre-match&sport=football', color: '#ffd700' },
+                              { label: 'bet365', url: `https://www.bet365.bet.br/#/AX/K^${encodeURIComponent(match.home)}/`, color: '#00884c' },
+                              { label: 'Betano', url: `https://www.betano.bet.br/odds/-/search?query=${encodeURIComponent(match.home)}`, color: '#00e676' },
+                              { label: 'Esportiva', url: `https://www.esportiva.bet.br/sports`, color: '#ffd700' },
                             ].map(h => (
                               <a
                                 key={h.label}
@@ -934,6 +934,7 @@ export default function Odd20({ mode = '2.0' }: TicketModeProps) {
                                 onClick={(e) => e.stopPropagation()}
                                 className="px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider border border-white/10 bg-white/5 hover:bg-white/15 transition-all hover:scale-105"
                                 style={{ color: h.color, borderColor: h.color + '40' }}
+                                title={`Procurar ${match.home} na ${h.label}`}
                               >
                                 {h.label}
                               </a>
