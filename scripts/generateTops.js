@@ -17,11 +17,9 @@ try {
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 
 function getTimezoneOffset() {
-  const offsetMinutes = new Date().getTimezoneOffset();
-  const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
-  const offsetMins = Math.abs(offsetMinutes % 60);
-  const sign = offsetMinutes > 0 ? "-" : "+";
-  return `${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+  // Always force Brazilian timezone (-03:00) so that "today" correctly matches BRT days,
+  // regardless of the machine/server running the script (e.g., GitHub Actions in UTC).
+  return "-03:00";
 }
 
 const CRITERIA = [
